@@ -1,0 +1,18 @@
+.crm-stats-drawer {
+    position: fixed !important; /* Override any existing positioning */
+    right: 0; /* Align to the right */
+    bottom: 0; /* Align to the bottom */
+    top: auto !important; /* Override default top positioning */
+    transform: translateX(0) !important; /* Override default transform if necessary */
+    height: auto !important; /* Adjust height as necessary, remove if you want full height */
+    max-height: 100%; /* Ensure the Drawer does not exceed the viewport height */
+}
+
+.crm-stats-drawer  .bp3-drawer-header { 
+    background: #565c70;
+  }
+  
+.crm-stats-drawer .bp3-drawer-header .bp3-heading {
+    color: white; 
+    opacity: 0.7; 
+  }

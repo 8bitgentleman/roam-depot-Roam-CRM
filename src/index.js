@@ -1,6 +1,4 @@
-import renderOverlay, {
-  RoamOverlayProps,
-} from "roamjs-components/util/renderOverlay";
+
 import displayBirthdays from "./components/birthday_drawer"
 
 
@@ -39,7 +37,7 @@ function getPeople(extensionAPI) {
 
 async function onload({extensionAPI}) {
   extensionAPI.settings.panel.create(panelConfig);
-
+  displayBirthdays()
   console.log(`load ${plugin_title} plugin`);
 }
 
