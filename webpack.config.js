@@ -15,6 +15,9 @@ module.exports = {
     experiments: {
         outputModule: true,
     },
+    resolve: {
+        extensions: ['.js', '.jsx'], // Add other extensions if needed
+    },
     module: {
         rules: [
             {

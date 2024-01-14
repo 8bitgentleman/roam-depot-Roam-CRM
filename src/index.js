@@ -1,5 +1,13 @@
+import renderOverlay, {
+  RoamOverlayProps,
+} from "roamjs-components/util/renderOverlay";
+import displayBirthdays from "./components/birthday_drawer"
+
+
+const plugin_title = "Roam CRM"
+
 const panelConfig = {
-  tabTitle: "Test Ext 1",
+  tabTitle: plugin_title,
   settings: [
       {id:          "button-setting",
        name:        "Button test",
@@ -25,18 +33,18 @@ const panelConfig = {
   ]
 };
 
+function getPeople(extensionAPI) {
+  return extensionAPI.settings.get('people') || {}
+}
+
 async function onload({extensionAPI}) {
-  // set defaults if they dont' exist
-  if (!extensionAPI.settings.get('data')) {
-      await extensionAPI.settings.set('data', "01");
-  }
   extensionAPI.settings.panel.create(panelConfig);
 
-  console.log("load example plugin");
+  console.log(`load ${plugin_title} plugin`);
 }
 
 function onunload() {
-  console.log("unload example plugin");
+  console.log(`unload ${plugin_title} plugin`);
 }
 
 export default {
