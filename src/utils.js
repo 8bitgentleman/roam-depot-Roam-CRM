@@ -1,28 +1,11 @@
  
-function findUpcomingBirthdays(data) {
-  const today = new Date();
-  const twoWeeksLater = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
-  const upcomingBirthdays = [];
+function isSecondDateAfter(firstDateString, secondDateString) {
+  // Parse the dates from the strings
+  const firstDate = new Date(firstDateString);
+  const secondDate = new Date(secondDateString);
 
-  for (const person in data) {
-      if (data.hasOwnProperty(person)) {
-          const birthdayStr = data[person].birthday;
-          const birthday = new Date(birthdayStr);
-          // Adjust the birthday year to this year for comparison
-          birthday.setFullYear(today.getFullYear());
-
-          // Check if the birthday has already occurred this year, if so, set to next year.
-          if (birthday < today) {
-              birthday.setFullYear(today.getFullYear() + 1);
-          }
-
-          if (birthday >= today && birthday <= twoWeeksLater) {
-              upcomingBirthdays.push({ name: person, birthday: birthday.toISOString() });
-          }
-      }
-  }
-
-  return upcomingBirthdays;
+  // Compare the dates
+  return secondDate > firstDate;
 }
 
 function parseStringToDate(dateString) {
@@ -204,7 +187,8 @@ function checkBirthdays(lastBirthdayCheck) {
   );
    
   // check if there are lower priority birthdays
-  if (otherBirthdaysToday.length > 0) {
+  const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date)
+  if (isSecondDateAfter(lastBirthdayCheck, todaysDNPUID)) {
      // block ref other today birthdays to the DNP
     const blockJSON = [
       {
@@ -214,7 +198,7 @@ function checkBirthdays(lastBirthdayCheck) {
           }))
       }
     ];
-    const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date)
+    
     createChildren(todaysDNPUID, blockJSON)
   }
   

@@ -43,6 +43,11 @@ async function onload({extensionAPI}) {
   extensionAPI.settings.panel.create(panelConfig);
   
   displayBirthdays(getLastBirthdayCheckDate(extensionAPI))
+  // update last birthday check since it's already happened
+  extensionAPI.settings.set(
+    'last-birthday-check-date',
+     window.roamAlphaAPI.util.dateToPageUid(new Date))
+  
   console.log(`load ${plugin_title} plugin`);
 }
 
