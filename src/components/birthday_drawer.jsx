@@ -21,13 +21,21 @@ import ReactDOM from "react-dom";
 import renderOverlay, {
   RoamOverlayProps,
 } from "roamjs-components/util/renderOverlay";
+import checkBirthdays from "../utils";
 
-const BirthdayDrawer = ({ onClose, isOpen }) => {
+const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck}) => {
+  const {
+    aAndBBirthdaysToday,
+    otherBirthdaysToday,
+    filteredUpcomingBirthdays
+  } = checkBirthdays(lastBirthdayCheck);
+  
+  // console.log(checkBirthdays(lastBirthdayCheck))
   return (
     <Drawer
       onClose={onClose}
       isOpen={isOpen}
-      title={"Graph Database stats"}
+      title={"Roam CRM Reminders"}
       position={"right"}
       hasBackdrop={false}
       canOutsideClickClose={false}
@@ -39,87 +47,60 @@ const BirthdayDrawer = ({ onClose, isOpen }) => {
     >
       <div
         className={`${Classes.DRAWER_BODY} p-5 text-white text-opacity-70`}
-        style={{ background: "#565c70" }}
+        style={{ background: "#565c70", paddingTop:"0px" }}
       >
 
+        <h5
+          style={{ fontWeight: "800" }}
+        >
+          Birthdays Today:
+        </h5>    
         <p>
-          Pages:{" "}
-          {
-            window.roamAlphaAPI.q(
-              "[:find (count ?p) :where [?p :node/title _]]"
-            )[0]
-          }
+          <ul>
+            {aAndBBirthdaysToday.map((person, index) => (
+              <li key={index}>
+                <a
+                  style={{ color: "lightgrey" }}
+                  onClick={() =>
+                    window.roamAlphaAPI.ui.mainWindow.openPage({
+                      page: { title: person.name },
+                    })
+                  }
+                >{person.name}</a>
+              </li>
+            ))}
+          </ul>
+          <h5 style={{ fontWeight: "800" }}>
+            Upcoming Birthdays:
+          </h5>
+          <ul>
+            {filteredUpcomingBirthdays.map((person, index) => (
+              <li key={index}>
+                <a
+                  style={{ color: "lightgrey" }}
+                  onClick={() =>
+                    window.roamAlphaAPI.ui.mainWindow.openPage({
+                      page: { title: person.name },
+                    })
+                  }
+                >{person.name}</a>
+                 - {new Date(person.birthday).toLocaleDateString()} (in {person.daysUntilBirthday} days)
+              </li>
+            ))}
+          </ul>
         </p>
-        <p>
-          Text Blocks / Words / Characters: <br />
-          
-        </p>
-        <p>
-          <a
-            style={{ color: "lightgrey" }}
-            onClick={() =>
-              window.roamAlphaAPI.ui.mainWindow.openPage({
-                page: { title: ">" },
-              })
-            }
-          >
-            Block Quotes
-          </a>{" "}
-          / Words / Characters: <br />
-          
-        </p>
-        <p>
-          Code Blocks / Characters:
-          <br />
-          
-        </p>
-        <p>
-          Interconnections (refs):
-          {window.roamAlphaAPI.q(
-            "[:find (count ?r) . :with ?e :where [?e :block/refs ?r] ]]"
-          )}
-        </p>
-        <p className="flex flex-col">
-          {[
-            "TODO",
-            "DONE",
-            "query",
-            "embed",
-            "table",
-            "kanban",
-            "video",
-            "roam/js",
-          ].map((tag) => (
-            <span key={tag}>
-              <a
-                style={{ color: "lightgrey" }}
-                onClick={() =>
-                  window.roamAlphaAPI.ui.mainWindow.openPage({
-                    page: { title: tag },
-                  })
-                }
-              >
-                {tag}
-              </a>
-              :{" "}
-              {window.roamAlphaAPI.q(
-                `[:find (count ?be) . :where [?e :node/title "${tag}"][?be :block/refs ?e]]`
-              ) || 0}
-            </span>
-          ))}
-        </p>
-        
       </div>
     </Drawer>
   );
 };
 
-const displayBirthdays = async () => {
+const displayBirthdays = async (lastBirthdayCheck) => {
   console.log("display birthdays");
   
     if (!document.getElementById("crm-stats-drawer"))
       renderOverlay({
         Overlay: BirthdayDrawer,
+        props: {lastBirthdayCheck},
       }
       );
   };

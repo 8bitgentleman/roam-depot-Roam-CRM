@@ -35,9 +35,14 @@ function getPeople(extensionAPI) {
   return extensionAPI.settings.get('people') || {}
 }
 
+function getLastBirthdayCheckDate(extensionAPI) {
+  return extensionAPI.settings.get('last-birthday-check-date') || '01-19-2024'
+}
+
 async function onload({extensionAPI}) {
   extensionAPI.settings.panel.create(panelConfig);
-  displayBirthdays()
+  
+  displayBirthdays(getLastBirthdayCheckDate(extensionAPI))
   console.log(`load ${plugin_title} plugin`);
 }
 
