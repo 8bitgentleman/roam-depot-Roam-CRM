@@ -70,9 +70,11 @@ const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck}) => {
               </li>
             ))}
           </ul>
-          <h5 style={{ fontWeight: "800" }}>
-            Upcoming Birthdays:
+        </p>
+        <h5 style={{ fontWeight: "800" }}>
+              Upcoming Birthdays:
           </h5>
+        <p>
           <ul>
             {filteredUpcomingBirthdays.map((person, index) => (
               <li key={index}>
@@ -88,6 +90,14 @@ const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck}) => {
               </li>
             ))}
           </ul>
+        </p>
+        <h5
+          style={{ fontWeight: "800" }}
+        >
+          Contact Reminders:
+        </h5> 
+        <p>
+          
         </p>
       </div>
     </Drawer>

@@ -1,6 +1,6 @@
 
 import displayBirthdays from "./components/birthday_drawer"
-
+const testing = true
 
 const plugin_title = "Roam CRM"
 
@@ -41,8 +41,12 @@ function getLastBirthdayCheckDate(extensionAPI) {
 
 async function onload({extensionAPI}) {
   extensionAPI.settings.panel.create(panelConfig);
+  if (testing) {
+    displayBirthdays('01-19-2024')
+  } else {
+    displayBirthdays(getLastBirthdayCheckDate(extensionAPI))
+  }
   
-  displayBirthdays(getLastBirthdayCheckDate(extensionAPI))
   // update last birthday check since it's already happened
   extensionAPI.settings.set(
     'last-birthday-check-date',

@@ -9,7 +9,7 @@ function isSecondDateAfter(firstDateString, secondDateString) {
 }
 
 function parseStringToDate(dateString) {
-  const defaultYear = 1980; // Set a default year, you can change it to whatever you prefer
+  const defaultYear = new Date().getFullYear(); // Use the current year as default
 
   // Array of month names for parsing
   const monthNames = [
@@ -18,6 +18,9 @@ function parseStringToDate(dateString) {
     'September', 'October', 'November', 'December'
   ];
 
+  // Remove any st, nd, rd, th suffixes from day
+  dateString = dateString.replace(/(\d+)(st|nd|rd|th)/, '$1');
+  
   // Split the dateString into parts
   const parts = dateString.split(' ');
 
@@ -27,16 +30,30 @@ function parseStringToDate(dateString) {
   if (parts.length === 2) {
     // Format: Month Day
     month = monthNames.indexOf(parts[0]);
-    day = parseInt(parts[1]);
+    day = parseInt(parts[1], 10);
     year = defaultYear;
   } else if (parts.length === 3) {
-    // Format: Month Day, Year
-    month = monthNames.indexOf(parts[0]);
-    day = parseInt(parts[1]);
-    year = parseInt(parts[2]);
+    // Try to parse the year first, as it's unambiguous
+    year = parseInt(parts[2], 10);
+    if (isNaN(year)) {
+      // If the year isn't a number, assume it's a part of the day and use the default year
+      day = parseInt(parts[1], 10);
+      month = monthNames.indexOf(parts[0]);
+      year = defaultYear;
+    } else {
+      // If the year is a number, parse the month and day
+      month = monthNames.indexOf(parts[0]);
+      day = parseInt(parts[1], 10);
+    }
   } else {
     // Invalid format
     console.error('Invalid date format');
+    return null;
+  }
+
+  // Check for invalid month or day
+  if (month === -1 || isNaN(day) || isNaN(year)) {
+    console.error('Invalid date components');
     return null;
   }
 
@@ -47,72 +64,76 @@ function parseStringToDate(dateString) {
 }
 
 function getAllPeople() {
+  let mappedResults = {};
   let query = `[:find 
-    (pull ?node [:block/string :block/uid])
-    (pull ?PAGE [:node/title])
-    (pull ?CONTACTdec [[:node/title :as :contact-title] [:block/string :as :contact-string] :block/refs {:block/refs ...}])
+      (pull ?node [[:block/string :as :birthday-string] :block/uid])
+      (pull ?PAGE [:node/title])
+      (pull ?CONTACTdec [[:node/title :as :contact-title] [:block/string :as :contact-string] :block/refs {:block/refs ...}])
+      (pull ?CONTACTLastdec [[:block/string :as :last-contact-string] [:block/uid :as :last-contact-uid]])
   :where
-    [?Birthday-Ref :node/title "Birthday"]
-    [?Tags-Ref :node/title "Tags"]
-    [?person-Ref :node/title "people"]
-    [?ContactFrequency-Ref :node/title "Contact Frequency"]
-    [?node :block/refs ?Birthday-Ref]
-    [?node :block/page ?PAGE]
-    [?PEOPLEdec :block/parents ?PAGE]
-    [?PEOPLEdec :block/refs ?Tags-Ref]
-    [?PEOPLEdec :block/refs ?person-Ref]
-    [?CONTACTdec :block/parents ?PAGE]
-    [?CONTACTdec :block/refs ?ContactFrequency-Ref]
-    (not
-      [?not_populated-Ref :node/title "not_populated"]
-      [?PEOPLEdec :block/refs ?not_populated-Ref]
-    )
+      [?Birthday-Ref :node/title "Birthday"]
+      [?Tags-Ref :node/title "Tags"]
+      [?person-Ref :node/title "people"]
+      [?ContactFrequency-Ref :node/title "Contact Frequency"]
+      [?LastContact-Ref :node/title "Last Contacted"]
+      [?node :block/refs ?Birthday-Ref]
+      [?node :block/page ?PAGE]
+      [?PEOPLEdec :block/parents ?PAGE]
+      [?PEOPLEdec :block/refs ?Tags-Ref]
+      [?PEOPLEdec :block/refs ?person-Ref]
+      [?CONTACTdec :block/parents ?PAGE]
+      [?CONTACTLastdec :block/parents ?PAGE]
+      [?CONTACTdec :block/refs ?ContactFrequency-Ref]
+      [?CONTACTLastdec :block/refs ?LastContact-Ref]
+      (not
+          [?not_populated-Ref :node/title "not_populated"]
+          [?PEOPLEdec :block/refs ?not_populated-Ref]
+      )
   ]`;
 
   let results = window.roamAlphaAPI.q(query).flat();
+  // Iterate through results 4 at a time
+  for (let i = 0; i < results.length; i += 4) {
+      let node = results[i];
+      let page = results[i + 1];
+      let contact = results[i + 2];
+      let lastContact = results[i + 3];
+      
+      // Merge the node and page objects
+      let mergedObject = {
+      ...node, // Spread the properties of the node object
+      ...page,  // Spread the properties of the page object
+      ...contact,
+      ...lastContact
+      };
 
-  let mappedResults = {};
-  // Iterate through results three at a time
-  for (let i = 0; i < results.length; i += 3) {
-  let node = results[i];
-  let page = results[i + 1];
-  let contact = results[i + 2];
+      // parse birthday date
+      const birthdayDateString = mergedObject["birthday-string"].split("::", 2)[1].replace(/\[|\]/g, '');
+      const conatctDateString = mergedObject["last-contact-string"].split("::", 2)[1].replace(/\[|\]/g, '');
+      
+      const filteredObjects = mergedObject.refs.filter(obj => {
+          // Assuming there's only one key-value pair in each object
+          return Object.values(obj).some(value => value.toLowerCase().includes("list"));
+      });
+        // If no object with "list" is found, set "C List"
+      if (filteredObjects.length === 0) {
+          mergedObject.contact = "C List";
+      } else {
+          mergedObject.contact = filteredObjects[0]['contact-title']
+      }
+      // if there is no last contact date then set it as today to kick things off
+      const last_contact = parseStringToDate(conatctDateString.trim()) || new Date()
 
-  // Merge the node and page objects
-  let mergedObject = {
-  ...node, // Spread the properties of the node object
-  ...page,  // Spread the properties of the page object
-  ...contact
-  };
+      mappedResults[mergedObject['title']] = {
+          "birthday":parseStringToDate(birthdayDateString.trim()),
+          "contact_list":mergedObject.contact,
+          "birthday_UID":mergedObject['uid'],
+          "last_contact":last_contact,
+          }
 
-  // parse birthday date
-  const dateString = mergedObject.string.split("::", 2)[1].replace(/\[|\]/g, '');
-  // console.log(dateString);
-  // mergedObject.birthday = parseStringToDate(dateString.trim())
-  // console.log(birthdays);
-
-  const filteredObjects = mergedObject.refs.filter(obj => {
-  // Assuming there's only one key-value pair in each object
-  return Object.values(obj).some(value => value.toLowerCase().includes("list"));
-  });
-  // If no object with "list" is found, set "C List"
-  if (filteredObjects.length === 0) {
-  mergedObject.contact = "C List";
-  } else {
-  mergedObject.contact = filteredObjects[0]['contact-title']
+      
   }
-
-  mappedResults[mergedObject['title']] = {
-  "birthday":parseStringToDate(dateString.trim()),
-  "contact_list":mergedObject.contact,
-  "birthday_UID":mergedObject['uid'],
-  "last_contact":null
-  }
-
-  // mappedResults.push(mergedObject);
-  }
-
-  return mappedResults;
+  return mappedResults
 }
 // const blockJSON = [
 //   {
@@ -141,15 +162,22 @@ export async function createChildren(parentBlockUid, childrenContents) {
   }
 }
 
+
 function checkBirthdays(lastBirthdayCheck) {
   const people = getAllPeople()
+  // console.log(people);
+  
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Normalize today's date to start of day for comparison
   const birthdaysToday = [];
   const upcomingBirthdays = [];
 
   for (const person in people) {
+    
+    
       if (people.hasOwnProperty(person)) {
+        console.log(people[person]);
+        
           const birthday = new Date(people[person].birthday);
           const currentYear = today.getFullYear();
           birthday.setFullYear(currentYear); // Set birthday year to current year for comparison
