@@ -21,16 +21,17 @@ import ReactDOM from "react-dom";
 import renderOverlay, {
   RoamOverlayProps,
 } from "roamjs-components/util/renderOverlay";
-import checkBirthdays from "../utils";
+import remindersSystem from "../utils";
 
 const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck}) => {
   const {
     aAndBBirthdaysToday,
     otherBirthdaysToday,
-    filteredUpcomingBirthdays
-  } = checkBirthdays(lastBirthdayCheck);
+    filteredUpcomingBirthdays,
+    toBeContacted
+  } = remindersSystem(lastBirthdayCheck);
+  console.log(remindersSystem(lastBirthdayCheck));
   
-  // console.log(checkBirthdays(lastBirthdayCheck))
   return (
     <Drawer
       onClose={onClose}
@@ -97,7 +98,7 @@ const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck}) => {
           Contact Reminders:
         </h5> 
         <p>
-          
+            
         </p>
       </div>
     </Drawer>

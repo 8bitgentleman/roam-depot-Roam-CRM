@@ -162,10 +162,46 @@ export async function createChildren(parentBlockUid, childrenContents) {
   }
 }
 
+function shouldContact(person) {
+  // Define the current date
+  const currentDate = new Date();
 
-function checkBirthdays(lastBirthdayCheck) {
-  const people = getAllPeople()
-  // console.log(people);
+  // Define the intervals in milliseconds
+  const intervals = {
+    "A List": 14 * 24 * 60 * 60 * 1000, // Every two weeks
+    "B List": 2 * 30 * 24 * 60 * 60 * 1000, // Roughly every two months
+    "C List": 6 * 30 * 24 * 60 * 60 * 1000, // Roughly every six months
+    "D List": 365 * 24 * 60 * 60 * 1000, // Once a year
+  };
+
+  // Extract the relevant properties from the person object
+  const { contact_list, last_contact, name } = person;
+
+  // Convert the last_contact string to a Date object
+  const lastContactDate = new Date(last_contact);
+  console.log('lastContactDate',  name, lastContactDate);
+  
+  // Calculate the next contact date based on the last_contact date and the interval for the contact_list
+  const nextContactDate = new Date(lastContactDate.getTime() + intervals[contact_list]);
+
+  // Determine if the current date is past the next contact date
+  return currentDate >= nextContactDate;
+}
+
+function checkContacts(people) {
+  
+  // inefficient since I already loop in checkBirthdays
+  for (const person in people) {
+    if (people.hasOwnProperty(person)) {
+      console.log(shouldContact(people[person]),people[person]);
+      
+    }
+  }
+  return {"toBeContacted": []}
+}
+
+function checkBirthdays(lastBirthdayCheck, people) {
+  
   
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Normalize today's date to start of day for comparison
@@ -173,10 +209,7 @@ function checkBirthdays(lastBirthdayCheck) {
   const upcomingBirthdays = [];
 
   for (const person in people) {
-    
-    
       if (people.hasOwnProperty(person)) {
-        console.log(people[person]);
         
           const birthday = new Date(people[person].birthday);
           const currentYear = today.getFullYear();
@@ -199,6 +232,7 @@ function checkBirthdays(lastBirthdayCheck) {
           }
       }
   }
+
   // Filter upcoming birthdays by contact_list
   const filteredUpcomingBirthdays = upcomingBirthdays.filter(person =>
     person.contact_list === "A List" || person.contact_list === "B List"
@@ -238,7 +272,19 @@ function checkBirthdays(lastBirthdayCheck) {
   };
 }
 
-export default checkBirthdays;
+function remindersSystem(lastBirthdayCheck) {
+  const people = getAllPeople()
+  const birthdays = checkBirthdays(lastBirthdayCheck, people)
+  const toBeContacted = checkContacts(people) // {"toBeContacted": []}
+  
+  const mergedReminders = {
+      ... birthdays,
+      ... toBeContacted
+  }
+  return mergedReminders
+}
+
+export default remindersSystem;
 
  
 
