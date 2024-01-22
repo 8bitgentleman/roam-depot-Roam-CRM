@@ -179,7 +179,6 @@ function shouldContact(person) {
 
   // Convert the last_contact string to a Date object
   const lastContactDate = new Date(last_contact);
-  console.log('lastContactDate',  name, lastContactDate);
   
   // Calculate the next contact date based on the last_contact date and the interval for the contact_list
   const nextContactDate = new Date(lastContactDate.getTime() + intervals[contact_list]);
@@ -189,15 +188,20 @@ function shouldContact(person) {
 }
 
 function checkContacts(people) {
-  
+
   // inefficient since I already loop in checkBirthdays
   for (const person in people) {
     if (people.hasOwnProperty(person)) {
-      console.log(shouldContact(people[person]),people[person]);
+      // console.log(shouldContact(people[person]),people[person]);
       
     }
   }
-  return {"toBeContacted": []}
+  const reminders =  [
+    // { name: 'John', email: 'john@example.com', phone: '123-456-7890' },
+    // { name: 'Jane', email: 'jane@example.com', phone: '987-654-3210' },
+    // // ... more person objects
+  ]
+  return {"toBeContacted": reminders}
 }
 
 function checkBirthdays(lastBirthdayCheck, people) {
@@ -250,7 +254,7 @@ function checkBirthdays(lastBirthdayCheck, people) {
    
   // check if there are lower priority birthdays
   const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date)
-  if (isSecondDateAfter(lastBirthdayCheck, todaysDNPUID)) {
+  if (isSecondDateAfter(lastBirthdayCheck, todaysDNPUID) & otherBirthdaysToday.length>0) {
      // block ref other today birthdays to the DNP
     const blockJSON = [
       {

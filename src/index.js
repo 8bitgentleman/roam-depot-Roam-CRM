@@ -51,12 +51,17 @@ async function onload({extensionAPI}) {
   extensionAPI.settings.set(
     'last-birthday-check-date',
      window.roamAlphaAPI.util.dateToPageUid(new Date))
+  if (!testing) {
+    console.log(`load ${plugin_title} plugin`);
+  }
   
-  console.log(`load ${plugin_title} plugin`);
 }
 
 function onunload() {
-  console.log(`unload ${plugin_title} plugin`);
+  if (!testing) {
+    console.log(`unload ${plugin_title} plugin`);
+  }
+  
 }
 
 export default {
