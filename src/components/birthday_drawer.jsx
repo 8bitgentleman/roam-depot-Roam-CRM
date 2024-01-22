@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import renderOverlay from "roamjs-components/util/renderOverlay";
 import remindersSystem from "../utils";
+import updateBlock from "roamjs-components/writes/updateBlock"
 
 const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck }) => {
   // State to store the reminders data
@@ -25,6 +26,13 @@ const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck }) => {
   
   // Handler for checkbox change
   const handleCheckboxChange = (contactName) => {
+    let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date())
+    // update the attribute when the checkbox is clicked
+    updateBlock({
+      uid:contactName.last_contact_uid,
+      text: `Last Contacted:: [[${dt}]]`
+    })
+    
     setCheckedContacts((prev) => {
       if (prev.includes(contactName)) {
         return prev.filter((name) => name !== contactName);
@@ -116,19 +124,31 @@ const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck }) => {
 
         {reminders.toBeContacted.length > 0 && (
           <>
-            <h5 style={{ fontWeight: "800" }}>Contact Reminders:</h5>
+            <h5 style={{ fontWeight: "800" }}>Time to reach out to:</h5>
             <ul>
               {reminders.toBeContacted.map((person, index) => (
                 !checkedContacts.includes(person) && (
-                  <li key={index}>
+                  <li key={index}  >
                     <label>
                       <input
                         type="checkbox"
                         checked={checkedContacts.includes(person)}
                         onChange={() => handleCheckboxChange(person)}
+                        style={{ marginRight: "10px" }}
                       />
-                      {person.name}
+                      
                     </label>
+                    <a
+                      style={{ color: "lightgrey" }}
+                      onClick={() =>
+                        window.roamAlphaAPI.ui.mainWindow.openPage({
+                          page: { title: person.name },
+                        })
+                      }
+                    >
+                      {person.name}
+                    </a>
+                    
                   </li>
                 )
               ))}

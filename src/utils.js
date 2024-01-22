@@ -129,6 +129,7 @@ function getAllPeople() {
           "contact_list":mergedObject.contact,
           "birthday_UID":mergedObject['uid'],
           "last_contact":last_contact,
+          "last_contact_uid":mergedObject["last-contact-uid"]
           }
 
       
@@ -188,19 +189,22 @@ function shouldContact(person) {
 }
 
 function checkContacts(people) {
-
+  
+  const reminders =  [
+    
+  ]
   // inefficient since I already loop in checkBirthdays
   for (const person in people) {
     if (people.hasOwnProperty(person)) {
-      // console.log(shouldContact(people[person]),people[person]);
+      if (shouldContact(people[person])) {
+        // this is duplicated should really be moved out into the master loop on refactor
+        people[person].name = person
+        reminders.push(people[person])
+      }
       
     }
   }
-  const reminders =  [
-    // { name: 'John', email: 'john@example.com', phone: '123-456-7890' },
-    // { name: 'Jane', email: 'jane@example.com', phone: '987-654-3210' },
-    // // ... more person objects
-  ]
+  
   return {"toBeContacted": reminders}
 }
 
@@ -278,13 +282,17 @@ function checkBirthdays(lastBirthdayCheck, people) {
 
 function remindersSystem(lastBirthdayCheck) {
   const people = getAllPeople()
-  const birthdays = checkBirthdays(lastBirthdayCheck, people)
-  const toBeContacted = checkContacts(people) // {"toBeContacted": []}
+  console.log(people);
   
+  const toBeContacted = checkContacts(people) // {"toBeContacted": []}
+  const birthdays = checkBirthdays(lastBirthdayCheck, people)
+    
   const mergedReminders = {
       ... birthdays,
       ... toBeContacted
   }
+  console.log("merged",mergedReminders);
+  
   return mergedReminders
 }
 

@@ -1,5 +1,7 @@
 
 import displayBirthdays from "./components/birthday_drawer"
+import createBlock from "roamjs-components/writes/createBlock"
+
 const testing = true
 
 const plugin_title = "Roam CRM"
