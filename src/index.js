@@ -9,43 +9,43 @@ const ts2 = 1707159407000
 const panelConfig = {
   tabTitle: plugin_title,
   settings: [
-    {
-      id: "button-setting",
-      name: "Button test",
-      description: "tests the button",
-      action: {
-        type: "button",
-        onClick: (evt) => { console.log("Button clicked!"); },
-        content: "Button"
-      }
-    },
-    {
-      id: "switch-setting",
-      name: "Switch Test",
-      description: "Test switch component",
-      action: {
-        type: "switch",
-        onChange: (evt) => { console.log("Switch!", evt); }
-      }
-    },
-    {
-      id: "input-setting",
-      name: "Input test",
-      action: {
-        type: "input",
-        placeholder: "placeholder",
-        onChange: (evt) => { console.log("Input Changed!", evt); }
-      }
-    },
-    {
-      id: "select-setting",
-      name: "Select test",
-      action: {
-        type: "select",
-        items: ["one", "two", "three"],
-        onChange: (evt) => { console.log("Select Changed!", evt); }
-      }
-    }
+    // {
+    //   id: "button-setting",
+    //   name: "Button test",
+    //   description: "tests the button",
+    //   action: {
+    //     type: "button",
+    //     onClick: (evt) => { console.log("Button clicked!"); },
+    //     content: "Button"
+    //   }
+    // },
+    // {
+    //   id: "switch-setting",
+    //   name: "Switch Test",
+    //   description: "Test switch component",
+    //   action: {
+    //     type: "switch",
+    //     onChange: (evt) => { console.log("Switch!", evt); }
+    //   }
+    // },
+    // {
+    //   id: "input-setting",
+    //   name: "Input test",
+    //   action: {
+    //     type: "input",
+    //     placeholder: "placeholder",
+    //     onChange: (evt) => { console.log("Input Changed!", evt); }
+    //   }
+    // },
+    // {
+    //   id: "select-setting",
+    //   name: "Select test",
+    //   action: {
+    //     type: "select",
+    //     items: ["one", "two", "three"],
+    //     onChange: (evt) => { console.log("Select Changed!", evt); }
+    //   }
+    // }
   ]
 };
 

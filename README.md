@@ -1,5 +1,4 @@
-Template for Roam Depot Plugins
-Roam Research extension template
+Roam CRM
 
 ## Setup 
 
