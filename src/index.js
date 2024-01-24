@@ -58,6 +58,84 @@ function getLastBirthdayCheckDate(extensionAPI) {
   return extensionAPI.settings.get('last-birthday-check-date') || '01-19-2024'
 }
 
+async function getAllPeople() {
+    
+  let query = `[:find 
+    (pull ?PAGE [:attrs/lookup :block/string :block/uid :node/title {:attrs/lookup [:block/string :block/uid]} ])
+   :where
+    [?Template-Ref :node/title "roam/templates"]
+    [?Tags-Ref :node/title "Tags"]
+    [?person-Ref :node/title "people"]
+    [?node :block/page ?PAGE]
+    [?PEOPLEdec :block/parents ?PAGE]
+    [?PEOPLEdec :block/refs ?Tags-Ref]
+    [?PEOPLEdec :block/refs ?person-Ref]
+    (not
+      [?PAGE :node/title "roam/templates"]      
+    )
+    (not
+      [?PAGE :node/title "SmartBlock"]      
+    )
+  ]`;
+
+  let results = await window.roamAlphaAPI.q(query).flat();
+
+  function extractElementsWithKeywords(data, keywords) {
+  return data.map(item => {
+    // Initialize an object to hold the categorized items with empty arrays
+    const categorizedItems = keywords.reduce((acc, keyword) => {
+      const propName = keyword.replace(/::/g, '');
+      acc[propName] = []; // Initialize each property with an empty array
+      return acc;
+    }, {});
+
+    // Check if lookup exists and is an array
+    if (Array.isArray(item.lookup)) {
+      // Iterate over each keyword
+      keywords.forEach(keyword => {
+        // Filter the lookup array for items containing the current keyword
+        const filteredLookup = item.lookup.filter(lookupItem => {
+          return lookupItem.string && lookupItem.string.includes(keyword);
+        });
+
+        // Assign the filtered array to the corresponding property
+        const propName = keyword.replace(/::/g, '');
+        categorizedItems[propName] = filteredLookup;
+      });
+    }
+
+    // Return the original item with the categorized items added
+    return {
+      ...item,
+      ...categorizedItems,
+    };
+  });
+  }
+
+  // Define the attributes to extract for
+  const keywords = ["Birthday::", "Contact Frequency::", "Last Contacted::"];
+
+
+ return extractElementsWithKeywords(results, keywords);
+}
+
+async function setDONEFilter(page) {
+  var fRemoves = await window.roamAlphaAPI.ui.filters.getPageFilters({"page": {"title": page}})["removes"]
+  // check if DONE is already filtered. if not add it
+  const containsDONE = fRemoves.includes("DONE");
+  console.log(fRemoves, containsDONE);
+  
+  if (!containsDONE) {
+    fRemoves.push("DONE")
+    await window.roamAlphaAPI.ui.filters.setPageFilters(
+      {
+        "page": {"title": page},
+        "filters": {"removes": fRemoves}
+      })
+  } 
+  
+}
+
 async function onload({ extensionAPI }) {
   extensionAPI.settings.panel.create(panelConfig);
   const ts1 = new Date().getTime();
@@ -69,7 +147,19 @@ async function onload({ extensionAPI }) {
     } else {
       displayBirthdays(getLastBirthdayCheckDate(extensionAPI))
     }
+    // update last birthday check since it's already happened
+    extensionAPI.settings.set(
+      'last-birthday-check-date',
+      window.roamAlphaAPI.util.dateToPageUid(new Date))
 
+    const people = await getAllPeople()
+    // always set people pages to hide DONE
+    // TODO see if vlad wants more granulity
+    people.forEach(async page =>  {
+      await setDONEFilter(page.title)
+    });
+
+    // Command Palette Sidebar - Close first block
     extensionAPI.ui.commandPalette.addCommand(
       {
         label: 'Sidebar - Close first block',
@@ -97,6 +187,7 @@ async function onload({ extensionAPI }) {
         }
       }
     )
+    // Command Palette Sidebar - Cursor in first block
     extensionAPI.ui.commandPalette.addCommand(
       {
         label: 'Sidebar - Cursor in first block',
@@ -136,10 +227,8 @@ async function onload({ extensionAPI }) {
         }
       }
     )
-    // update last birthday check since it's already happened
-    extensionAPI.settings.set(
-      'last-birthday-check-date',
-      window.roamAlphaAPI.util.dateToPageUid(new Date))
+
+    
     if (!testing) {
       console.log(`load ${plugin_title} plugin`);
     }
