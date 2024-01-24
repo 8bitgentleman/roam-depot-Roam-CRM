@@ -1,6 +1,7 @@
 
 import displayBirthdays from "./components/birthday_drawer"
 import createBlock from "roamjs-components/writes/createBlock"
+import { showToast } from './components/toast';
 
 const testing = true
 
@@ -87,10 +88,10 @@ async function onload({ extensionAPI }) {
           }
 
           let sidebarWindows = window.roamAlphaAPI.ui.rightSidebar.getWindows();
-
-          if (sidebarWindows.length > 0) {
-            sidebarWindows.sort((a, b) => a.order - b.order);
-            await removeWindow(sidebarWindows[0])
+          const filteredBlocks = sidebarWindows.filter(obj => !obj["pinned?"]);
+          if (filteredBlocks.length > 0) {
+            filteredBlocks.sort((a, b) => a.order - b.order);
+            await removeWindow(filteredBlocks[0])
           }
 
         }
@@ -142,6 +143,8 @@ async function onload({ extensionAPI }) {
     if (!testing) {
       console.log(`load ${plugin_title} plugin`);
     }
+  } else {
+    showToast(`Failed to run an old version of ${plugin_title}.`, "DANGER");
   }
 
 }
