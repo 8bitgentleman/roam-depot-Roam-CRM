@@ -5,7 +5,7 @@ import createBlock from "roamjs-components/writes/createBlock"
 const testing = true
 
 const plugin_title = "Roam CRM"
-
+const ts2=1707159407000
 const panelConfig = {
   tabTitle: plugin_title,
   settings: [
@@ -43,18 +43,23 @@ function getLastBirthdayCheckDate(extensionAPI) {
 
 async function onload({extensionAPI}) {
   extensionAPI.settings.panel.create(panelConfig);
-  if (testing) {
-    displayBirthdays('01-19-2024')
-  } else {
-    displayBirthdays(getLastBirthdayCheckDate(extensionAPI))
-  }
+  const ts1 = new Date().getTime();
   
-  // update last birthday check since it's already happened
-  extensionAPI.settings.set(
-    'last-birthday-check-date',
-     window.roamAlphaAPI.util.dateToPageUid(new Date))
-  if (!testing) {
-    console.log(`load ${plugin_title} plugin`);
+  if (ts1 < ts2) {
+
+    if (testing) {
+      displayBirthdays('01-19-2024')
+    } else {
+      displayBirthdays(getLastBirthdayCheckDate(extensionAPI))
+    }
+    
+    // update last birthday check since it's already happened
+    extensionAPI.settings.set(
+      'last-birthday-check-date',
+      window.roamAlphaAPI.util.dateToPageUid(new Date))
+    if (!testing) {
+      console.log(`load ${plugin_title} plugin`);
+    }
   }
   
 }

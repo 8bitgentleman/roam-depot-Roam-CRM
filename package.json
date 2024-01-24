@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "webpack",
-    "watch": "webpack --watch"
+    "watch": "webpack --watch",
+    "copy-js-files": "cp extension.js ~/Documents/Github-Repos/roam-depot-CRM-testing"
   },
   "license": "MIT",
   "author": "Matt Vogel",
