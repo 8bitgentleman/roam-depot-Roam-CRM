@@ -119,7 +119,7 @@ export async function getAllPeople() {
   }
 
   // Define the attributes to extract for
-  const keywords = ["Birthday::", "Contact Frequency::", "Last Contacted::", "Email::"];
+  const keywords = ["Birthday::", "Contact Frequency::", "Last Contacted::", "Email::", "Relationship Metadata::"];
 
 
   return extractElementsWithKeywords(results, keywords);
@@ -247,6 +247,7 @@ function shouldContact(person) {
   // Determine if the current date is past the next contact date
   return currentDate >= nextContactDate;
 }
+
 function checkBirthdays(person) {
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Normalize today's date to start of day for comparison
@@ -296,14 +297,32 @@ function fixPersonJSON(person) {
     ? person["Birthday"][0].string.split("::", 2)[1].replace(/\[|\]/g, '') || ""
     : "";
   const birthday = parseStringToDate(birthdayDateString.trim()) || null
-  const conatctDateString = person["Last Contacted"].length > 0
-    ? person["Last Contacted"][0].string.split("::", 2)[1].replace(/\[|\]/g, '') || null
-    : "";
-  const last_contact = parseStringToDate(conatctDateString.trim()) || new Date()
-  const conatctUIDString = person["Last Contacted"].length > 0
-  ? person["Last Contacted"][0].uid || null
-  : null;
+  let contactDateString;
+  let last_contact
+  let contactUIDString
+  console.log(person);
+  
+  // Check if person["Last Contacted"] is not empty
+  if (person["Last Contacted"].length > 0) {
+     contactDateString = person["Last Contacted"][0].string.split("::", 2)[1].replace(/\[|\]/g, '') || null;
+     last_contact = parseStringToDate(contactDateString.trim()) || new Date();
+     contactUIDString = person["Last Contacted"][0].uid || null;
 
+  }  else {
+    // there is no "last contacted" attribute so let's create one
+    contactUIDString = window.roamAlphaAPI.util.generateUID()
+    contactDateString = roamAlphaAPI.util.dateToPageTitle(new Date())
+    last_contact = parseStringToDate(contactDateString.trim()) || new Date();
+    createBlock({
+      node:{
+        text: `Last Contacted:: [[${contactDateString}]]`,
+        uid:contactUIDString
+      },
+      
+      parentUid:person["Relationship Metadata"][0].uid
+    })
+  }
+  
   let contact 
   
   // set the contact list
@@ -325,7 +344,7 @@ function fixPersonJSON(person) {
   person.contact_list = contact
   person.birthday_UID = person["Birthday"][0].uid || null
   person.last_contact = last_contact
-  person.last_contact_uid = conatctUIDString
+  person.last_contact_uid = contactUIDString
   person.name = person.title
 
   return person
