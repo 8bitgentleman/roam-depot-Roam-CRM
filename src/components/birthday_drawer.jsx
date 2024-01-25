@@ -5,7 +5,7 @@ import renderOverlay from "roamjs-components/util/renderOverlay";
 import remindersSystem from "../utils";
 import updateBlock from "roamjs-components/writes/updateBlock"
 
-const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck }) => {
+const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
   // State to store the reminders data
   const [reminders, setReminders] = useState({
     aAndBBirthdaysToday: [],
@@ -19,7 +19,7 @@ const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck }) => {
 
   // Fetch the reminders data only once when the component mounts
   useEffect(() => {
-    const data = remindersSystem(lastBirthdayCheck);
+    const data = remindersSystem(people,lastBirthdayCheck);
     setReminders(data);
     
   }, [lastBirthdayCheck]);
@@ -161,12 +161,12 @@ const BirthdayDrawer = ({ onClose, isOpen, lastBirthdayCheck }) => {
   );
 };
 
-const displayBirthdays = async (lastBirthdayCheck) => {
+const displayBirthdays = async (people, lastBirthdayCheck) => {
 // only show the modal if there isn't already one shown  
   if (document.getElementsByClassName("crm-stats-drawer").length===0)
     renderOverlay({
       Overlay: BirthdayDrawer,
-      props: { lastBirthdayCheck },
+      props: { people, lastBirthdayCheck },
     });
 };
 

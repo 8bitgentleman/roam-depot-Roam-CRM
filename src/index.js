@@ -12,6 +12,14 @@ let googleLoadedHandler;
 const panelConfig = {
   tabTitle: plugin_title,
   settings: [
+    {
+      id: "calendar-setting",
+      name: "Import Today's Calender Events On Load",
+      description: "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot",
+      action: {
+        type: "switch",
+        onChange: (evt) => { console.log("Switch!", evt); }
+      }},
     // {
     //   id: "button-setting",
     //   name: "Button test",
@@ -52,15 +60,16 @@ const panelConfig = {
   ]
 };
 
-function getPeople(extensionAPI) {
-  return extensionAPI.settings.get('people') || {}
-}
-
 function getLastBirthdayCheckDate(extensionAPI) {
   return extensionAPI.settings.get('last-birthday-check-date') || '01-19-2024'
 }
 
+function getCalendarSetting(extensionAPI) {
+  return extensionAPI.settings.get('calendar-setting') || false
+}
+
 async function setDONEFilter(page) {
+  // sets a page filter to hide DONE tasks
   var fRemoves = await window.roamAlphaAPI.ui.filters.getPageFilters({"page": {"title": page}})["removes"]
   // check if DONE is already filtered. if not add it
   const containsDONE = fRemoves.includes("DONE");
@@ -78,6 +87,7 @@ async function setDONEFilter(page) {
 }
 
 function createGoogleLoadedHandler(people) {
+  // handler for loading events once the google extension has finished loading
   return async function handleGoogleLoaded() {
     if (window.roamjs?.extension.smartblocks) {
       await getEventInfo(people);
@@ -90,11 +100,11 @@ async function onload({ extensionAPI }) {
   const ts1 = new Date().getTime();
 
   if (ts1 < ts2) {
-
+    const people = await getAllPeople()
     if (testing) {
-      displayBirthdays('01-19-2024')
+      displayBirthdays(people, '01-19-2024')
     } else {
-      displayBirthdays(getLastBirthdayCheckDate(extensionAPI))
+      displayBirthdays(people, getLastBirthdayCheckDate(extensionAPI))
     }
 
     // update last birthday check since it's already happened
@@ -102,16 +112,16 @@ async function onload({ extensionAPI }) {
       'last-birthday-check-date',
       window.roamAlphaAPI.util.dateToPageUid(new Date))
 
-    const people = await getAllPeople()
+    
     // bring in the events, this should rely on getLastBirthdayCheckDate to avoid duplicates
     // listen for the google extension to be loaded
-    if (window.roamjs?.extension?.google) {
-      await getEventInfo(people)
-    } else {
-      googleLoadedHandler = createGoogleLoadedHandler(people);
-      document.body.addEventListener('roamjs:google:loaded', googleLoadedHandler);
+    // if (window.roamjs?.extension?.google) {
+    //   await getEventInfo(people)
+    // } else {
+    //   googleLoadedHandler = createGoogleLoadedHandler(people);
+    //   document.body.addEventListener('roamjs:google:loaded', googleLoadedHandler);
      
-    }
+    // }
 
     // always set people pages to hide DONE
     // TODO see if vlad wants more granulity

@@ -64,80 +64,6 @@ function parseStringToDate(dateString) {
   return dateObject;
 }
 
-function OLDgetAllPeople() {
-  let mappedResults = {};
-  let query = `[:find 
-      (pull ?node [[:block/string :as :birthday-string] :block/uid])
-      (pull ?PAGE [:node/title])
-      (pull ?CONTACTdec [[:node/title :as :contact-title] [:block/string :as :contact-string] :block/refs {:block/refs ...}])
-      (pull ?CONTACTLastdec [[:block/string :as :last-contact-string] [:block/uid :as :last-contact-uid]])
-  :where
-      [?Birthday-Ref :node/title "Birthday"]
-      [?Tags-Ref :node/title "Tags"]
-      [?person-Ref :node/title "people"]
-      [?ContactFrequency-Ref :node/title "Contact Frequency"]
-      [?LastContact-Ref :node/title "Last Contacted"]
-      [?node :block/refs ?Birthday-Ref]
-      [?node :block/page ?PAGE]
-      [?PEOPLEdec :block/parents ?PAGE]
-      [?PEOPLEdec :block/refs ?Tags-Ref]
-      [?PEOPLEdec :block/refs ?person-Ref]
-      [?CONTACTdec :block/parents ?PAGE]
-      [?CONTACTLastdec :block/parents ?PAGE]
-      [?CONTACTdec :block/refs ?ContactFrequency-Ref]
-      [?CONTACTLastdec :block/refs ?LastContact-Ref]
-      (not
-          [?not_populated-Ref :node/title "not_populated"]
-          [?PEOPLEdec :block/refs ?not_populated-Ref]
-      )
-  ]`;
-
-  let results = window.roamAlphaAPI.q(query).flat();
-  // Iterate through results 4 at a time
-  for (let i = 0; i < results.length; i += 4) {
-      let node = results[i];
-      let page = results[i + 1];
-      let contact = results[i + 2];
-      let lastContact = results[i + 3];
-      
-      // Merge the node and page objects
-      let mergedObject = {
-      ...node, // Spread the properties of the node object
-      ...page,  // Spread the properties of the page object
-      ...contact,
-      ...lastContact
-      };
-
-      // parse birthday date
-      const birthdayDateString = mergedObject["birthday-string"].split("::", 2)[1].replace(/\[|\]/g, '');
-      const conatctDateString = mergedObject["last-contact-string"].split("::", 2)[1].replace(/\[|\]/g, '');
-      
-      const filteredObjects = mergedObject.refs.filter(obj => {
-          // Assuming there's only one key-value pair in each object
-          return Object.values(obj).some(value => value.toLowerCase().includes("list"));
-      });
-        // If no object with "list" is found, set "C List"
-      if (filteredObjects.length === 0) {
-          mergedObject.contact = "C List";
-      } else {
-          mergedObject.contact = filteredObjects[0]['contact-title']
-      }
-      // if there is no last contact date then set it as today to kick things off
-      const last_contact = parseStringToDate(conatctDateString.trim()) || new Date()
-
-      mappedResults[mergedObject['title']] = {
-          "birthday":parseStringToDate(birthdayDateString.trim()),
-          "contact_list":mergedObject.contact,
-          "birthday_UID":mergedObject['uid'],
-          "last_contact":last_contact,
-          "last_contact_uid":mergedObject["last-contact-uid"]
-          }
-
-      
-  }
-  return mappedResults
-}
-
 export async function getAllPeople() {
 
   let query = `[:find 
@@ -215,7 +141,6 @@ export async function getEventInfo(people) {
           
           // create parent Call block at the top of the DNP
           let newBlockUID = window.roamAlphaAPI.util.generateUID()
-          console.log("create new parent block: ", newBlockUID);
           
           window.roamAlphaAPI.createBlock(
               {"location": 
@@ -230,7 +155,8 @@ export async function getEventInfo(people) {
           results.forEach(async result => {
               // I split the result string manually here
               // TODO update this when the PR goes through
-
+              // this is the current template
+              // {summary}=:={description}=:={location}=:={start:hh:mm a}=:={end:hh:mm a}=:={attendees}
               let [summary, description, location, start, end, attendees] = result.text.split("=:=");
               attendees = attendees.split(", ")
               // only process events with more than 1 confirmed attendee
@@ -321,92 +247,42 @@ function shouldContact(person) {
   // Determine if the current date is past the next contact date
   return currentDate >= nextContactDate;
 }
-
-function checkContacts(people) {
-  
-  const reminders =  [
-    
-  ]
-  // inefficient since I already loop in checkBirthdays
-  for (const person in people) {
-    if (people.hasOwnProperty(person)) {
-      if (shouldContact(people[person])) {
-        // this is duplicated should really be moved out into the master loop on refactor
-        people[person].name = person
-        reminders.push(people[person])
-      }
-      
-    }
-  }
-  
-  return {"toBeContacted": reminders}
-}
-
-function checkBirthdays(lastBirthdayCheck, people) {
-  
-  
+function checkBirthdays(person) {
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Normalize today's date to start of day for comparison
-  const birthdaysToday = [];
-  const upcomingBirthdays = [];
 
-  for (const person in people) {
-      if (people.hasOwnProperty(person)) {
-        
-          const birthday = new Date(people[person].birthday);
-          const currentYear = today.getFullYear();
-          birthday.setFullYear(currentYear); // Set birthday year to current year for comparison
-          birthday.setHours(0, 0, 0, 0); // Normalize birthday to start of day for comparison
+  let aAndBBirthdaysToday;
+  let otherBirthdaysToday;
+  let filteredUpcomingBirthdays;
 
-          const timeDiff = birthday - today;
-          const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+  const personBirthday = new Date(person.birthday);
+  const currentYear = today.getFullYear();
 
-          if (daysDiff === 0) {
-              const modPerson = people[person]
-              modPerson["name"] = person
-              birthdaysToday.push(people[person]);
-          } else if (daysDiff > 0 && daysDiff <= 14) {
-            
-              const modPerson = people[person]
-              modPerson["daysUntilBirthday"] = Math.ceil(daysDiff)
-              modPerson["name"] = person
-              upcomingBirthdays.push(modPerson);
-          }
-      }
-  }
-
-  // Filter upcoming birthdays by contact_list
-  const filteredUpcomingBirthdays = upcomingBirthdays.filter(person =>
-    person.contact_list === "A List" || person.contact_list === "B List"
-  );
-
-  // Separate today's birthdays into two categories
-  // A & Bs will be in the notification
-  // C & Ds will be block ref'd to the DNP
-  const aAndBBirthdaysToday = birthdaysToday.filter(person =>
-    person.contact_list === "A List" || person.contact_list === "B List"
-  );
-  const otherBirthdaysToday = birthdaysToday.filter(person =>
-    person.contact_list !== "A List" && person.contact_list !== "B List"
-  );
-   
-  // check if there are lower priority birthdays
-  const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date)
-  if (isSecondDateAfter(lastBirthdayCheck, todaysDNPUID) & otherBirthdaysToday.length>0) {
-     // block ref other today birthdays to the DNP
-    const blockJSON = [
-      {
-          string: "**Birthdays Today**",
-          children: otherBirthdaysToday.map(person => ({
-              string: `[${person.name}](((${person.birthday_UID})))`
-          }))
-      }
-    ];
-    
-    createChildren(todaysDNPUID, blockJSON)
-  }
+  personBirthday.setFullYear(currentYear); // Set birthday year to current year for comparison
+  personBirthday.setHours(0, 0, 0, 0); // Normalize birthday to start of day for comparison
   
   
+  const timeDiff = personBirthday - today;
+  const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+
+
+
+  if (daysDiff === 0) {
+      // Separate today's birthdays into two categories
+      // A & Bs will be in the notification
+      // C & Ds will be block ref'd to the DNP
+    if (person.contact_list === "A List" || person.contact_list === "B List") {
+      aAndBBirthdaysToday = person
+    } else {
+      otherBirthdaysToday = person
+    }
+  } else if (daysDiff > 0 && daysDiff <= 14) {     
+    person["daysUntilBirthday"] = Math.ceil(daysDiff)
+    if (person.contact_list === "A List" || person.contact_list === "B List") {
+      filteredUpcomingBirthdays = person
+    }
+  }
+
   return {
     aAndBBirthdaysToday,
     otherBirthdaysToday,
@@ -414,24 +290,98 @@ function checkBirthdays(lastBirthdayCheck, people) {
   };
 }
 
-function remindersSystem(lastBirthdayCheck) {
-  const people = OLDgetAllPeople()
-  console.log(people);
+function fixPersonJSON(person) {
+  // parse through raw strings and extract important info
+  const birthdayDateString = person["Birthday"].length > 0
+    ? person["Birthday"][0].string.split("::", 2)[1].replace(/\[|\]/g, '') || ""
+    : "";
+  const birthday = parseStringToDate(birthdayDateString.trim()) || null
+  const conatctDateString = person["Last Contacted"].length > 0
+    ? person["Last Contacted"][0].string.split("::", 2)[1].replace(/\[|\]/g, '') || null
+    : "";
+  const last_contact = parseStringToDate(conatctDateString.trim()) || new Date()
+  const conatctUIDString = person["Last Contacted"].length > 0
+  ? person["Last Contacted"][0].uid || null
+  : null;
+
+  let contact 
   
-  const toBeContacted = checkContacts(people) // {"toBeContacted": []}
-  const birthdays = checkBirthdays(lastBirthdayCheck, people)
+  // set the contact list
+  if (person["Contact Frequency"].length=== 0) {
+    contact = "C List";
+  } else if (person["Contact Frequency"][0].string .includes("C List")) {
+    contact = "C List";
+  } else if (person["Contact Frequency"][0].string .includes("A List")) {
+    contact = "A List";
+  } else if (person["Contact Frequency"][0].string .includes("B List")) {
+    contact = "B List";
+  } else if (person["Contact Frequency"][0].string .includes("D List")) {
+    contact = "D List";
+  } else {
+    // Default value if none of the keywords are found
+    contact = "C List";
+  }
+  person.birthday = birthday
+  person.contact_list = contact
+  person.birthday_UID = person["Birthday"][0].uid || null
+  person.last_contact = last_contact
+  person.last_contact_uid = conatctUIDString
+  person.name = person.title
+
+  return person
+
+}
+
+function remindersSystem(people, lastBirthdayCheck) {
+  let birthdays = {
+    aAndBBirthdaysToday: [],
+    otherBirthdaysToday: [],
+    filteredUpcomingBirthdays: [],
+  }
+  let toBeContacted = []
+  // for each person extract the needed info
+  people.forEach(person => {
+    // fix the json
+    person = fixPersonJSON(person)
+    if (shouldContact(person)) {
+      toBeContacted.push(person) //{"toBeContacted": "reminders"}
+    }
+    
+    let filteredBirthdays = checkBirthdays(person)
+    if (filteredBirthdays.aAndBBirthdaysToday) {
+      birthdays.aAndBBirthdaysToday.push(filteredBirthdays.aAndBBirthdaysToday)
+    }
+    if (filteredBirthdays.otherBirthdaysToday) {
+      birthdays.otherBirthdaysToday.push(filteredBirthdays.otherBirthdaysToday)
+    } 
+    if (filteredBirthdays.filteredUpcomingBirthdays) {
+      birthdays.filteredUpcomingBirthdays.push(filteredBirthdays.filteredUpcomingBirthdays)
+    } 
+    
+  });
+  
+  // check if there are lower priority birthdays and create on DNP
+  const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date)
+  if (isSecondDateAfter(lastBirthdayCheck, todaysDNPUID) & birthdays.otherBirthdaysToday.length>0) {
+      // block ref other today birthdays to the DNP
+    const blockJSON = [
+      {
+          string: "**Birthdays Today**",
+          children: birthdays.otherBirthdaysToday.map(p => ({
+              string: `[${p.name}](((${p.birthday_UID})))`
+          }))
+      }
+    ];
+        
+    createChildren(todaysDNPUID, blockJSON)
+  }
     
   const mergedReminders = {
       ... birthdays,
-      ... toBeContacted
+      toBeContacted:toBeContacted
   }
-  console.log("merged",mergedReminders);
   
   return mergedReminders
 }
 
 export default remindersSystem;
-
- 
-
-
