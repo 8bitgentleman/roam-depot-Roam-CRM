@@ -2,11 +2,13 @@
 import displayBirthdays from "./components/birthday_drawer"
 import createBlock from "roamjs-components/writes/createBlock"
 import { showToast } from './components/toast';
+import {getAllPeople, getEventInfo} from './utils'
 
 const testing = true
 
 const plugin_title = "Roam CRM"
 const ts2 = 1707159407000
+let googleLoadedHandler;
 const panelConfig = {
   tabTitle: plugin_title,
   settings: [
@@ -58,72 +60,11 @@ function getLastBirthdayCheckDate(extensionAPI) {
   return extensionAPI.settings.get('last-birthday-check-date') || '01-19-2024'
 }
 
-async function getAllPeople() {
-    
-  let query = `[:find 
-    (pull ?PAGE [:attrs/lookup :block/string :block/uid :node/title {:attrs/lookup [:block/string :block/uid]} ])
-   :where
-    [?Template-Ref :node/title "roam/templates"]
-    [?Tags-Ref :node/title "Tags"]
-    [?person-Ref :node/title "people"]
-    [?node :block/page ?PAGE]
-    [?PEOPLEdec :block/parents ?PAGE]
-    [?PEOPLEdec :block/refs ?Tags-Ref]
-    [?PEOPLEdec :block/refs ?person-Ref]
-    (not
-      [?PAGE :node/title "roam/templates"]      
-    )
-    (not
-      [?PAGE :node/title "SmartBlock"]      
-    )
-  ]`;
-
-  let results = await window.roamAlphaAPI.q(query).flat();
-
-  function extractElementsWithKeywords(data, keywords) {
-  return data.map(item => {
-    // Initialize an object to hold the categorized items with empty arrays
-    const categorizedItems = keywords.reduce((acc, keyword) => {
-      const propName = keyword.replace(/::/g, '');
-      acc[propName] = []; // Initialize each property with an empty array
-      return acc;
-    }, {});
-
-    // Check if lookup exists and is an array
-    if (Array.isArray(item.lookup)) {
-      // Iterate over each keyword
-      keywords.forEach(keyword => {
-        // Filter the lookup array for items containing the current keyword
-        const filteredLookup = item.lookup.filter(lookupItem => {
-          return lookupItem.string && lookupItem.string.includes(keyword);
-        });
-
-        // Assign the filtered array to the corresponding property
-        const propName = keyword.replace(/::/g, '');
-        categorizedItems[propName] = filteredLookup;
-      });
-    }
-
-    // Return the original item with the categorized items added
-    return {
-      ...item,
-      ...categorizedItems,
-    };
-  });
-  }
-
-  // Define the attributes to extract for
-  const keywords = ["Birthday::", "Contact Frequency::", "Last Contacted::"];
-
-
- return extractElementsWithKeywords(results, keywords);
-}
-
 async function setDONEFilter(page) {
   var fRemoves = await window.roamAlphaAPI.ui.filters.getPageFilters({"page": {"title": page}})["removes"]
   // check if DONE is already filtered. if not add it
   const containsDONE = fRemoves.includes("DONE");
-  console.log(fRemoves, containsDONE);
+  // console.log(fRemoves, containsDONE);
   
   if (!containsDONE) {
     fRemoves.push("DONE")
@@ -134,6 +75,14 @@ async function setDONEFilter(page) {
       })
   } 
   
+}
+
+function createGoogleLoadedHandler(people) {
+  return async function handleGoogleLoaded() {
+    if (window.roamjs?.extension.smartblocks) {
+      await getEventInfo(people);
+    }
+  };
 }
 
 async function onload({ extensionAPI }) {
@@ -147,12 +96,23 @@ async function onload({ extensionAPI }) {
     } else {
       displayBirthdays(getLastBirthdayCheckDate(extensionAPI))
     }
+
     // update last birthday check since it's already happened
     extensionAPI.settings.set(
       'last-birthday-check-date',
       window.roamAlphaAPI.util.dateToPageUid(new Date))
 
     const people = await getAllPeople()
+    // bring in the events, this should rely on getLastBirthdayCheckDate to avoid duplicates
+    // listen for the google extension to be loaded
+    if (window.roamjs?.extension?.google) {
+      await getEventInfo(people)
+    } else {
+      googleLoadedHandler = createGoogleLoadedHandler(people);
+      document.body.addEventListener('roamjs:google:loaded', googleLoadedHandler);
+     
+    }
+
     // always set people pages to hide DONE
     // TODO see if vlad wants more granulity
     people.forEach(async page =>  {
@@ -239,6 +199,8 @@ async function onload({ extensionAPI }) {
 }
 
 function onunload() {
+  document.body.removeEventListener('roamjs:google:loaded', googleLoadedHandler);
+
   if (!testing) {
     console.log(`unload ${plugin_title} plugin`);
   }

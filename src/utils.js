@@ -1,3 +1,4 @@
+import createBlock from "roamjs-components/writes/createBlock"
  
 function isSecondDateAfter(firstDateString, secondDateString) {
   // Parse the dates from the strings
@@ -63,7 +64,7 @@ function parseStringToDate(dateString) {
   return dateObject;
 }
 
-function getAllPeople() {
+function OLDgetAllPeople() {
   let mappedResults = {};
   let query = `[:find 
       (pull ?node [[:block/string :as :birthday-string] :block/uid])
@@ -136,6 +137,138 @@ function getAllPeople() {
   }
   return mappedResults
 }
+
+export async function getAllPeople() {
+
+  let query = `[:find 
+  (pull ?PAGE [:attrs/lookup :block/string :block/uid :node/title {:attrs/lookup [:block/string :block/uid]} ])
+  :where
+  [?Template-Ref :node/title "roam/templates"]
+  [?Tags-Ref :node/title "Tags"]
+  [?person-Ref :node/title "people"]
+  [?node :block/page ?PAGE]
+  [?PEOPLEdec :block/parents ?PAGE]
+  [?PEOPLEdec :block/refs ?Tags-Ref]
+  [?PEOPLEdec :block/refs ?person-Ref]
+  (not
+      [?PAGE :node/title "roam/templates"]      
+  )
+  (not
+      [?PAGE :node/title "SmartBlock"]      
+  )
+  ]`;
+
+  let results = await window.roamAlphaAPI.q(query).flat();
+
+  function extractElementsWithKeywords(data, keywords) {
+      return data.map(item => {
+          // Initialize an object to hold the categorized items with empty arrays
+          const categorizedItems = keywords.reduce((acc, keyword) => {
+              const propName = keyword.replace(/::/g, '');
+              acc[propName] = []; // Initialize each property with an empty array
+              return acc;
+          }, {});
+
+          // Check if lookup exists and is an array
+          if (Array.isArray(item.lookup)) {
+              // Iterate over each keyword
+              keywords.forEach(keyword => {
+                  // Filter the lookup array for items containing the current keyword
+                  const filteredLookup = item.lookup.filter(lookupItem => {
+                      return lookupItem.string && lookupItem.string.includes(keyword);
+                  });
+
+                  // Assign the filtered array to the corresponding property
+                  const propName = keyword.replace(/::/g, '');
+                  categorizedItems[propName] = filteredLookup;
+              });
+          }
+
+          // Return the original item with the categorized items added
+          return {
+              ...item,
+              ...categorizedItems,
+          };
+      });
+  }
+
+  // Define the attributes to extract for
+  const keywords = ["Birthday::", "Contact Frequency::", "Last Contacted::", "Email::"];
+
+
+  return extractElementsWithKeywords(results, keywords);
+}
+
+function findPersonByEmail(people, email) {
+  const result = people
+      .filter(item => item.Email.some(emailItem => emailItem.string.includes(email)))
+      .map(item => item.title);
+  return result
+}
+
+export async function getEventInfo(people) {
+  await window.roamjs.extension.google.fetchGoogleCalendar({
+      startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date())
+  }).then(results => {      
+      // Iterate through each response and split the string
+      if (results[0].text!=='No Events Scheduled for Selected Date(s)!') {
+          
+          // create parent Call block at the top of the DNP
+          let newBlockUID = window.roamAlphaAPI.util.generateUID()
+          console.log("create new parent block: ", newBlockUID);
+          
+          window.roamAlphaAPI.createBlock(
+              {"location": 
+                  {"parent-uid": window.roamAlphaAPI.util.dateToPageUid(new Date()), 
+                  "order": 0}, 
+              "block": 
+                  {"string": "Calls Today",
+                  "heading":3,
+                  "open":true,
+                  "uid": newBlockUID}})
+
+          results.forEach(async result => {
+              // I split the result string manually here
+              // TODO update this when the PR goes through
+
+              let [summary, description, location, start, end, attendees] = result.text.split("=:=");
+              attendees = attendees.split(", ")
+              // only process events with more than 1 confirmed attendee
+              if (attendees.length > 1) {
+
+                  let attendeeNames = []
+                  attendees.forEach(email => {
+                      let name = findPersonByEmail(people, email)
+                      if (name.length > 0) {
+                          // push the formatted person page name
+                          attendeeNames.push(`[[${name[0]}]]`)
+                      } else {
+                          attendeeNames.push(email)
+                      }
+                  });
+                  let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about **${summary}**`
+
+                  const blockJSON = [
+                      {
+                          string: headerString, 
+                          children:[
+                              { string: "Notes::", children:[{string: ""}] },
+                              { string: "Next Actions::", children:[{string: ""}] },
+                              ]
+                      }
+                      ]
+                  createChildren(newBlockUID, blockJSON)
+              }
+
+          });  
+      }
+      
+  }).catch(error => {
+      console.error(error);
+  });
+
+}
+
 // const blockJSON = [
 //   {
 //     string: "**Birthdays Today**", children:
@@ -145,6 +278,7 @@ function getAllPeople() {
 //         ]
 //   }
 // ]
+
 export async function createChildren(parentBlockUid, childrenContents) {
   for (let index = 0; index < childrenContents.length; index++) {
     const element = childrenContents[index];
@@ -281,7 +415,7 @@ function checkBirthdays(lastBirthdayCheck, people) {
 }
 
 function remindersSystem(lastBirthdayCheck) {
-  const people = getAllPeople()
+  const people = OLDgetAllPeople()
   console.log(people);
   
   const toBeContacted = checkContacts(people) // {"toBeContacted": []}
