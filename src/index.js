@@ -1,14 +1,25 @@
 
 import displayBirthdays from "./components/birthday_drawer"
-import createBlock from "roamjs-components/writes/createBlock"
 import { showToast } from './components/toast';
 import {getAllPeople, getEventInfo} from './utils'
 
 const testing = true
+const version = "v0.9"
 
 const plugin_title = "Roam CRM"
 const ts2 = 1707159407000
+
 let googleLoadedHandler;
+
+function versionText() { 
+  return (
+    React.createElement(
+      "div",
+      {},
+      version
+  )
+  );
+}
 const panelConfig = {
   tabTitle: plugin_title,
   settings: [
@@ -20,6 +31,10 @@ const panelConfig = {
         type: "switch",
         onChange: (evt) => { console.log("Switch!", evt); }
       }},
+      {id:     "version-text",
+         name:   "Version",
+         action: {type:     "reactComponent",
+                  component: versionText}}
     // {
     //   id: "button-setting",
     //   name: "Button test",
