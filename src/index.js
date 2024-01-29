@@ -1,17 +1,19 @@
 
 import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from './components/toast';
-import {getAllPeople, getEventInfo} from './utils'
+import {getAllPeople, getEventInfo, getPageUID} from './utils'
+import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
 const testing = true
-const version = "v0.9"
+const version = "v0.8"
+// missing the Agenda Adder
 
 const plugin_title = "Roam CRM"
 const ts2 = 1707159407000
 
 let googleLoadedHandler;
 
-function versionText() { 
+function versionTextComponent() { 
   return (
     React.createElement(
       "div",
@@ -20,31 +22,69 @@ function versionText() {
   )
   );
 }
+
 const panelConfig = {
   tabTitle: plugin_title,
   settings: [
+    {id:     "version-text",
+         name:   "Version",
+         action: {type:     "reactComponent",
+                  component: versionTextComponent}},
     {
       id: "calendar-setting",
       name: "Import Today's Calender Events On Load",
-      description: "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot",
+      description: "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot to be installed.",
       action: {
         type: "switch",
         onChange: (evt) => { console.log("Switch!", evt); }
       }},
-      {id:     "version-text",
-         name:   "Version",
-         action: {type:     "reactComponent",
-                  component: versionText}}
-    // {
-    //   id: "button-setting",
-    //   name: "Button test",
-    //   description: "tests the button",
-    //   action: {
-    //     type: "button",
-    //     onClick: (evt) => { console.log("Button clicked!"); },
-    //     content: "Button"
-    //   }
-    // },
+      
+    {
+      id: "call-rollup-query",
+      name: "Imports Call Rollup Queries ",
+      description: "Imports the rollup query templates to your `[[Call]]` page. These can be referenced or added to templates as needed.",
+      action: {
+        type: "button",
+        onClick: async () => { 
+          const callPageUID = await getPageUID("Call")          
+          createLastMonthCalls(callPageUID)
+          createLastWeekCalls(callPageUID)
+          
+          showToast(`Templates Added.`, "SUCCESS");
+        },
+        content: "Import"
+      }
+    },
+    {
+      id: "call-template",
+      name: "Imports Call Template",
+      description: "Imports the call template into your roam/templates page. This template structure is important for the rolloup queries to work.",
+      action: {
+        type: "button",
+        onClick: async () => { 
+          const templatePageUID = await getPageUID("roam/templates")          
+          createCallTemplates(templatePageUID)
+          showToast(`Template Added.`, "SUCCESS");
+
+        },
+        content: "Import"
+      }
+    },
+    {
+      id: "person-template",
+      name: "Imports Person Metadata Template",
+      description: "Imports the persom metadata template into your roam/templates page. This template structure is important for Roam CRM to work.",
+      action: {
+        type: "button",
+        onClick: async () => { 
+          const templatePageUID = await getPageUID("roam/templates")          
+          createPersonTemplates(templatePageUID)
+          showToast(`Template Added.`, "SUCCESS");
+
+        },
+        content: "Import"
+      }
+    },
     // {
     //   id: "switch-setting",
     //   name: "Switch Test",

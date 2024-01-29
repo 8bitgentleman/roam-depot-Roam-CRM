@@ -1,3 +1,4 @@
+/* Modal CSS */
 .crm-stats-drawer {
     position: fixed !important; /* Override any existing positioning */
     right: 0; /* Align to the right */
@@ -16,3 +17,64 @@
     color: white; 
     opacity: 0.7; 
   }
+
+/* Roundup Query */
+span.rm-page-ref--tag[data-tag=".rollup-table"]{
+  display:none !important;
+}
+
+
+.rollup-table .roamjs-query-page tfoot {
+  display:none;
+}
+.rollup-table thead{
+  background:rgb(247, 244, 253) !important;
+  background-color:rgb(247, 244, 253) !important;
+  border: 2px solid rgb(189, 179, 230) !important;
+  border-radius:10px !important;
+  font-size:16px;
+  font-style:bold;
+  font-weight:700;
+}
+.rollup-table tbody{
+  background:rgb(247, 244, 253) !important;
+  background-color:rgb(247, 244, 253) !important;
+}
+
+.rollup-table td>div:nth-child(1)>span:nth-child(2){
+  opacity:20%
+}
+
+.rollup-table tr .rm-page-ref{
+  color:rgb(127, 93, 207);
+  text-decoration: underline;
+}
+.rollup-table .bp3-icon{
+  color:rgb(127, 98, 206);
+  
+}
+.rollup-table .bp3-icon-more, 
+.rollup-table .bp3-icon-refresh{
+  opacity:20%;
+}
+.rollup-table .bp3-card {
+  border:1px solid rgb(189, 179, 230) !important;
+  border-radius:10px;
+}
+.roamjs-query-results-view>div:nth-child(1){
+  background:rgb(247, 244, 253);
+  color:rgb(127, 98, 206, .5);
+}
+.rm-embed-container--block:has(.rollup-table){
+    background-color:rgba(127, 98, 206, .0);
+}
+
+.rollup-table  .rm-attr-ref{
+  font-weight: 500;
+}
+/*the bottom bar*/
+.rollup-table .roamjs-query-results-view>div.relative>div:last-child{
+  background:rgb(247, 244, 253)  !important;
+  border-top:1px solid rgb(127, 98, 206, .5)  !important;
+  display:none;
+}

@@ -1,5 +1,6 @@
 import createBlock from "roamjs-components/writes/createBlock"
- 
+import createPage from "roamjs-components/writes/createPage"
+
 function isSecondDateAfter(firstDateString, secondDateString) {
   // Parse the dates from the strings
   const firstDate = new Date(firstDateString);
@@ -192,6 +193,21 @@ export async function getEventInfo(people) {
   }).catch(error => {
       console.error(error);
   });
+
+}
+
+export async function getPageUID(page) {
+  // Perform Roam Research datalog pull
+const result = window.roamAlphaAPI.data.pull("[:node/title :block/uid]", `[:node/title "${page}"]`);
+
+if (result && result[":block/uid"]) {
+// If data exists, return the existing block UID
+return result[":block/uid"];
+} else {
+const newPageUid = window.roamAlphaAPI.util.generateUID()
+createPage({title:page, uid:newPageUid})
+return newPageUid;
+}
 
 }
 
@@ -404,3 +420,4 @@ function remindersSystem(people, lastBirthdayCheck) {
 }
 
 export default remindersSystem;
+
