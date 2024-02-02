@@ -9,7 +9,7 @@ const version = "v0.8"
 // missing the Agenda Adder
 
 const plugin_title = "Roam CRM"
-const ts2 = 1707159407000
+const ts2 = 1708112159000
 
 let googleLoadedHandler;
 
@@ -30,18 +30,18 @@ const panelConfig = {
          name:   "Version",
          action: {type:     "reactComponent",
                   component: versionTextComponent}},
-    {
-      id: "calendar-setting",
-      name: "Import Today's Calender Events On Load",
-      description: "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot to be installed.",
-      action: {
-        type: "switch",
-        onChange: (evt) => { console.log("Switch!", evt); }
-      }},
+    // {
+    //   id: "calendar-setting",
+    //   name: "Import Today's Calender Events On Load",
+    //   description: "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot to be installed.",
+    //   action: {
+    //     type: "switch",
+    //     onChange: (evt) => { console.log("Switch!", evt); }
+    //   }},
       
     {
       id: "call-rollup-query",
-      name: "Imports Call Rollup Queries ",
+      name: "Import Call Rollup Queries",
       description: "Imports the rollup query templates to your `[[Call]]` page. These can be referenced or added to templates as needed.",
       action: {
         type: "button",
@@ -57,7 +57,7 @@ const panelConfig = {
     },
     {
       id: "call-template",
-      name: "Imports Call Template",
+      name: "Import Call Template",
       description: "Imports the call template into your roam/templates page. This template structure is important for the rolloup queries to work.",
       action: {
         type: "button",
@@ -170,13 +170,13 @@ async function onload({ extensionAPI }) {
     
     // bring in the events, this should rely on getLastBirthdayCheckDate to avoid duplicates
     // listen for the google extension to be loaded
-    // if (window.roamjs?.extension?.google) {
-    //   await getEventInfo(people)
-    // } else {
-    //   googleLoadedHandler = createGoogleLoadedHandler(people);
-    //   document.body.addEventListener('roamjs:google:loaded', googleLoadedHandler);
+    if (window.roamjs?.extension?.google) {
+      await getEventInfo(people)
+    } else {
+      googleLoadedHandler = createGoogleLoadedHandler(people);
+      document.body.addEventListener('roamjs:google:loaded', googleLoadedHandler);
      
-    // }
+    }
 
     // always set people pages to hide DONE
     // TODO see if vlad wants more granulity

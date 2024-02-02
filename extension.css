@@ -1,5 +1,5 @@
 /* Modal CSS */
-.crm-stats-drawer {
+.crm-reminders-drawer {
     position: fixed !important; /* Override any existing positioning */
     right: 0; /* Align to the right */
     bottom: 0; /* Align to the bottom */
@@ -9,14 +9,14 @@
     max-height: 100%; /* Ensure the Drawer does not exceed the viewport height */
 }
 
-.crm-stats-drawer  .bp3-drawer-header { 
-    background: #565c70;
+ .crm-reminders-drawer  .bp3-drawer-header { 
+    background: rgb(247, 248, 248);
   }
-  
-.crm-stats-drawer .bp3-drawer-header .bp3-heading {
+  /*
+.crm-reminders-drawer .bp3-drawer-header .bp3-heading {
     color: white; 
     opacity: 0.7; 
-  }
+  } */
 
 /* Roundup Query */
 span.rm-page-ref--tag[data-tag=".rollup-table"]{

@@ -62,26 +62,28 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
       position={"right"}
       hasBackdrop={false}
       canOutsideClickClose={false}
-      style={{ width: 400, height: 400 }}
+      style={{ width: 400,
+              height: 400,
+              }}
       portalClassName={"pointer-events-none"}
-      className={"crm-stats-drawer pointer-events-auto"}
+      className={"crm-reminders-drawer pointer-events-auto"}
       enforceFocus={false}
       autoFocus={false}
     >
       <div
-        className={`${Classes.DRAWER_BODY} p-5 text-white text-opacity-70`}
-        style={{ background: "#565c70", paddingTop: "0px" }}
+        className={`${Classes.DRAWER_BODY} p-5 `}
+        style={{ paddingTop: "0px" }}
       >
         {/* only show if there are birthdays today */}
         {reminders.aAndBBirthdaysToday.length > 0 && (
           <>
-            <h5 style={{ fontWeight: "800" }}>Birthdays Today:</h5>
+            <h5 style={{ fontWeight: "800", }}>Birthdays Today:</h5>
             <p>
               <ul>
                 {reminders.aAndBBirthdaysToday.map((person, index) => (
                   <li key={index}>
                     <a
-                      style={{ color: "lightgrey" }}
+                      style={{ color: "#48494a", fontWeight: 700 }}
                       onClick={() =>
                         window.roamAlphaAPI.ui.mainWindow.openPage({
                           page: { title: person.name },
@@ -105,7 +107,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                 {reminders.filteredUpcomingBirthdays.map((person, index) => (
                   <li key={index}>
                     <a
-                      style={{ color: "lightgrey" }}
+                      style={{ color: "#48494a", fontWeight: 700 }}
                       onClick={() =>
                         window.roamAlphaAPI.ui.mainWindow.openPage({
                           page: { title: person.name },
@@ -139,7 +141,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                       
                     </label>
                     <a
-                      style={{ color: "lightgrey" }}
+                      style={{ color: "#48494a", fontWeight: 700 }}
                       onClick={() =>
                         window.roamAlphaAPI.ui.mainWindow.openPage({
                           page: { title: person.name },
@@ -163,7 +165,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
 
 const displayBirthdays = async (people, lastBirthdayCheck) => {
 // only show the modal if there isn't already one shown  
-  if (document.getElementsByClassName("crm-stats-drawer").length===0)
+  if (document.getElementsByClassName("crm-reminders-drawer").length===0)
     renderOverlay({
       Overlay: BirthdayDrawer,
       props: { people, lastBirthdayCheck },

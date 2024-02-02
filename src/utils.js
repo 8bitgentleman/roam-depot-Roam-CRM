@@ -156,24 +156,24 @@ export async function getEventInfo(people) {
           results.forEach(async result => {
               // I split the result string manually here
               // TODO update this when the PR goes through
-              // this is the current template
-              // {summary}=:={description}=:={location}=:={start:hh:mm a}=:={end:hh:mm a}=:={attendees}
-              let [summary, description, location, start, end, attendees] = result.text.split("=:=");
-              attendees = attendees.split(", ")
-              // only process events with more than 1 confirmed attendee
+            console.log(result);
+            
+              // let [summary, description, location, start, end, attendees] = result.text.split("=:=");
+              let attendees = result.event.attendees
+              // // only process events with more than 1 confirmed attendee
               if (attendees.length > 1) {
 
                   let attendeeNames = []
-                  attendees.forEach(email => {
-                      let name = findPersonByEmail(people, email)
+                  attendees.forEach(a => {
+                      let name = findPersonByEmail(people, a.email)
                       if (name.length > 0) {
                           // push the formatted person page name
                           attendeeNames.push(`[[${name[0]}]]`)
                       } else {
-                          attendeeNames.push(email)
+                          attendeeNames.push(a.email)
                       }
                   });
-                  let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about **${summary}**`
+                  let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about **${result.event.summary}**`
 
                   const blockJSON = [
                       {
