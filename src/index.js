@@ -4,8 +4,8 @@ import { showToast } from './components/toast';
 import {getAllPeople, getEventInfo, getPageUID} from './utils'
 import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
-const testing = true
-const version = "v0.8"
+const testing = false
+const version = "v0.9"
 // missing the Agenda Adder
 
 const plugin_title = "Roam CRM"
