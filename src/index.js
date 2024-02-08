@@ -5,11 +5,11 @@ import {getAllPeople, getEventInfo, getPageUID} from './utils'
 import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
 const testing = false
-const version = "v0.9"
+const version = "v0.9.1"
 // missing the Agenda Adder
 
 const plugin_title = "Roam CRM"
-const ts2 = 1708112159000
+const ts2 = 1708640298000
 
 let googleLoadedHandler;
 
@@ -124,6 +124,8 @@ function getCalendarSetting(extensionAPI) {
 }
 
 async function setDONEFilter(page) {
+  console.log(`Set DONE filter for: ${page}`);
+  
   // sets a page filter to hide DONE tasks
   var fRemoves = await window.roamAlphaAPI.ui.filters.getPageFilters({"page": {"title": page}})["removes"]
   // check if DONE is already filtered. if not add it
@@ -141,11 +143,11 @@ async function setDONEFilter(page) {
   
 }
 
-function createGoogleLoadedHandler(people) {
+function createGoogleLoadedHandler(people, extensionAPI) {
   // handler for loading events once the google extension has finished loading
   return async function handleGoogleLoaded() {
     if (window.roamjs?.extension.smartblocks) {
-      await getEventInfo(people);
+      await getEventInfo(people, extensionAPI, testing);
     }
   };
 }
@@ -171,9 +173,9 @@ async function onload({ extensionAPI }) {
     // bring in the events, this should rely on getLastBirthdayCheckDate to avoid duplicates
     // listen for the google extension to be loaded
     if (window.roamjs?.extension?.google) {
-      await getEventInfo(people)
+      await getEventInfo(people, extensionAPI, testing)
     } else {
-      googleLoadedHandler = createGoogleLoadedHandler(people);
+      googleLoadedHandler = createGoogleLoadedHandler(people, extensionAPI);
       document.body.addEventListener('roamjs:google:loaded', googleLoadedHandler);
      
     }

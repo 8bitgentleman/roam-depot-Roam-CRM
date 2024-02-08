@@ -10,6 +10,10 @@ function isSecondDateAfter(firstDateString, secondDateString) {
   return secondDate > firstDate;
 }
 
+function getLastCalendarCheckDate(extensionAPI) {
+  return extensionAPI.settings.get('last-calendar-check-date') || '01-19-2024'
+}
+
 function parseStringToDate(dateString) {
   const defaultYear = new Date().getFullYear(); // Use the current year as default
 
@@ -133,67 +137,82 @@ function findPersonByEmail(people, email) {
   return result
 }
 
-export async function getEventInfo(people) {
-  await window.roamjs.extension.google.fetchGoogleCalendar({
-      startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date())
-  }).then(results => {      
-      // Iterate through each response and split the string
-      if (results[0].text!=='No Events Scheduled for Selected Date(s)!') {
-          
-          // create parent Call block at the top of the DNP
-          let newBlockUID = window.roamAlphaAPI.util.generateUID()
-          
-          window.roamAlphaAPI.createBlock(
-              {"location": 
-                  {"parent-uid": window.roamAlphaAPI.util.dateToPageUid(new Date()), 
-                  "order": 0}, 
-              "block": 
-                  {"string": "Calls Today",
-                  "heading":3,
-                  "open":true,
-                  "uid": newBlockUID}})
-
-          results.forEach(async result => {
-              // I split the result string manually here
-              // TODO update this when the PR goes through
-            console.log(result);
+export async function getEventInfo(people, extensionAPI, testing) {
+  const lastCalendarCheck = getLastCalendarCheckDate(extensionAPI)
+  console.log("lastCalendarCheck", lastCalendarCheck);
+  const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date)
+  // override if testing version
+  let checkDate 
+  if (testing===true) {
+    checkDate = testing
+  } else {
+    checkDate = isSecondDateAfter(lastCalendarCheck, todaysDNPUID)
+  }
+  if (checkDate) {
+    await window.roamjs.extension.google.fetchGoogleCalendar({
+        startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date())
+    }).then(results => {      
+        // Iterate through each response and split the string
+        // TODO add a check for if you're not logged in
+        if (results[0].text!=='No Events Scheduled for Selected Date(s)!') {
             
-              // let [summary, description, location, start, end, attendees] = result.text.split("=:=");
-              let attendees = result.event.attendees
-              // // only process events with more than 1 confirmed attendee
-              if (attendees.length > 1) {
+            // create parent Call block at the top of the DNP
+            let newBlockUID = window.roamAlphaAPI.util.generateUID()
+            
+            window.roamAlphaAPI.createBlock(
+                {"location": 
+                    {"parent-uid": window.roamAlphaAPI.util.dateToPageUid(new Date()), 
+                    "order": 0}, 
+                "block": 
+                    {"string": "Calls Today",
+                    "heading":3,
+                    "open":true,
+                    "uid": newBlockUID}})
 
-                  let attendeeNames = []
-                  attendees.forEach(a => {
-                      let name = findPersonByEmail(people, a.email)
-                      if (name.length > 0) {
-                          // push the formatted person page name
-                          attendeeNames.push(`[[${name[0]}]]`)
-                      } else {
-                          attendeeNames.push(a.email)
-                      }
-                  });
-                  let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about **${result.event.summary}**`
+            results.forEach(async result => {
+                // I split the result string manually here
+                // TODO update this when the PR goes through
+              console.log("event result",result);
+              
+                // let [summary, description, location, start, end, attendees] = result.text.split("=:=");
+                let attendees = result.event.attendees
+                // // only process events with more than 1 confirmed attendee
+                if (attendees.length > 1) {
 
-                  const blockJSON = [
-                      {
-                          string: headerString, 
-                          children:[
-                              { string: "Notes::", children:[{string: ""}] },
-                              { string: "Next Actions::", children:[{string: ""}] },
-                              ]
-                      }
-                      ]
-                  createChildren(newBlockUID, blockJSON)
-              }
+                    let attendeeNames = []
+                    attendees.forEach(a => {
+                        let name = findPersonByEmail(people, a.email)
+                        if (name.length > 0) {
+                            // push the formatted person page name
+                            attendeeNames.push(`[[${name[0]}]]`)
+                        } else {
+                            attendeeNames.push(a.email)
+                        }
+                    });
+                    let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about **${result.event.summary}**`
 
-          });  
-      }
-      
-  }).catch(error => {
-      console.error(error);
-  });
+                    const blockJSON = [
+                        {
+                            string: headerString, 
+                            children:[
+                                { string: "Notes::", children:[{string: ""}] },
+                                { string: "Next Actions::", children:[{string: ""}] },
+                                ]
+                        }
+                        ]
+                    createChildren(newBlockUID, blockJSON)
+                }
 
+            });  
+        }
+        
+    }).catch(error => {
+        console.error(error);
+    });
+    extensionAPI.settings.set(
+    'last-calendar-check-date',
+    todaysDNPUID)
+  }
 }
 
 export async function getPageUID(page) {
@@ -316,14 +335,17 @@ function fixPersonJSON(person) {
   let contactDateString;
   let last_contact
   let contactUIDString
-  console.log(person);
   
   // Check if person["Last Contacted"] is not empty
   if (person["Last Contacted"].length > 0) {
      contactDateString = person["Last Contacted"][0].string.split("::", 2)[1].replace(/\[|\]/g, '') || null;
-     last_contact = parseStringToDate(contactDateString.trim()) || new Date();
+     if (contactDateString === null) {
+      last_contact = new Date()
+    } else {
+      last_contact = parseStringToDate(contactDateString.trim())
+    }
      contactUIDString = person["Last Contacted"][0].uid || null;
-
+    
   }  else {
     // there is no "last contacted" attribute so let's create one
     contactUIDString = window.roamAlphaAPI.util.generateUID()
