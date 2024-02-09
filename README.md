@@ -7,8 +7,6 @@ Roam CRM relies on several excellent Roam extensions to extend it's functionalit
 
 - Google extension by David Vargas & Michael Gartner
     1. Follow the extension's instructions to log into your google account and add a calendar.
-    2. Set the "Calendar Event Format" to this exactly. This is a temporary workaround until the latest extension changes are finished.
-        - `{summary}=:={description}=:={location}=:={start:hh:mm a}=:={end:hh:mm a}=:={attendees}`
 
 - Workbench (optional) by David Vargas & Michael Gartner
     1. Install the extension and enable the Attribute Select Feature
