@@ -130,10 +130,16 @@ export async function getAllPeople() {
   return extractElementsWithKeywords(results, keywords);
 }
 
-function findPersonByEmail(people, email) {
+function findPersonNameByEmail(people, email) {
   const result = people
       .filter(item => item.Email.some(emailItem => emailItem.string.includes(email)))
       .map(item => item.title);
+  return result
+}
+function findPersonByEmail(people, email) {
+  const result = people
+      .filter(item => item.Email.some(emailItem => emailItem.string.includes(email)))
+      
   return result
 }
 
@@ -181,7 +187,7 @@ export async function getEventInfo(people, extensionAPI, testing) {
 
                     let attendeeNames = []
                     attendees.forEach(a => {
-                        let name = findPersonByEmail(people, a.email)
+                        let name = findPersonNameByEmail(people, a.email)
                         if (name.length > 0) {
                             // push the formatted person page name
                             attendeeNames.push(`[[${name[0]}]]`)
@@ -335,6 +341,8 @@ function fixPersonJSON(person) {
   let contactDateString;
   let last_contact
   let contactUIDString
+  let newRelationshipUID
+  console.log(person);
   
   // Check if person["Last Contacted"] is not empty
   if (person["Last Contacted"].length > 0) {
@@ -344,27 +352,68 @@ function fixPersonJSON(person) {
     } else {
       last_contact = parseStringToDate(contactDateString.trim())
     }
-     contactUIDString = person["Last Contacted"][0].uid || null;
+    console.log("contact UID String");
+    contactUIDString = person["Last Contacted"][0].uid || null;
+    
     
   }  else {
     // there is no "last contacted" attribute so let's create one
     contactUIDString = window.roamAlphaAPI.util.generateUID()
     contactDateString = roamAlphaAPI.util.dateToPageTitle(new Date())
     last_contact = parseStringToDate(contactDateString.trim()) || new Date();
-    createBlock({
-      node:{
-        text: `Last Contacted:: [[${contactDateString}]]`,
-        uid:contactUIDString
-      },
+    console.log("relationship meta uid", contactUIDString, contactDateString, last_contact);
+
+    // Check if Relationship Metadata and property exist
+    if (person && person["Relationship Metadata"] && person["Relationship Metadata"][0]) {
+      // If the object and property exist, create a child
+      createBlock({
+        node:{
+          text: `Last Contacted:: [[${contactDateString}]]`,
+          uid:contactUIDString
+        },
+        parentUid:person["Relationship Metadata"][0].uid
+      })
+    } else {
+      // If the object or property does not exist, create both the parent and the child
+      console.log("Object or property does not exist");
+      newRelationshipUID = window.roamAlphaAPI.util.generateUID()
+      createBlock({
+        node:{
+          text: `Relationship Metadata::`,
+          uid:newRelationshipUID,
+          children:[
+            {
+              text: `Last Contacted:: [[${contactDateString}]]`,
+              uid: contactUIDString,
+            }
+          ]
+        },
+        parentUid:person.uid
+      })
+      person["Relationship Metadata"].push({"string": "Relationship Metadata::",  "uid": newRelationshipUID})
+      person["Last Contacted"].push({"string": "Last Contacted::",  "uid": contactUIDString})
+      console.log("after new data", person);
       
-      parentUid:person["Relationship Metadata"][0].uid
-    })
+      // Your code here for when the property does not exist
+    }
+
+    
   }
   
   let contact 
   
   // set the contact list
   if (person["Contact Frequency"].length=== 0) {
+    // there is no contact frequency node so add one
+    const contactFrequenceUID = window.roamAlphaAPI.util.generateUID()
+    createBlock({
+      node:{
+        text: `Contact Frequency:: #[[C List]]: Contact every six months`,
+        uid: contactFrequenceUID,
+      },
+      parentUid:person["Relationship Metadata"][0].uid
+    })
+    person["Contact Frequency"].push({"string": `Contact Frequency:: #[[C List]]: Contact every six months`,  "uid": contactFrequenceUID})
     contact = "C List";
   } else if (person["Contact Frequency"][0].string .includes("C List")) {
     contact = "C List";
@@ -380,7 +429,8 @@ function fixPersonJSON(person) {
   }
   person.birthday = birthday
   person.contact_list = contact
-  person.birthday_UID = person["Birthday"][0].uid || null
+  console.log("birthday-uid");
+  person.birthday_UID = person?.Birthday?.[0]?.uid || null;
   person.last_contact = last_contact
   person.last_contact_uid = contactUIDString
   person.name = person.title
@@ -399,6 +449,7 @@ function remindersSystem(people, lastBirthdayCheck) {
   // for each person extract the needed info
   people.forEach(person => {
     // fix the json
+    
     person = fixPersonJSON(person)
     if (shouldContact(person)) {
       toBeContacted.push(person) //{"toBeContacted": "reminders"}

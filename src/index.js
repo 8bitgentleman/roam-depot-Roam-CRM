@@ -124,7 +124,7 @@ function getCalendarSetting(extensionAPI) {
 }
 
 async function setDONEFilter(page) {
-  console.log(`Set DONE filter for: ${page}`);
+  
   
   // sets a page filter to hide DONE tasks
   var fRemoves = await window.roamAlphaAPI.ui.filters.getPageFilters({"page": {"title": page}})["removes"]
@@ -133,6 +133,7 @@ async function setDONEFilter(page) {
   // console.log(fRemoves, containsDONE);
   
   if (!containsDONE) {
+    console.log(`Set DONE filter for: ${page}`);
     fRemoves.push("DONE")
     await window.roamAlphaAPI.ui.filters.setPageFilters(
       {
