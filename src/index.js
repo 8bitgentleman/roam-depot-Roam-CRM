@@ -5,7 +5,7 @@ import {getAllPeople, getEventInfo, getPageUID} from './utils'
 import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
 const testing = true
-const version = "v0.9.1"
+const version = "v0.9.2"
 // missing the Agenda Adder
 
 const plugin_title = "Roam CRM"
