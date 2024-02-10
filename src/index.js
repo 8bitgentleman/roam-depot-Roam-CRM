@@ -4,7 +4,7 @@ import { showToast } from './components/toast';
 import {getAllPeople, getEventInfo, getPageUID} from './utils'
 import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
-const testing = false
+const testing = true
 const version = "v0.9.1"
 // missing the Agenda Adder
 
@@ -157,7 +157,11 @@ async function onload({ extensionAPI }) {
   const ts1 = new Date().getTime();
 
   if (ts1 < ts2) {
+    console.log("~~ Getting People");
     const people = await getAllPeople()
+    console.log("~~~~ All people:", people);
+    console.log("~~ Getting Birthdays");
+    
     if (testing) {
       displayBirthdays(people, '01-19-2024')
     } else {
@@ -181,7 +185,7 @@ async function onload({ extensionAPI }) {
     }
 
     // always set people pages to hide DONE
-    // TODO see if vlad wants more granulity
+    // TODO see if they want more granulity
     people.forEach(async page =>  {
       await setDONEFilter(page.title)
     });
