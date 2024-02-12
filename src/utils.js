@@ -89,13 +89,10 @@ export async function getAllPeople() {
                     [?PAGE :node/title "SmartBlock"]      
                   )
                 ]`;
-  console.log("~~ Running People query");
   
   let results = await window.roamAlphaAPI.q(query).flat();
-  console.log("~~~ People result: ", results);
   
   function extractElementsWithKeywords(data, keywords) {
-    console.log("extracing keyword elements");
     
       return data.map(item => {
           // Initialize an object to hold the categorized items with empty arrays
@@ -347,7 +344,6 @@ function fixPersonJSON(person) {
   let last_contact
   let contactUIDString
   let newRelationshipUID
-  console.log(person);
   
   // Check if person["Last Contacted"] is not empty
   if (person["Last Contacted"].length > 0) {
@@ -365,7 +361,6 @@ function fixPersonJSON(person) {
     contactUIDString = window.roamAlphaAPI.util.generateUID()
     contactDateString = roamAlphaAPI.util.dateToPageTitle(new Date())
     last_contact = parseStringToDate(contactDateString.trim()) || new Date();
-    console.log("relationship meta uid", contactUIDString, contactDateString, last_contact);
 
     // Check if Relationship Metadata and property exist
     if (person && person["Relationship Metadata"] && person["Relationship Metadata"][0]) {
@@ -379,7 +374,6 @@ function fixPersonJSON(person) {
       })
     } else {
       // If the object or property does not exist, create both the parent and the child
-      console.log("Object or property does not exist");
       newRelationshipUID = window.roamAlphaAPI.util.generateUID()
       createBlock({
         node:{
@@ -396,7 +390,6 @@ function fixPersonJSON(person) {
       })
       person["Relationship Metadata"].push({"string": "Relationship Metadata::",  "uid": newRelationshipUID})
       person["Last Contacted"].push({"string": "Last Contacted::",  "uid": contactUIDString})
-      console.log("after new data", person);
       
       // Your code here for when the property does not exist
     }
@@ -433,7 +426,6 @@ function fixPersonJSON(person) {
   }
   person.birthday = birthday
   person.contact_list = contact
-  console.log("birthday-uid");
   person.birthday_UID = person?.Birthday?.[0]?.uid || null;
   person.last_contact = last_contact
   person.last_contact_uid = contactUIDString

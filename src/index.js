@@ -4,12 +4,12 @@ import { showToast } from './components/toast';
 import {getAllPeople, getEventInfo, getPageUID} from './utils'
 import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
-const testing = true
-const version = "v0.9.2.5"
+const testing = false
+const version = "v0.9.3"
 // missing the Agenda Adder
 
 const plugin_title = "Roam CRM"
-const ts2 = 1708640298000
+const ts2 = 1708980444000
 
 let googleLoadedHandler;
 
@@ -133,7 +133,7 @@ async function setDONEFilter(page) {
   // console.log(fRemoves, containsDONE);
   
   if (!containsDONE) {
-    console.log(`Set DONE filter for: ${page}`);
+    // console.log(`Set DONE filter for: ${page}`);
     fRemoves.push("DONE")
     await window.roamAlphaAPI.ui.filters.setPageFilters(
       {
@@ -158,10 +158,7 @@ async function onload({ extensionAPI }) {
   const ts1 = new Date().getTime();
 
   if (ts1 < ts2) {
-    console.log("~~ Getting People");
     const people = await getAllPeople()
-    console.log("~~~~ All people:", people);
-    console.log("~~ Getting Birthdays");
     
     if (testing) {
       displayBirthdays(people, '01-19-2024')

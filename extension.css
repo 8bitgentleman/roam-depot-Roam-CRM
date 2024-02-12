@@ -78,3 +78,8 @@ span.rm-page-ref--tag[data-tag=".rollup-table"]{
   border-top:1px solid rgb(127, 98, 206, .5)  !important;
   display:none;
 }
+
+.crm-reminders-drawer h5{
+  font-size: 14px !important;
+  font-weight: 800;
+}
