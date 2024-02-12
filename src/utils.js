@@ -71,27 +71,33 @@ function parseStringToDate(dateString) {
 
 export async function getAllPeople() {
 
-  let query = `[:find 
-  (pull ?PAGE [:attrs/lookup :block/string :block/uid :node/title {:attrs/lookup [:block/string :block/uid]} ])
-  :where
-  [?Template-Ref :node/title "roam/templates"]
-  [?Tags-Ref :node/title "Tags"]
-  [?person-Ref :node/title "people"]
-  [?node :block/page ?PAGE]
-  [?PEOPLEdec :block/parents ?PAGE]
-  [?PEOPLEdec :block/refs ?Tags-Ref]
-  [?PEOPLEdec :block/refs ?person-Ref]
-  (not
-      [?PAGE :node/title "roam/templates"]      
-  )
-  (not
-      [?PAGE :node/title "SmartBlock"]      
-  )
+  let query = `[:find (pull ?PAGE [:attrs/lookup
+                                  :block/string
+                                  :block/uid
+                                  :node/title
+                                  {:attrs/lookup [:block/string :block/uid]} ])
+            :where
+              [?Tags-Ref :node/title "Tags"]
+              [?person-Ref :node/title "people"]
+              [?node :block/page ?PAGE]
+              [?PEOPLEdec :block/parents ?PAGE]
+              [?PEOPLEdec :block/refs ?Tags-Ref]
+              [?PEOPLEdec :block/refs ?person-Ref]
+              (not
+                  [?PAGE :node/title "roam/templates"]      
+              )
+              (not
+                  [?PAGE :node/title "SmartBlock"]      
+              )
   ]`;
-
+  console.log("~~ Running People query");
+  
   let results = await window.roamAlphaAPI.q(query).flat();
-
+  console.log("~~~ People result: ", results);
+  
   function extractElementsWithKeywords(data, keywords) {
+    console.log("extracing keyword elements");
+    
       return data.map(item => {
           // Initialize an object to hold the categorized items with empty arrays
           const categorizedItems = keywords.reduce((acc, keyword) => {
@@ -352,7 +358,6 @@ function fixPersonJSON(person) {
     } else {
       last_contact = parseStringToDate(contactDateString.trim())
     }
-    console.log("contact UID String");
     contactUIDString = person["Last Contacted"][0].uid || null;
     
     
