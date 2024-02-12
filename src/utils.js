@@ -76,20 +76,19 @@ export async function getAllPeople() {
                                   :block/uid
                                   :node/title
                                   {:attrs/lookup [:block/string :block/uid]} ])
-            :where
-              [?Tags-Ref :node/title "Tags"]
-              [?person-Ref :node/title "people"]
-              [?node :block/page ?PAGE]
-              [?PEOPLEdec :block/parents ?PAGE]
-              [?PEOPLEdec :block/refs ?Tags-Ref]
-              [?PEOPLEdec :block/refs ?person-Ref]
-              (not
-                  [?PAGE :node/title "roam/templates"]      
-              )
-              (not
-                  [?PAGE :node/title "SmartBlock"]      
-              )
-  ]`;
+                :where 
+                  [?Tags-Ref :node/title "Tags"]
+                  [?person-Ref :node/title "people"]
+                  [?PEOPLEdec :block/refs ?Tags-Ref]
+                  [?PEOPLEdec :block/refs ?person-Ref]
+                  [?PEOPLEdec :block/page ?PAGE]
+                  (not
+                    [?PAGE :node/title "roam/templates"]      
+                  )
+                  (not
+                    [?PAGE :node/title "SmartBlock"]      
+                  )
+                ]`;
   console.log("~~ Running People query");
   
   let results = await window.roamAlphaAPI.q(query).flat();
