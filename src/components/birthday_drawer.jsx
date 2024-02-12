@@ -90,7 +90,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                         })
                       }
                     >
-                      {person.name}
+                      [[{person.name}]]
                     </a>
                   </li>
                 ))}
@@ -114,7 +114,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                         })
                       }
                     >
-                      {person.name}
+                      [[{person.name}]]
                     </a>
                     - {new Date(person.birthday).toLocaleDateString()} (in {person.daysUntilBirthday} days)
                   </li>
@@ -148,7 +148,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                         })
                       }
                     >
-                      {person.name}
+                      [[{person.name}]]
                     </a>
                     
                   </li>
