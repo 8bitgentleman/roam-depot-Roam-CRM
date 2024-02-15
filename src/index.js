@@ -1,7 +1,10 @@
 
 import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from './components/toast';
-import {getAllPeople, getEventInfo, getPageUID} from './utils'
+import { getAllPeople,
+        getEventInfo,
+        getPageUID,
+        parseAgendaPull } from './utils'
 import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
 const testing = false
@@ -12,6 +15,10 @@ const plugin_title = "Roam CRM"
 const ts2 = 1708980444000
 
 let googleLoadedHandler;
+
+const pullPattern = "[:block/_refs :block/uid :node/title {:block/_refs [{:block/refs[:node/title]} :node/title :block/uid :block/string]}]";
+const entity = '[:node/title "Agenda"]';
+const pullFunction = async function a(before, after) { await parseAgendaPull(after); };
 
 function versionTextComponent() { 
   return (
@@ -257,7 +264,13 @@ async function onload({ extensionAPI }) {
       }
     )
 
-    
+    // agenda addr pull watch
+    window.roamAlphaAPI.data.addPullWatch(
+      pullPattern,
+      entity,
+      pullFunction
+    )
+
     if (!testing) {
       console.log(`load ${plugin_title} plugin`);
     }
@@ -269,6 +282,12 @@ async function onload({ extensionAPI }) {
 
 function onunload() {
   document.body.removeEventListener('roamjs:google:loaded', googleLoadedHandler);
+
+  window.roamAlphaAPI.data.removePullWatch(
+    pullPattern,
+    entity,
+    pullFunction
+  )
 
   if (!testing) {
     console.log(`unload ${plugin_title} plugin`);

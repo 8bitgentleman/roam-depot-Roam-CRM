@@ -488,5 +488,96 @@ function remindersSystem(people, lastBirthdayCheck) {
   return mergedReminders
 }
 
+function getDictionaryWithKeyValue(list, key, value) {
+  return list.find(function(dict) {
+    // Ensure that dict[key] is a string and then check if it includes the value
+    return typeof dict[key] === 'string' && dict[key].includes(value);
+  });
+}
+
+function getBlockUidByContainsTextOnPage(text,page) {
+  let query = `[:find
+    (pull ?node [:block/uid])
+    :in $ ?pageTitle ?string
+    :where
+    [?sourcePage :node/title ?pageTitle]
+    [?node :block/page ?sourcePage]
+    (or [?node :block/string ?node-String]
+        [?node :node/title ?node-String])
+    [(clojure.string/includes? ?node-String ?string)]
+  ]`;
+
+  let result = window.roamAlphaAPI.q(query, page, text).flat();
+
+  if (result.length === 0) {
+    // Agenda:: block doesn't exist on the person's page so we need to make it
+    const newUID = window.roamAlphaAPI.util.generateUID()
+    const pageUID = window.roamAlphaAPI.data.pull("[:block/uid]", `[:node/title \"${page}\"]`)[":block/uid"]
+    
+    // create Agenda:: block
+    window.roamAlphaAPI.createBlock({"location":{"parent-uid":pageUID, "order": 'last'},"block":{"string": "Agenda::", "uid":newUID}})
+
+    return newUID; 
+  } else {
+    // Return the uid of the first block that contains Agenda::
+    return result[0].uid;
+  }
+}
+
+export async function parseAgendaPull(after) {
+  // Function to clean up the original block
+  function cleanUpBlock(block) {
+    const cleanedString = block[":block/string"].replace(agendaRegex, '');
+    window.roamAlphaAPI.updateBlock({
+      block: { uid: block[":block/uid"], string: cleanedString }
+    });
+  }
+  // Precompile the regex
+  const agendaRegex = /\[\[Agenda\]\]|\#Agenda|\#\[\[Agenda\]\]/g;
+
+  // Function to create a TODO block
+  function createTodoBlock(sourceUID, personAgendaBlock) {
+    const newBlockString = `{{[[TODO]]}} ((${sourceUID}))`;
+    window.roamAlphaAPI.createBlock({
+      location: { 'parent-uid': personAgendaBlock, order: 'last' },
+      block: { string: newBlockString }
+    });
+  }
+
+  if (':block/_refs' in after) {
+    
+    const agendaBlocks = after[':block/_refs']
+    
+    const filteredBlocks = agendaBlocks.filter(block => {
+      // Check if ":block/refs" key exists and has at least 2 refs
+      const hasRefs = block[":block/refs"] && block[":block/refs"].length >= 2;
+      // Check if ":block/string" does not start with "Agenda::"
+      const doesNotStartWithAgenda = !block[":block/string"].startsWith("Agenda::");
+  
+      // Return true if both conditions are met
+      return hasRefs && doesNotStartWithAgenda;
+    });
+    if (filteredBlocks.length>0) {
+      const people = await getAllPeople();
+
+      filteredBlocks.forEach(block => {
+        const relevantRefs = block[":block/refs"].filter(ref => ref[":node/title"] !== "Agenda");
+        relevantRefs.forEach(ref => {
+          const matchingPerson = getDictionaryWithKeyValue(people, "title", ref[":node/title"]);
+          if (matchingPerson) {
+            const personAgendaBlock = getBlockUidByContainsTextOnPage("Agenda::", matchingPerson.title);
+            createTodoBlock(block[":block/uid"], personAgendaBlock);
+            cleanUpBlock(block);
+          }
+        });
+      });
+    }
+    
+    
+  
+    
+  }
+  
+}
 export default remindersSystem;
 
