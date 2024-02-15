@@ -156,6 +156,8 @@ export async function getEventInfo(people, extensionAPI, testing) {
   } else {
     checkDate = isSecondDateAfter(lastCalendarCheck, todaysDNPUID)
   }
+  console.log("check date", checkDate);
+  
   if (checkDate) {
     await window.roamjs.extension.google.fetchGoogleCalendar({
         startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date())
@@ -164,18 +166,8 @@ export async function getEventInfo(people, extensionAPI, testing) {
         // TODO add a check for if you're not logged in
         if (results[0].text!=='No Events Scheduled for Selected Date(s)!') {
             
-            // create parent Call block at the top of the DNP
-            let newBlockUID = window.roamAlphaAPI.util.generateUID()
-            
-            window.roamAlphaAPI.createBlock(
-                {"location": 
-                    {"parent-uid": window.roamAlphaAPI.util.dateToPageUid(new Date()), 
-                    "order": 0}, 
-                "block": 
-                    {"string": "Calls Today",
-                    "heading":3,
-                    "open":true,
-                    "uid": newBlockUID}})
+            // get the uid for today's DNP
+            let newBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
 
             results.forEach(async result => {
                 // I split the result string manually here

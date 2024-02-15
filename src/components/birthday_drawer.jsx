@@ -72,42 +72,40 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
     >
       <div
         className={`${Classes.DRAWER_BODY} p-5 `}
-        style={{ paddingTop: "0px" }}
+        
       >
         {/* only show if there are birthdays today */}
         {reminders.aAndBBirthdaysToday.length > 0 && (
           <>
-            <h5 style={{ fontWeight: "800", }}>Birthdays Today:</h5>
-            <p>
-              <ul>
-                {reminders.aAndBBirthdaysToday.map((person, index) => (
-                  <li key={index}>
-                    <a
-                      style={{ color: "#48494a", fontWeight: 700 }}
-                      onClick={() =>
-                        window.roamAlphaAPI.ui.mainWindow.openPage({
-                          page: { title: person.name },
-                        })
-                      }
-                    >
-                      [[{person.name}]]
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </p>
+            <div className="reminder-section">
+              <h5 >Birthdays Today:</h5>
+                <ul>
+                  {reminders.aAndBBirthdaysToday.map((person, index) => (
+                    <li key={index}>
+                      <a
+                        onClick={() =>
+                          window.roamAlphaAPI.ui.mainWindow.openPage({
+                            page: { title: person.name },
+                          })
+                        }
+                      >
+                        [[{person.name}]]
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+            </div>
           </>
         )}
 
         {reminders.filteredUpcomingBirthdays.length > 0 && (
           <>
-            <h5 style={{ fontWeight: "800" }}>Upcoming Birthdays:</h5>
-            <p>
+            <div className="reminder-section">
+            <h5>Upcoming Birthdays:</h5>
               <ul>
                 {reminders.filteredUpcomingBirthdays.map((person, index) => (
                   <li key={index}>
                     <a
-                      style={{ color: "#48494a", fontWeight: 700 }}
                       onClick={() =>
                         window.roamAlphaAPI.ui.mainWindow.openPage({
                           page: { title: person.name },
@@ -120,41 +118,41 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                   </li>
                 ))}
               </ul>
-            </p>
+            </div>
           </>
         )}
 
         {reminders.toBeContacted.length > 0 && (
           <>
-            <h5 style={{ fontWeight: "800" }}>Time to reach out to:</h5>
-            <ul>
-              {reminders.toBeContacted.map((person, index) => (
-                !checkedContacts.includes(person) && (
-                  <li key={index}  >
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={checkedContacts.includes(person)}
-                        onChange={() => handleCheckboxChange(person)}
-                        style={{ marginRight: "10px" }}
-                      />
+            <div className="reminder-section">
+              <h5 >Time to reach out to:</h5>
+              <ul>
+                {reminders.toBeContacted.map((person, index) => (
+                  !checkedContacts.includes(person) && (
+                    <li key={index}  >
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={checkedContacts.includes(person)}
+                          onChange={() => handleCheckboxChange(person)}
+                        />
+                        
+                      </label>
+                      <a
+                        onClick={() =>
+                          window.roamAlphaAPI.ui.mainWindow.openPage({
+                            page: { title: person.name },
+                          })
+                        }
+                      >
+                        [[{person.name}]]
+                      </a>
                       
-                    </label>
-                    <a
-                      style={{ color: "#48494a", fontWeight: 700 }}
-                      onClick={() =>
-                        window.roamAlphaAPI.ui.mainWindow.openPage({
-                          page: { title: person.name },
-                        })
-                      }
-                    >
-                      [[{person.name}]]
-                    </a>
-                    
-                  </li>
-                )
-              ))}
-            </ul>
+                    </li>
+                  )
+                ))}
+              </ul>
+            </div>
           </>
         )}
 
