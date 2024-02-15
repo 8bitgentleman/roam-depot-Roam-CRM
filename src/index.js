@@ -8,8 +8,7 @@ import { getAllPeople,
 import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
 const testing = false
-const version = "v0.9.3"
-// missing the Agenda Adder
+const version = "v0.9.4"
 
 const plugin_title = "Roam CRM"
 const ts2 = 1708980444000
