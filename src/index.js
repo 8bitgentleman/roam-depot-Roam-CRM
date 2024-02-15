@@ -121,6 +121,30 @@ const panelConfig = {
   ]
 };
 
+async function crmbutton(extensionAPI) { //creates a new left sidebar log button below Daily Notes
+  
+  if (!document.getElementById('crmDiv')) {
+    var divCRM = document.createElement('div');
+    divCRM.classList.add('log-button');
+    divCRM.innerHTML = "Roam CRM";
+    divCRM.id = 'crmDiv';
+    var spanCRM = document.createElement('span');
+    spanCRM.classList.add('bp3-icon', 'bp3-icon-people', 'icon');
+    divCRM.prepend(spanCRM);
+    var sidebarcontent = document.querySelector("#app > div.roam-body > div.roam-app > div.roam-sidebar-container.noselect > div"),
+        sidebartoprow = sidebarcontent.childNodes[1];
+    if (sidebarcontent && sidebartoprow) {
+      sidebartoprow.parentNode.insertBefore(divCRM, sidebartoprow.nextSibling);    
+    }
+    divCRM.onclick = async () => {      
+      const allPeople = await getAllPeople();
+      const lastBirthdayCheckDate = getLastBirthdayCheckDate(extensionAPI);
+
+      displayBirthdays(allPeople, lastBirthdayCheckDate);
+    };
+  }
+}
+
 function getLastBirthdayCheckDate(extensionAPI) {
   return extensionAPI.settings.get('last-birthday-check-date') || '01-19-2024'
 }
@@ -165,7 +189,8 @@ async function onload({ extensionAPI }) {
 
   if (ts1 < ts2) {
     const people = await getAllPeople()
-    
+    // add left sidebar button
+    crmbutton(extensionAPI)
     if (testing) {
       displayBirthdays(people, '01-19-2024')
     } else {
@@ -287,7 +312,9 @@ function onunload() {
     entity,
     pullFunction
   )
-
+  var crmDiv = document.getElementById('crmDiv');
+  crmDiv.remove();
+  
   if (!testing) {
     console.log(`unload ${plugin_title} plugin`);
   }
