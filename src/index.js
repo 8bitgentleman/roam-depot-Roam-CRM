@@ -7,7 +7,7 @@ import { getAllPeople,
         parseAgendaPull } from './utils'
 import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
-const testing = true
+const testing = false
 const version = "v0.9.5"
 
 const plugin_title = "Roam CRM"
