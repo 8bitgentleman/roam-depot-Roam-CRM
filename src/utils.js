@@ -557,8 +557,10 @@ export async function parseAgendaPull(after) {
   // Function to create a TODO block
   function createTodoBlock(sourceUID, personAgendaBlock) {
     const newBlockString = `{{[[TODO]]}} ((${sourceUID}))`;
+    console.log(personAgendaBlock);
+    
     window.roamAlphaAPI.createBlock({
-      location: { 'parent-uid': personAgendaBlock, order: 'last' },
+      location: { 'parent-uid': personAgendaBlock, order: 0 },
       block: { string: newBlockString }
     });
   }
