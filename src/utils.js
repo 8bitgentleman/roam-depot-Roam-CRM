@@ -427,6 +427,19 @@ function fixPersonJSON(person) {
 
 }
 
+export function calculateAge(birthdate) {  
+  const today = new Date();
+  const birthDate = new Date(birthdate);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  return age;
+}
+
 function remindersSystem(people, lastBirthdayCheck) {
   let birthdays = {
     aAndBBirthdaysToday: [],
@@ -435,6 +448,7 @@ function remindersSystem(people, lastBirthdayCheck) {
   }
   let toBeContacted = []
   // for each person extract the needed info
+  
   people.forEach(person => {
     // fix the json
     
@@ -455,16 +469,17 @@ function remindersSystem(people, lastBirthdayCheck) {
     } 
     
   });
-  
+
   // check if there are lower priority birthdays and create on DNP
   const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date)
+
   if (isSecondDateAfter(lastBirthdayCheck, todaysDNPUID) & birthdays.otherBirthdaysToday.length>0) {
       // block ref other today birthdays to the DNP
     const blockJSON = [
       {
-          string: "**Birthdays Today**",
+          string: `((${getBlockUidByContainsTextOnPage("Birthdays Today", "roam/templates")}))`,
           children: birthdays.otherBirthdaysToday.map(p => ({
-              string: `[${p.name}](((${p.birthday_UID})))`
+              string: `[${p.name} is ${calculateAge(p.birthday)} years old](((${p.birthday_UID})))`
           }))
       }
     ];
@@ -507,7 +522,7 @@ function getBlockUidByContainsTextOnPage(text,page) {
     const pageUID = window.roamAlphaAPI.data.pull("[:block/uid]", `[:node/title \"${page}\"]`)[":block/uid"]
     
     // create Agenda:: block
-    window.roamAlphaAPI.createBlock({"location":{"parent-uid":pageUID, "order": 'last'},"block":{"string": "Agenda::", "uid":newUID}})
+    window.roamAlphaAPI.createBlock({"location":{"parent-uid":pageUID, "order": 'last'},"block":{"string": text, "uid":newUID}})
 
     return newUID; 
   } else {

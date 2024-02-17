@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import renderOverlay from "roamjs-components/util/renderOverlay";
 import remindersSystem from "../utils";
+import { calculateAge } from "../utils";
 import updateBlock from "roamjs-components/writes/updateBlock"
 
 const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
@@ -89,7 +90,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                           })
                         }
                       >
-                        [[{person.name}]]
+                        [[{person.name}]] is {calculateAge(person.birthday)} years old
                       </a>
                     </li>
                   ))}

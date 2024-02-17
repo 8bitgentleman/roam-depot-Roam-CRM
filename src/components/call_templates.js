@@ -6,6 +6,7 @@ function createLastWeekCalls(parentUid) {
         node:{
             text: `Calls in the Last Week`,
             heading:1,
+            open:false,
             children:[
             {
                 text: `{{query block}} #.rollup-table`,
