@@ -147,7 +147,6 @@ function findPersonByEmail(people, email) {
 
 export async function getEventInfo(people, extensionAPI, testing) {
   const lastCalendarCheck = getLastCalendarCheckDate(extensionAPI)
-  console.log("lastCalendarCheck", lastCalendarCheck);
   const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date)
   // override if testing version
   let checkDate 
@@ -156,7 +155,6 @@ export async function getEventInfo(people, extensionAPI, testing) {
   } else {
     checkDate = isSecondDateAfter(lastCalendarCheck, todaysDNPUID)
   }
-  console.log("check date", checkDate);
   
   if (checkDate) {
     await window.roamjs.extension.google.fetchGoogleCalendar({
@@ -172,7 +170,6 @@ export async function getEventInfo(people, extensionAPI, testing) {
             results.forEach(async result => {
                 // I split the result string manually here
                 // TODO update this when the PR goes through
-              console.log("event result",result);
               
                 // let [summary, description, location, start, end, attendees] = result.text.split("=:=");
                 let attendees = result.event.attendees
@@ -462,7 +459,6 @@ function remindersSystem(people, lastBirthdayCheck) {
     // fix the json
     
     person = fixPersonJSON(person)
-    console.log(person);
     
     // check the last contact date compared to the contact list 
     if (shouldContact(person)) {
@@ -557,7 +553,6 @@ export async function parseAgendaPull(after) {
   // Function to create a TODO block
   function createTodoBlock(sourceUID, personAgendaBlock) {
     const newBlockString = `{{[[TODO]]}} ((${sourceUID}))`;
-    console.log(personAgendaBlock);
     
     window.roamAlphaAPI.createBlock({
       location: { 'parent-uid': personAgendaBlock, order: 0 },
