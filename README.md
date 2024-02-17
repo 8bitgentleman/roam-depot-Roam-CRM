@@ -17,6 +17,7 @@ Roam CRM relies on several excellent Roam extensions to extend it's functionalit
         - #[[B List]]: Contact every two months
         - #[[C List]]: Contact every six months
         - #[[D List]]: Contact once a year
+        - #[[F List]]: Never contact
 
 - Query Builder by David Vargas & Michael Gartner
 

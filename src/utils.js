@@ -268,10 +268,17 @@ function shouldContact(person) {
     "B List": 2 * 30 * 24 * 60 * 60 * 1000, // Roughly every two months
     "C List": 6 * 30 * 24 * 60 * 60 * 1000, // Roughly every six months
     "D List": 365 * 24 * 60 * 60 * 1000, // Once a year
+    "F List": null //never contact
   };
 
   // Extract the relevant properties from the person object
   const { contact_list, last_contact, name } = person;
+
+  // Check if the person is on the "F List"
+  if (contact_list === "F List") {
+    // If so, return false as we never contact these individuals
+    return false;
+  }
 
   // Convert the last_contact string to a Date object
   const lastContactDate = new Date(last_contact);
@@ -309,7 +316,7 @@ function checkBirthdays(person) {
       // C & Ds will be block ref'd to the DNP
     if (person.contact_list === "A List" || person.contact_list === "B List") {
       aAndBBirthdaysToday = person
-    } else {
+    } else if (person.contact_list !== "F List") {
       otherBirthdaysToday = person
     }
   } else if (daysDiff > 0 && daysDiff <= 14) {     
@@ -412,6 +419,8 @@ function fixPersonJSON(person) {
     contact = "B List";
   } else if (person["Contact Frequency"][0].string .includes("D List")) {
     contact = "D List";
+  } else if (person["Contact Frequency"][0].string .includes("F List")) {
+    contact = "F List";
   } else {
     // Default value if none of the keywords are found
     contact = "C List";
@@ -453,8 +462,11 @@ function remindersSystem(people, lastBirthdayCheck) {
     // fix the json
     
     person = fixPersonJSON(person)
+    console.log(person);
+    
+    // check the last contact date compared to the contact list 
     if (shouldContact(person)) {
-      toBeContacted.push(person) //{"toBeContacted": "reminders"}
+      toBeContacted.push(person)
     }
     
     let filteredBirthdays = checkBirthdays(person)
