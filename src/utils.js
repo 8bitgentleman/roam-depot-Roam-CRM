@@ -503,10 +503,25 @@ function remindersSystem(people, lastBirthdayCheck) {
   return mergedReminders
 }
 
+function normalizeString(str) {
+  return str
+    // Convert to lowercase
+    .toLowerCase()
+    // Trim leading and trailing whitespace
+    .trim()
+}
+
 function getDictionaryWithKeyValue(list, key, value) {
+
   return list.find(function(dict) {
-    // Ensure that dict[key] is a string and then check if it includes the value
-    return typeof dict[key] === 'string' && dict[key].includes(value);
+    if (typeof dict[key] !== 'string') {
+      return false;
+    }
+    // Normalize and standardize both the dictionary value and the search value
+    const normalizedDictValue = normalizeString(dict[key]);
+    const normalizedSearchValue = normalizeString(value);
+
+    return normalizedDictValue === normalizedSearchValue;
   });
 }
 
@@ -575,11 +590,14 @@ export async function parseAgendaPull(after) {
     });
     if (filteredBlocks.length>0) {
       const people = await getAllPeople();
-
+      console.log(filteredBlocks);
+      
       filteredBlocks.forEach(block => {
         const relevantRefs = block[":block/refs"].filter(ref => ref[":node/title"] !== "Agenda");
         relevantRefs.forEach(ref => {
           const matchingPerson = getDictionaryWithKeyValue(people, "title", ref[":node/title"]);
+          console.log("match", matchingPerson);
+          
           if (matchingPerson) {
             const personAgendaBlock = getBlockUidByContainsTextOnPage("Agenda::", matchingPerson.title);
             createTodoBlock(block[":block/uid"], personAgendaBlock);
