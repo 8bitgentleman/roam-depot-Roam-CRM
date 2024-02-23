@@ -286,6 +286,9 @@ async function onload({ extensionAPI }) {
     }
   )
 
+  // run the initial agenda addr  
+  await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity));
+  
   // agenda addr pull watch
   window.roamAlphaAPI.data.addPullWatch(
     pullPattern,
