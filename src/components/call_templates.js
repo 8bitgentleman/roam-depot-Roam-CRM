@@ -384,15 +384,6 @@ function createLastMonthCalls(parentUid) {
                                 
                             }
                             ]
-                        },
-                        {
-                            text: `node:NEXT:created date`,
-                            children: [
-                            {
-                                text: `Created Date`,
-                                
-                            }
-                            ]
                         }
                         ]
                     },
