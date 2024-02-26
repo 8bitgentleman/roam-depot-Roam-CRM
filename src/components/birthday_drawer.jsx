@@ -59,7 +59,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
     <Drawer
       onClose={onClose}
       isOpen={isOpen}
-      title={"Roam CRM Reminders"}
+      title={"Roam CRM"}
       position={"right"}
       hasBackdrop={false}
       canOutsideClickClose={false}
