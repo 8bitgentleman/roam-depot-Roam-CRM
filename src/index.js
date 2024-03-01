@@ -7,8 +7,8 @@ import { getAllPeople,
         parseAgendaPull } from './utils'
 import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
-const testing = true
-const version = "v0.9.6.2"
+const testing = false
+const version = "v0.9.7"
 
 const plugin_title = "Roam CRM"
 
@@ -285,6 +285,47 @@ async function onload({ extensionAPI }) {
       }
     }
   )
+    // Command Palette Sidebar - Close first block
+    extensionAPI.ui.commandPalette.addCommand(
+      {
+        label: 'Sidebar - Toggle first sidebar window open/close',
+        "disable-hotkey": false,
+        callback: async () => {
+          async function toggleWindowCollapse(w) {
+            if (w['collapsed?']===true) {
+              window.roamAlphaAPI.ui.rightSidebar.expandWindow(
+                {
+                  "window":
+                  {
+                    "type": w['type'],
+                    "block-uid": w['block-uid'] || w['page-uid'] || w['mentions-uid']
+                  }
+                }
+              )
+            } else if (w['collapsed?']===false){
+              window.roamAlphaAPI.ui.rightSidebar.collapseWindow(
+                {
+                  "window":
+                  {
+                    "type": w['type'],
+                    "block-uid": w['block-uid'] || w['page-uid'] || w['mentions-uid']
+                  }
+                }
+              )
+            }
+            
+          }
+  
+          let sidebarWindows = window.roamAlphaAPI.ui.rightSidebar.getWindows();
+          
+          if (sidebarWindows.length > 0) {
+            sidebarWindows.sort((a, b) => a.order - b.order);
+            await toggleWindowCollapse(sidebarWindows[0])
+          }
+  
+        }
+      }
+    )
 
   // run the initial agenda addr  
   await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity));
