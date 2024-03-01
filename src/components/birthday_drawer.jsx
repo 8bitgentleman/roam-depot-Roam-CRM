@@ -102,7 +102,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
         {reminders.filteredUpcomingBirthdays.length > 0 && (
           <>
             <div className="reminder-section">
-            <h5>Upcoming Birthdays</h5>
+            <h5>Upcoming Birthdays </h5>
               <ul>
                 {reminders.filteredUpcomingBirthdays.map((person, index) => (
                   <li key={index}>
@@ -113,7 +113,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                         })
                       }
                     >
-                      {person.name}
+                      {person.name} 
                     </a>
                     {new Date(person.birthday).toLocaleDateString()} (in {person.daysUntilBirthday} days)
                   </li>
