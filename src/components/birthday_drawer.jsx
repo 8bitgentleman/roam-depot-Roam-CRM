@@ -79,7 +79,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
         {reminders.aAndBBirthdaysToday.length > 0 && (
           <>
             <div className="reminder-section">
-              <h5 >Birthdays Today:</h5>
+              <h5 >Birthdays Today</h5>
                 <ul>
                   {reminders.aAndBBirthdaysToday.map((person, index) => (
                     <li key={index}>
@@ -90,7 +90,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                           })
                         }
                       >
-                        [[{person.name}]] is {calculateAge(person.birthday)} years old
+                        {person.name} is {calculateAge(person.birthday)} years old
                       </a>
                     </li>
                   ))}
@@ -102,7 +102,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
         {reminders.filteredUpcomingBirthdays.length > 0 && (
           <>
             <div className="reminder-section">
-            <h5>Upcoming Birthdays:</h5>
+            <h5>Upcoming Birthdays</h5>
               <ul>
                 {reminders.filteredUpcomingBirthdays.map((person, index) => (
                   <li key={index}>
@@ -113,9 +113,9 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                         })
                       }
                     >
-                      [[{person.name}]]
+                      {person.name}
                     </a>
-                    - {new Date(person.birthday).toLocaleDateString()} (in {person.daysUntilBirthday} days)
+                    {new Date(person.birthday).toLocaleDateString()} (in {person.daysUntilBirthday} days)
                   </li>
                 ))}
               </ul>
@@ -126,7 +126,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
         {reminders.toBeContacted.length > 0 && (
           <>
             <div className="reminder-section">
-              <h5 >Time to reach out to:</h5>
+              <h5 >Time to reach out to</h5>
               <ul>
                 {reminders.toBeContacted.map((person, index) => (
                   !checkedContacts.includes(person) && (
@@ -146,7 +146,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck }) => {
                           })
                         }
                       >
-                        [[{person.name}]]
+                        {person.name}
                       </a>
                       
                     </li>

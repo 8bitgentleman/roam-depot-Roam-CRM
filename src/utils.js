@@ -168,9 +168,6 @@ export async function getEventInfo(people, extensionAPI, testing) {
             let newBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
 
             results.forEach(async result => {
-                // I split the result string manually here
-                // TODO update this when the PR goes through
-              
                 // let [summary, description, location, start, end, attendees] = result.text.split("=:=");
                 let attendees = result.event.attendees
                 // // only process events with more than 1 confirmed attendee
@@ -186,7 +183,7 @@ export async function getEventInfo(people, extensionAPI, testing) {
                             attendeeNames.push(a.email)
                         }
                     });
-                    let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about **${result.event.summary}**`
+                    let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
 
                     const blockJSON = [
                         {
