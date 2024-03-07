@@ -1,5 +1,6 @@
 import createBlock from "roamjs-components/writes/createBlock"
 import createPage from "roamjs-components/writes/createPage"
+import { showToast } from './components/toast';
 
 function isSecondDateAfter(firstDateString, secondDateString) {
   // Parse the dates from the strings
@@ -155,14 +156,27 @@ export async function getEventInfo(people, extensionAPI, testing) {
   } else {
     checkDate = isSecondDateAfter(lastCalendarCheck, todaysDNPUID)
   }
+  // keep in mind when editing 'last-calendar-check-date' I have to get the whole object, 
+  // edit the values I need and then set 'last-calendar-check-date' to the new object
+
+  // if No Events Scheduled -> update all 'last-calendar-check-date' dictionary dates
+  // else loop through all
+  // if one has "Error: Must log in" extract email into "prevent_update"
+  // if prevent_update is empty loop through 'last-calendar-check-date' dictionary and 
+  // for each key set the value to today's date
+  // if prevent_update is full omit those keys from the 'last-calendar-check-date' update
   
   if (checkDate) {
     await window.roamjs.extension.google.fetchGoogleCalendar({
         startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date())
     }).then(results => {      
         // Iterate through each response and split the string
-        // TODO add a check for if you're not logged in
-        if (results[0].text!=='No Events Scheduled for Selected Date(s)!') {
+        console.log("Events: ", results);
+        // check if you're logged in
+        if (results[0].text.includes("Error: Must log in")) {
+          showToast(results[0].text, "DANGER")
+        } else{
+          if (results[0].text!=='No Events Scheduled for Selected Date(s)!') {
             
             // get the uid for today's DNP
             let newBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
@@ -198,14 +212,20 @@ export async function getEventInfo(people, extensionAPI, testing) {
                 }
 
             });  
+          }
+          // TODO what happens if there are multiple email accounts connected? 
+          // how can I tell if one has been imported but not the other?
+          // right now I only 
+          extensionAPI.settings.set(
+          'last-calendar-check-date',
+          todaysDNPUID)
         }
+        
         
     }).catch(error => {
         console.error(error);
     });
-    extensionAPI.settings.set(
-    'last-calendar-check-date',
-    todaysDNPUID)
+    
   }
 }
 
