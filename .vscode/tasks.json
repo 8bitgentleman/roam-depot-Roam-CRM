@@ -1,12 +1,12 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "npm",
-			"script": "copy-js-files",
-			"problemMatcher": [],
-			"label": "npm: copy-js-files",
-			"detail": "cp extension.js ~/Documents/Github-Repos/roam-depot-CRM-testing"
-		}
-	]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "npm",
+            "script": "copy-js-files",
+            "problemMatcher": [],
+            "label": "npm: copy-js-files",
+            "detail": "cp extension.js ~/Documents/Github-Repos/roam-depot-CRM-testing"
+        }
+    ]
 }

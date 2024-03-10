@@ -9,110 +9,108 @@
     max-height: 100%; /* Ensure the Drawer does not exceed the viewport height */
 }
 
- .crm-reminders-drawer  .bp3-drawer-header { 
+.crm-reminders-drawer .bp3-drawer-header {
     background: rgb(247, 248, 248);
-  }
-  /*
+}
+/*
 .crm-reminders-drawer .bp3-drawer-header .bp3-heading {
     color: white; 
     opacity: 0.7; 
   } */
 
 /* Roundup Query */
-span.rm-page-ref--tag[data-tag=".rollup-table"]{
-  display:none !important;
+span.rm-page-ref--tag[data-tag=".rollup-table"] {
+    display: none !important;
 }
-
 
 .rollup-table .roamjs-query-page tfoot {
-  /* display:none; */
+    /* display:none; */
 }
-.rollup-table thead{
-  background:rgb(247, 244, 253) !important;
-  background-color:rgb(247, 244, 253) !important;
-  border: 2px solid rgb(189, 179, 230) !important;
-  border-radius:10px !important;
-  font-size:16px;
-  font-style:bold;
-  font-weight:700;
+.rollup-table thead {
+    background: rgb(247, 244, 253) !important;
+    background-color: rgb(247, 244, 253) !important;
+    border: 2px solid rgb(189, 179, 230) !important;
+    border-radius: 10px !important;
+    font-size: 16px;
+    font-style: bold;
+    font-weight: 700;
 }
-.rollup-table tbody{
-  background:rgb(247, 244, 253) !important;
-  background-color:rgb(247, 244, 253) !important;
-  font-size:8px;
-}
-
-.rollup-table td>div:nth-child(1)>span:nth-child(2){
-  opacity:20%
+.rollup-table tbody {
+    background: rgb(247, 244, 253) !important;
+    background-color: rgb(247, 244, 253) !important;
+    font-size: 8px;
 }
 
-.rollup-table tr .rm-page-ref{
-  color:rgb(127, 93, 207);
-  text-decoration: underline;
+.rollup-table td > div:nth-child(1) > span:nth-child(2) {
+    opacity: 20%;
 }
-.rollup-table .bp3-icon{
-  color:rgb(127, 98, 206);
-  
+
+.rollup-table tr .rm-page-ref {
+    color: rgb(127, 93, 207);
+    text-decoration: underline;
 }
-.rollup-table .bp3-icon-more, 
-.rollup-table .bp3-icon-refresh{
-  opacity:20%;
+.rollup-table .bp3-icon {
+    color: rgb(127, 98, 206);
+}
+.rollup-table .bp3-icon-more,
+.rollup-table .bp3-icon-refresh {
+    opacity: 20%;
 }
 .rollup-table .bp3-card {
-  border:1px solid rgb(189, 179, 230) !important;
-  border-radius:10px;
+    border: 1px solid rgb(189, 179, 230) !important;
+    border-radius: 10px;
 }
-.roamjs-query-results-view>div:nth-child(1){
-  background:rgb(247, 244, 253);
-  color:rgb(127, 98, 206, .5);
+.roamjs-query-results-view > div:nth-child(1) {
+    background: rgb(247, 244, 253);
+    color: rgb(127, 98, 206, 0.5);
 }
-.rm-embed-container--block:has(.rollup-table){
-    background-color:rgba(127, 98, 206, .0);
+.rm-embed-container--block:has(.rollup-table) {
+    background-color: rgba(127, 98, 206, 0);
 }
 
-.rollup-table  .rm-attr-ref{
-  font-weight: 500;
+.rollup-table .rm-attr-ref {
+    font-weight: 500;
 }
 /*the bottom bar*/
-.rollup-table .roamjs-query-results-view>div.relative>div:last-child{
-  background:rgb(247, 244, 253)  !important;
-  border-top:1px solid rgb(127, 98, 206, .5)  !important;
-  display:none;
+.rollup-table .roamjs-query-results-view > div.relative > div:last-child {
+    background: rgb(247, 244, 253) !important;
+    border-top: 1px solid rgb(127, 98, 206, 0.5) !important;
+    display: none;
 }
-.crm-reminders-drawer a{
-  color: #48494a;
-  font-weight: 700;
+.crm-reminders-drawer a {
+    color: #48494a;
+    font-weight: 700;
 }
-.crm-reminders-drawer h5{
-  font-size: 12px !important;
-  font-weight: 800;
-  margin:0px;
-  margin-left: 8px;
+.crm-reminders-drawer h5 {
+    font-size: 12px !important;
+    font-weight: 800;
+    margin: 0px;
+    margin-left: 8px;
 }
-.crm-reminders-drawer ul{
-  padding-top: 4px;
-  /* padding-bottom: 4px; */
-} 
-.crm-reminders-drawer li{
-  font-size: 14px !important;
+.crm-reminders-drawer ul {
+    padding-top: 4px;
+    /* padding-bottom: 4px; */
 }
-.crm-reminders-drawer  div.reminder-section{
-  background-color: hsl(204,33%,97%);
-  /* margin: 4px 8px; */
-  margin-bottom:.5rem;
-  padding: 4px;
-  border-radius: 4px;
-  border: 1px solid;
-  border-color: hsl(204,33%,87%);
+.crm-reminders-drawer li {
+    font-size: 14px !important;
+}
+.crm-reminders-drawer div.reminder-section {
+    background-color: hsl(204, 33%, 97%);
+    /* margin: 4px 8px; */
+    margin-bottom: 0.5rem;
+    padding: 4px;
+    border-radius: 4px;
+    border: 1px solid;
+    border-color: hsl(204, 33%, 87%);
 }
 
 .crm-reminders-drawer .p-5 {
-  padding: .5rem;
+    padding: 0.5rem;
 }
-.crm-reminders-drawer input{
-  margin:4px;
-  padding-top:4px;
+.crm-reminders-drawer input {
+    margin: 4px;
+    padding-top: 4px;
 }
-.crm-reminders-drawer li>label{
-  margin-bottom:0px;
+.crm-reminders-drawer li > label {
+    margin-bottom: 0px;
 }
