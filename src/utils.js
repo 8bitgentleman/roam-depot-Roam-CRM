@@ -11,8 +11,17 @@ function isSecondDateAfter(firstDateString, secondDateString) {
   return secondDate > firstDate;
 }
 
+// function getLastCalendarCheckDate(extensionAPI) {
+//   return extensionAPI.settings.get('last-calendar-check-date') || "01-19-2024"
+// }
 function getLastCalendarCheckDate(extensionAPI) {
-  return extensionAPI.settings.get('last-calendar-check-date') || '01-19-2024'
+  const value = extensionAPI.settings.get('last-calendar-check-date') || {};  
+  if (typeof value === 'string') {
+    extensionAPI.settings.set('last-calendar-check-date',{})
+    return {};
+  } else {
+    return value;
+  }
 }
 
 function parseStringToDate(dateString) {
@@ -145,88 +154,98 @@ function findPersonByEmail(people, email) {
       
   return result
 }
-
+function extractEmailFromString(text) {
+  // Regular expression for matching an email address
+  const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+  
+  // Using match() to find the email in the text
+  const found = text.match(emailRegex);
+  
+  // If an email is found, return it; otherwise, return null or an appropriate message
+  return found ? found[0] : null;
+}
 export async function getEventInfo(people, extensionAPI, testing) {
   const lastCalendarCheck = getLastCalendarCheckDate(extensionAPI)
   const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date)
-  // override if testing version
-  let checkDate 
-  if (testing===true) {
-    checkDate = testing
-  } else {
-    checkDate = isSecondDateAfter(lastCalendarCheck, todaysDNPUID)
-  }
-  // keep in mind when editing 'last-calendar-check-date' I have to get the whole object, 
-  // edit the values I need and then set 'last-calendar-check-date' to the new object
 
-  // if No Events Scheduled -> update all 'last-calendar-check-date' dictionary dates
-  // else loop through all
-  // if one has "Error: Must log in" extract email into "prevent_update"
-  // if prevent_update is empty loop through 'last-calendar-check-date' dictionary and 
-  // for each key set the value to today's date
-  // if prevent_update is full omit those keys from the 'last-calendar-check-date' update
-  
-  if (checkDate) {
-    await window.roamjs.extension.google.fetchGoogleCalendar({
-        startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date())
-    }).then(results => {      
-        // Iterate through each response and split the string
-        console.log("Events: ", results);
-        // check if you're logged in
-        if (results[0].text.includes("Error: Must log in")) {
-          showToast(results[0].text, "DANGER")
-        } else{
-          if (results[0].text!=='No Events Scheduled for Selected Date(s)!') {
-            
-            // get the uid for today's DNP
-            let newBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
+  let prevent_update = new Set()
+  let to_update = new Set()
+  await window.roamjs.extension.google.fetchGoogleCalendar({
+      startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date())
+  }).then(async results => {      
+      console.log("Events: ", results);
+      if (results[0].text!=='No Events Scheduled for Selected Date(s)!') {
+        
+        // get the uid for today's DNP
+        let newBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
 
-            results.forEach(async result => {
-                // let [summary, description, location, start, end, attendees] = result.text.split("=:=");
-                let attendees = result.event.attendees
-                // // only process events with more than 1 confirmed attendee
-                if (attendees.length > 1) {
+        results.forEach(async result => {
+          // check if there are logged in errors
+          if(result.text.includes("Error: Must log in") || result.text.includes("Error for calendar")) {
+            const errorEmail = extractEmailFromString(result.text)
+            prevent_update.add(errorEmail)
+            console.log("email issue: ", errorEmail, prevent_update)
+            showToast(result.text, "DANGER")
+          } else {
+            let attendees = result.event.attendees || 0
+            let calendar = result.event.calendar || null
+            // add calendar date check
+            let checkDate
+            if (testing) {
+              checkDate = '01-19-2024'
+            } else {
+              checkDate = lastCalendarCheck[calendar] || '01-19-2024'
+            }
+            let toCheck = isSecondDateAfter(checkDate, todaysDNPUID)
+            if (toCheck) {
+              to_update.add(calendar)
+              // only process events with more than 1 confirmed attendee
+              if (attendees.length > 1) {
 
-                    let attendeeNames = []
-                    attendees.forEach(a => {
-                        let name = findPersonNameByEmail(people, a.email)
-                        if (name.length > 0) {
-                            // push the formatted person page name
-                            attendeeNames.push(`[[${name[0]}]]`)
-                        } else {
-                            attendeeNames.push(a.email)
-                        }
-                    });
-                    let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
+                  let attendeeNames = []
+                  attendees.forEach(a => {
+                      let name = findPersonNameByEmail(people, a.email)
+                      if (name.length > 0) {
+                          // push the formatted person page name
+                          attendeeNames.push(`[[${name[0]}]]`)
+                      } else {
+                          attendeeNames.push(a.email)
+                      }
+                  });
+                  let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
 
-                    const blockJSON = [
-                        {
-                            string: headerString, 
-                            children:[
-                                { string: "Notes::", children:[{string: ""}] },
-                                { string: "Next Actions::", children:[{string: ""}] },
-                                ]
-                        }
-                        ]
-                    createChildren(newBlockUID, blockJSON)
-                }
-
-            });  
+                  const blockJSON = [
+                      {
+                          string: headerString, 
+                          children:[
+                              { string: "Notes::", children:[{string: ""}] },
+                              { string: "Next Actions::", children:[{string: ""}] },
+                              ]
+                      }
+                      ]
+                  createChildren(newBlockUID, blockJSON)
+              }
+            }
           }
-          // TODO what happens if there are multiple email accounts connected? 
-          // how can I tell if one has been imported but not the other?
-          // right now I only 
-          extensionAPI.settings.set(
-          'last-calendar-check-date',
-          todaysDNPUID)
+        });  
+      }
+
+      // keep in mind when editing 'last-calendar-check-date' I have to get the whole object, 
+      // edit the values I need and then set 'last-calendar-check-date' to the new object
+      if (to_update.size > 0) {
+        let new_calendar_check_date = lastCalendarCheck
+        for (const value of to_update) {
+          new_calendar_check_date[value] = todaysDNPUID
         }
-        
-        
-    }).catch(error => {
-        console.error(error);
-    });
-    
-  }
+        await extensionAPI.settings.set('last-calendar-check-date', new_calendar_check_date)
+      }
+      console.log("new values ", await extensionAPI.settings.get('last-calendar-check-date'));
+      
+      
+  }).catch(error => {
+      console.error(error);
+  });
+  
 }
 
 export async function getPageUID(page) {

@@ -8,7 +8,7 @@ import { getAllPeople,
 import { createLastWeekCalls, createLastMonthCalls, createPersonTemplates, createCallTemplates } from './components/call_templates';
 
 const testing = false
-const version = "v0.9.7"
+const version = "v1.0 🎉"
 
 const plugin_title = "Roam CRM"
 
