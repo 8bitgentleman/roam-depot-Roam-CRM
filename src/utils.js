@@ -11,9 +11,6 @@ function isSecondDateAfter(firstDateString, secondDateString) {
     return secondDate > firstDate
 }
 
-// function getLastCalendarCheckDate(extensionAPI) {
-//   return extensionAPI.settings.get('last-calendar-check-date') || "01-19-2024"
-// }
 function getLastCalendarCheckDate(extensionAPI) {
     const value = extensionAPI.settings.get("last-calendar-check-date") || {}
     if (typeof value === "string") {

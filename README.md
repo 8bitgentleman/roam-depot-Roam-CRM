@@ -30,7 +30,7 @@ Roam CRM relies on several excellent Roam extensions to extend it's functionalit
 ### Agenda Adder
 
 -   Inefficient leaders waste a lot of time reaching out about or responding to one-off issues in real time. A much more efficient method is to batch your issues and discuss them all at once.
--   Make a block anywhere that has as persons name `[[Bill Gates]]` and a hashtag `#Agenda`
+-   Make a block anywhere that has as persons name `[[Bill Gates]]` and a hashtag `#Agenda` (configurable in the extension settings)
 -   Roam CRM will automatically nest your block on Bill's page under an agenda attribute
 -   Next time you talk, you'll remember everything you wanted to tell Bill!
 
@@ -40,8 +40,14 @@ Roam CRM relies on several excellent Roam extensions to extend it's functionalit
 
 ### Contact Reminders
 
--   Set contact frequency reminders for each person - #[[A List]]: Contact every two weeks - #[[B List]]: Contact every two months - #[[C List]]: Contact every six months - #[[D List]]: Contact once a year - #[[F List]]: Never contact
--   A modal on the daily note remind you to contact someone
+Set contact frequency reminders for each person 
+- #[[A List]]: Contact every two weeks 
+- #[[B List]]: Contact every two months 
+- #[[C List]]: Contact every six months 
+- #[[D List]]: Contact once a year 
+- #[[F List]]: Never contact
+
+A modal on the daily note remind you to contact someone
 
 ### Birthday Reminders
 

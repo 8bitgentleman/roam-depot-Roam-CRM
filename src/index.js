@@ -1,6 +1,11 @@
 import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from "./components/toast"
-import { getAllPeople, getEventInfo, getPageUID, parseAgendaPull } from "./utils"
+import { 
+    getAllPeople,
+    getEventInfo,
+    getPageUID,
+    parseAgendaPull 
+} from "./utils"
 import {
     createLastWeekCalls,
     createLastMonthCalls,
@@ -9,7 +14,7 @@ import {
 } from "./components/call_templates"
 
 const testing = false
-const version = "v1.0 🎉"
+const version = "v1.1"
 
 const plugin_title = "Roam CRM"
 
@@ -18,6 +23,11 @@ let googleLoadedHandler
 const pullPattern =
     "[:block/_refs :block/uid :node/title {:block/_refs [{:block/refs[:node/title]} :node/title :block/uid :block/string]}]"
 const entity = '[:node/title "Agenda"]'
+
+function getAgendaAddrSetting(extensionAPI) {
+    return extensionAPI.settings.get("agenda-addr-tag") || "Agenda"
+}
+
 const pullFunction = async function a(before, after) {
     await parseAgendaPull(after)
 }
@@ -34,20 +44,53 @@ const panelConfig = {
             name: "Version",
             action: { type: "reactComponent", component: versionTextComponent },
         },
-        // {
-        //   id: "calendar-setting",
-        //   name: "Import Today's Calender Events On Load",
-        //   description: "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot to be installed.",
-        //   action: {
-        //     type: "switch",
-        //     onChange: (evt) => { console.log("Switch!", evt); }
-        //   }},
-
+        {
+          id: "calendar-setting",
+          name: "Import Today's Calender Events On Load",
+          description: "Imports today's call events from a linked google calendar where more than 1 person is invited. Requires the Google extension from Roam Depot to be installed.",
+          action: {
+            type: "switch",
+            onChange: (evt) => { 
+                console.log(evt.target.checked);
+                
+                showToast(`Reload Roam to take effect.`, "SUCCESS")
+             }
+          }},
+          {
+            id: "left-sidebar-button",
+            name: "Left Sidebar CRM Button",
+            description: "Adds a shortcut button to the left sidebar to launch Roam CRM",
+            action: {
+              type: "switch",
+              onChange: (evt) => { 
+                showToast(`Reload Roam to take effect.`, "SUCCESS")
+               }
+            }},
+        {
+            id: "hide-people-done",
+            name: "Hide DONE Tasks",
+            description: "Hides DONE tasks on people pages",
+            action: {
+                type: "switch",
+                onChange: (evt) => { 
+                    showToast(`Reload Roam to take effect.`, "SUCCESS")
+                 }
+            }},
+        {
+          id: "agenda-addr-tag",
+          name: "Agenda Addr Tag",
+          description: "The tag to trigger Agenda Addr. Must be an existing page in the graph.",
+          action: {
+            type: "input",
+            placeholder: "Agenda",
+            onChange: (evt) => { console.log("Input Changed!", evt); }
+          }
+        },
         {
             id: "call-rollup-query",
             name: "Import Call Rollup Queries",
             description:
-                "Imports the rollup query templates to your `[[Call]]` page. These can be referenced or added to templates as needed.",
+                "Imports the rollup query templates to your `[[Call]]` page. These can be referenced or added to templates as needed. Requires the Query Builder extension from Roam Depot to be installed.",
             action: {
                 type: "button",
                 onClick: async () => {
@@ -155,6 +198,14 @@ function getCalendarSetting(extensionAPI) {
     return extensionAPI.settings.get("calendar-setting") || false
 }
 
+function getSidebarButtonSetting(extensionAPI) {
+    return extensionAPI.settings.get("left-sidebar-button") || false
+}
+
+function getHideDoneSetting(extensionAPI) {
+    return extensionAPI.settings.get("hide-people-done") || false
+}
+
 async function setDONEFilter(page) {
     // sets a page filter to hide DONE tasks
     var fRemoves = await window.roamAlphaAPI.ui.filters.getPageFilters({ page: { title: page } })[
@@ -185,11 +236,13 @@ function createGoogleLoadedHandler(people, extensionAPI) {
 
 async function onload({ extensionAPI }) {
     extensionAPI.settings.panel.create(panelConfig)
-    const ts1 = new Date().getTime()
 
     const people = await getAllPeople()
-    // add left sidebar button
-    crmbutton(extensionAPI)
+    if (getSidebarButtonSetting(extensionAPI)) {
+        // add left sidebar button
+        crmbutton(extensionAPI)
+    }
+    
     if (testing) {
         displayBirthdays(people, "01-19-2024")
     } else {
@@ -202,20 +255,23 @@ async function onload({ extensionAPI }) {
         window.roamAlphaAPI.util.dateToPageUid(new Date()),
     )
 
-    // bring in the events, this should rely on getLastBirthdayCheckDate to avoid duplicates
-    // listen for the google extension to be loaded
-    if (window.roamjs?.extension?.google) {
-        await getEventInfo(people, extensionAPI, testing)
-    } else {
-        googleLoadedHandler = createGoogleLoadedHandler(people, extensionAPI)
-        document.body.addEventListener("roamjs:google:loaded", googleLoadedHandler)
+    // bring in the google events if feature is enabled
+    if(getCalendarSetting(extensionAPI)){
+        // listen for the google extension to be loaded
+        if (window.roamjs?.extension?.google) {
+            await getEventInfo(people, extensionAPI, testing)
+        } else {
+            googleLoadedHandler = createGoogleLoadedHandler(people, extensionAPI)
+            document.body.addEventListener("roamjs:google:loaded", googleLoadedHandler)
+        }
     }
-
     // always set people pages to hide DONE
-    // TODO see if they want more granulity
-    people.forEach(async (page) => {
-        await setDONEFilter(page.title)
-    })
+    if (getHideDoneSetting(extensionAPI)) {
+        people.forEach(async (page) => {
+            await setDONEFilter(page.title)
+        })
+    }
+    
 
     // Command Palette Sidebar - Close first block
     extensionAPI.ui.commandPalette.addCommand({
