@@ -25,7 +25,7 @@ const pullFunction = async function a(before, after) {
 function versionTextComponent() {
     return React.createElement("div", {}, version)
 }
-
+//MARK: config panel
 const panelConfig = {
     tabTitle: plugin_title,
     settings: [
@@ -189,7 +189,7 @@ function createGoogleLoadedHandler(people, extensionAPI) {
         }
     }
 }
-
+//MARK: Onload function
 async function onload({ extensionAPI }) {
     extensionAPI.settings.panel.create(panelConfig)
     const ts1 = new Date().getTime()
@@ -310,6 +310,42 @@ async function onload({ extensionAPI }) {
                 sidebarWindows.sort((a, b) => a.order - b.order)
                 await toggleWindowCollapse(sidebarWindows[0])
             }
+        },
+    })
+    // Command Palette Sidebar - pin current block/page
+    extensionAPI.ui.commandPalette.addCommand({
+        label: "Sidebar - Pin focused block or page",
+        "disable-hotkey": false,
+        callback: async () => {
+            const focusedBlock = roamAlphaAPI.ui.getFocusedBlock();
+
+            if (focusedBlock && focusedBlock['window-id'].startsWith('sidebar-')) {
+                const sidebarWindows = window.roamAlphaAPI.ui.rightSidebar.getWindows();
+
+                // Find the window in the sidebar that matches the window-id of the focused block
+                const matchingWindow = sidebarWindows.find(window => window['window-id'] === focusedBlock['window-id']);
+
+                if (matchingWindow) {
+                    // toggle pin/unpin accordingly
+                    if (matchingWindow['pinned?']) {
+                        // If the window is pinned, unpin it
+                        window.roamAlphaAPI.ui.rightSidebar.unpinWindow({
+                            window: {
+                                type: matchingWindow.type,
+                                'block-uid': matchingWindow["block-uid"] || matchingWindow["page-uid"] || matchingWindow["mentions-uid"]
+                            }
+                        });
+                    } else {
+                        // If the window is not pinned, pin it
+                        window.roamAlphaAPI.ui.rightSidebar.pinWindow({
+                            window: {
+                                type: matchingWindow.type,
+                                'block-uid': matchingWindow["block-uid"] || matchingWindow["page-uid"] || matchingWindow["mentions-uid"]
+                            }
+                        });
+                    }
+                } 
+            } 
         },
     })
 
