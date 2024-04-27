@@ -236,11 +236,11 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                     {
                                         string: headerString,
                                         children: [
-                                            { string: "Notes::", children: [{ string: "" }] },
                                             {
                                                 string: "Next Actions::",
                                                 children: [{ string: "" }],
                                             },
+                                            { string: "Notes::", children: [{ string: "" }] },
                                         ],
                                     },
                                 ]
