@@ -155,11 +155,13 @@ export async function getAllPeople() {
 }
 
 function findPersonNameByEmail(people, email) {
+    const normalizedEmail = email.toLowerCase(); // Normalize the input email to lower case
     const result = people
-        .filter((item) => item.Email.some((emailItem) => emailItem.string.includes(email)))
-        .map((item) => item.title)
-    return result
+        .filter((item) => item.Email.some((emailItem) => emailItem.string.toLowerCase().includes(normalizedEmail))) // Compare in lower case
+        .map((item) => item.title);
+    return result;
 }
+
 function findPersonByEmail(people, email) {
     const result = people.filter((item) =>
         item.Email.some((emailItem) => emailItem.string.includes(email)),
