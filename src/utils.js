@@ -242,9 +242,26 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                             },
                                             { string: "Notes::", children: [{ string: "" }] },
                                         ],
+                                        open:false,
                                     },
                                 ]
-                                createChildren(newBlockUID, blockJSON)
+                                // createChildren(parentBlockUid=newBlockUID, childrenContents=blockJSON)
+                                createBlock({
+                                    parentUid: newBlockUID,
+                                    node: {
+                                        text: headerString,
+                                        open: false,
+                                        children: [
+                                            {
+                                                text: `Next Actions::`,
+                                                children: [{ text: "" }],
+                                            },
+                                            { text: "Notes::", children: [{ text: "" }] },
+                                        ],
+                                    },
+                                    
+                                })
+                                
                             }
                         }
                     }
@@ -294,13 +311,13 @@ export async function getPageUID(page) {
 //   }
 // ]
 
-export async function createChildren(parentBlockUid, childrenContents) {
+export async function createChildren(parentBlockUid, childrenContents, open=true) {
     for (let index = 0; index < childrenContents.length; index++) {
         const element = childrenContents[index]
         const newBlockUID = roamAlphaAPI.util.generateUID()
         window.roamAlphaAPI.createBlock({
             location: { "parent-uid": parentBlockUid, order: 0 },
-            block: { string: element.string, uid: newBlockUID },
+            block: { string: element.string, uid: newBlockUID, open: open },
         })
         if (element.children) {
             createChildren(newBlockUID, element.children)
