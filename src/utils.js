@@ -230,7 +230,14 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                         attendeeNames.push(a.email)
                                     }
                                 })
-                                let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
+                                const includeEventTitle = extensionAPI.settings.get("include-event-title") || false
+                                if (includeEventTitle === true) {
+                                    let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
+                                } else {
+                                    let headerString = `[[Call]] with ${attendeeNames.join(" and ")}`
+                                }
+                                
+                                
 
                                 const blockJSON = [
                                     {

@@ -42,7 +42,14 @@ const panelConfig = {
         //     type: "switch",
         //     onChange: (evt) => { console.log("Switch!", evt); }
         //   }},
-
+        {
+          id: "include-event-title",
+          name: "Include event title ",
+          description: "When events import, include the events title in the call template header text",
+          action: {
+            type: "switch",
+            onChange: (evt) => {  }
+          }},
         {
             id: "call-rollup-query",
             name: "Import Call Rollup Queries",
