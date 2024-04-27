@@ -344,8 +344,18 @@ async function onload({ extensionAPI }) {
                             }
                         });
                     }
-                } 
-            } 
+                }
+            } else {
+                // block is not in the sidebar
+                await window.roamAlphaAPI.ui.rightSidebar.addWindow(
+                    {window:{type:'block', 'block-uid':focusedBlock['block-uid']}})
+                await window.roamAlphaAPI.ui.rightSidebar.pinWindow({
+                    window: {
+                    type:'block', 
+                    'block-uid':focusedBlock['block-uid']
+                    }
+                });
+            }
         },
     })
 
