@@ -638,11 +638,11 @@ function getBlockUidByContainsTextOnPage(text, page) {
         return result[0].uid
     }
 }
-
+//MARK:Agenda Addr
 export async function parseAgendaPull(after) {
     // Function to clean up the original block
     function cleanUpBlock(block) {
-        const cleanedString = block[":block/string"].replace(agendaRegex, "")
+        const cleanedString = block[":block/string"].replace(agendaRegex, "").trim()
         window.roamAlphaAPI.updateBlock({
             block: { uid: block[":block/uid"], string: cleanedString },
         })
