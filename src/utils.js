@@ -1,5 +1,6 @@
 import createBlock from "roamjs-components/writes/createBlock"
 import createPage from "roamjs-components/writes/createPage"
+import updateBlock from "roamjs-components/writes/updateBlock"
 import { showToast } from "./components/toast"
 
 function isSecondDateAfter(firstDateString, secondDateString) {
@@ -169,6 +170,9 @@ export async function getAllPeople() {
 
 function findPersonNameByEmail(people, email) {
     const normalizedEmail = email.toLowerCase(); // Normalize the input email to lower case
+    console.log("normalizedEmail",normalizedEmail);
+    
+    
     const result = people
         .filter((item) => item.Email.some((emailItem) => emailItem.string.toLowerCase().includes(normalizedEmail))) // Compare in lower case
         .map((item) => item.title);
@@ -176,11 +180,15 @@ function findPersonNameByEmail(people, email) {
 }
 
 function findPersonByEmail(people, email) {
-    const result = people.filter((item) =>
-        item.Email.some((emailItem) => emailItem.string.includes(email)),
-    )
+    const emailLower = email.toLowerCase();  // Convert the search email to lowercase
 
-    return result
+    const result = people.filter((item) =>
+        item.Email.some((emailItem) =>
+            emailItem.string.toLowerCase().includes(emailLower)  // Convert each email item to lowercase before comparison
+        ),
+    );
+
+    return result;
 }
 function extractEmailFromString(text) {
     // Regular expression for matching an email address
@@ -238,11 +246,21 @@ export async function getEventInfo(people, extensionAPI, testing) {
                             // only process events with more than 1 confirmed attendee
                             if (attendees.length > 1) {
                                 let attendeeNames = []
+                                let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date())
                                 attendees.forEach((a) => {
                                     let name = findPersonNameByEmail(people, a.email)
+                                    
                                     if (name.length > 0) {
                                         // push the formatted person page name
                                         attendeeNames.push(`[[${name[0]}]]`)
+                                        // update each person's last contacted
+                                        let person = findPersonByEmail(people, a.email)
+                                        console.log(a, person);
+                                        
+                                        updateBlock({
+                                            uid: person[0].last_contact_uid,
+                                            text: `Last Contacted:: [[${dt}]]`,
+                                        })
                                     } else {
                                         attendeeNames.push(a.email)
                                     }
