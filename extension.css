@@ -1,16 +1,18 @@
 /* Modal CSS */
 .crm-reminders-drawer {
     position: fixed !important; /* Override any existing positioning */
-    right: 0; /* Align to the right */
-    bottom: 0; /* Align to the bottom */
+    right: 4px !important; /* Align to the right */
+    bottom: 4px !important; /* Align to the bottom */
     top: auto !important; /* Override default top positioning */
     transform: translateX(0) !important; /* Override default transform if necessary */
     height: auto !important; /* Adjust height as necessary, remove if you want full height */
     max-height: 100%; /* Ensure the Drawer does not exceed the viewport height */
+    border-radius:4px;
 }
 
 .crm-reminders-drawer .bp3-drawer-header {
     background: rgb(247, 248, 248);
+    border-radius:4px;
 }
 /*
 .crm-reminders-drawer .bp3-drawer-header .bp3-heading {

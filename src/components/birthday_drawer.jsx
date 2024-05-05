@@ -1,4 +1,4 @@
-import { Drawer, Classes } from "@blueprintjs/core"
+import { Drawer, Classes, Tooltip, AnchorButton } from "@blueprintjs/core"
 import React, { useState, useEffect } from "react"
 import ReactDOM from "react-dom"
 import renderOverlay from "roamjs-components/util/renderOverlay"
@@ -57,7 +57,18 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         <Drawer
             onClose={onClose}
             isOpen={isOpen}
-            title={"Roam CRM"}
+            title={
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>Roam CRM</span>
+                    <Tooltip content="Coming Soon..." position="bottom">
+                            <AnchorButton 
+                                icon="fullscreen" 
+                                minimal={true} 
+                                disabled={true} 
+                            />
+                    </Tooltip>
+                </div>
+            }
             position={"right"}
             hasBackdrop={false}
             canOutsideClickClose={false}
