@@ -8,7 +8,7 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 
-const testing = false
+const testing = true
 const version = "v1.0 🎉"
 
 const plugin_title = "Roam CRM"
@@ -25,6 +25,10 @@ const pullFunction = async function a(before, after) {
 function versionTextComponent() {
     return React.createElement("div", {}, version)
 }
+
+function headerTextComponent() {
+    return React.createElement("h1", {})
+}
 //MARK: config panel
 const panelConfig = {
     tabTitle: plugin_title,
@@ -33,6 +37,11 @@ const panelConfig = {
             id: "version-text",
             name: "Version",
             action: { type: "reactComponent", component: versionTextComponent },
+        },
+        {
+            id: "calendar-header",
+            name: "Calendar Settings",
+            action: { type: "reactComponent", component: headerTextComponent },
         },
         // {
         //   id: "calendar-setting",
@@ -50,6 +59,16 @@ const panelConfig = {
             type: "switch",
             onChange: (evt) => {  }
           }},
+        {
+            id: "agenda-header",
+            name: "Agenda Addr Settings",
+            action: { type: "reactComponent", component: headerTextComponent },
+        },
+        {
+            id: "templates-header",
+            name: "Setup Templates",
+            action: { type: "reactComponent", component: headerTextComponent },
+        },
         {
             id: "call-rollup-query",
             name: "Import Call Rollup Queries",
