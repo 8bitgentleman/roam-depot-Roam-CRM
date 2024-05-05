@@ -38,6 +38,12 @@ const panelConfig = {
             name: "Version",
             action: { type: "reactComponent", component: versionTextComponent },
         },
+        {id:     "batch-contact-notification",
+         name:   "Batch Contact Reminders",
+         description: "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",
+         action: {type:     "select",
+                  items:    ["No Batch", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                  onChange: (evt) => { console.log("Select Changed!", evt); }}},
         {
             id: "calendar-header",
             name: "Calendar Settings",
@@ -67,6 +73,7 @@ const panelConfig = {
         {
             id: "templates-header",
             name: "Setup Templates",
+            description: "These are the templates that facilitate Roam CRM. Each button only needs to be hit once the first time you setup the extension in a graph. See the README for more information.",
             action: { type: "reactComponent", component: headerTextComponent },
         },
         {
@@ -168,7 +175,7 @@ async function crmbutton(extensionAPI) {
             const allPeople = await getAllPeople()
             const lastBirthdayCheckDate = getLastBirthdayCheckDate(extensionAPI)
 
-            displayBirthdays(allPeople, lastBirthdayCheckDate)
+            displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
         }
     }
 }
@@ -217,9 +224,9 @@ async function onload({ extensionAPI }) {
     // add left sidebar button
     crmbutton(extensionAPI)
     if (testing) {
-        displayBirthdays(people, "01-19-2024")
+        displayBirthdays(people, "01-19-2024", extensionAPI)
     } else {
-        displayBirthdays(people, getLastBirthdayCheckDate(extensionAPI))
+        displayBirthdays(people, getLastBirthdayCheckDate(extensionAPI), extensionAPI)
     }
 
     // update last birthday check since it's already happened

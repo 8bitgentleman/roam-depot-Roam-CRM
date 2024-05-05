@@ -24,6 +24,19 @@ function getLastCalendarCheckDate(extensionAPI) {
     }
 }
 
+function checkBatchContactSetting(extensionAPI) {
+    const userSetting = extensionAPI.settings.get("batch-contact-notification") || "No Batch"
+    // if no batch is selected than always show the contact reminder
+    if (userSetting === "No Batch") {
+        return true;
+    }
+    // Get the current day as a string
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+    // Compare the current day with the user's setting
+    return today === userSetting;
+}
+
 function parseStringToDate(dateString) {
     const defaultYear = new Date().getFullYear() // Use the current year as default
 
@@ -190,7 +203,7 @@ export async function getEventInfo(people, extensionAPI, testing) {
             startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date()),
         })
         .then(async (results) => {
-            console.log("Events: ", results)
+            // console.log("Events: ", results)
             if (results[0].text !== "No Events Scheduled for Selected Date(s)!") {
                 // get the uid for today's DNP
                 let newBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
@@ -203,8 +216,12 @@ export async function getEventInfo(people, extensionAPI, testing) {
                     ) {
                         const errorEmail = extractEmailFromString(result.text)
                         prevent_update.add(errorEmail)
-                        console.log("email issue: ", errorEmail, prevent_update)
-                        showToast(result.text, "DANGER")
+                        
+                        if (!testing) {
+                            // console.log("email issue: ", errorEmail, prevent_update)
+                            showToast(result.text, "DANGER")
+                        }
+                        
                     } else {
                         let attendees = result.event.attendees || 0
                         let calendar = result.event.calendar || null
@@ -231,10 +248,11 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                     }
                                 })
                                 const includeEventTitle = extensionAPI.settings.get("include-event-title") || false
+                                let headerString;
                                 if (includeEventTitle === true) {
-                                    let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
+                                    headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
                                 } else {
-                                    let headerString = `[[Call]] with ${attendeeNames.join(" and ")}`
+                                    headerString = `[[Call]] with ${attendeeNames.join(" and ")}`
                                 }
                                 
                                 
@@ -252,7 +270,6 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                         open:false,
                                     },
                                 ]
-                                // createChildren(parentBlockUid=newBlockUID, childrenContents=blockJSON)
                                 createBlock({
                                     parentUid: newBlockUID,
                                     node: {
@@ -317,20 +334,6 @@ export async function getPageUID(page) {
 //         ]
 //   }
 // ]
-
-export async function createChildren(parentBlockUid, childrenContents, open=true) {
-    for (let index = 0; index < childrenContents.length; index++) {
-        const element = childrenContents[index]
-        const newBlockUID = roamAlphaAPI.util.generateUID()
-        window.roamAlphaAPI.createBlock({
-            location: { "parent-uid": parentBlockUid, order: 0 },
-            block: { string: element.string, uid: newBlockUID, open: open },
-        })
-        if (element.children) {
-            createChildren(newBlockUID, element.children)
-        }
-    }
-}
 
 function shouldContact(person) {
     // Define the current date
@@ -523,7 +526,7 @@ export function calculateAge(birthdate) {
     return age
 }
 
-function remindersSystem(people, lastBirthdayCheck) {
+function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     let birthdays = {
         aAndBBirthdaysToday: [],
         otherBirthdaysToday: [],
@@ -531,17 +534,18 @@ function remindersSystem(people, lastBirthdayCheck) {
     }
     let toBeContacted = []
     // for each person extract the needed info
-
+    // TODO fetch the extensionAPI and check if batching is enabled
+    let displayToBeContacted = checkBatchContactSetting(extensionAPI)
     people.forEach((person) => {
         // fix the json
-
         person = fixPersonJSON(person)
 
         // check the last contact date compared to the contact list
-        if (shouldContact(person)) {
-            toBeContacted.push(person)
+        if(displayToBeContacted){
+            if (shouldContact(person)) {
+                toBeContacted.push(person)
+            }
         }
-
         let filteredBirthdays = checkBirthdays(person)
         if (filteredBirthdays.aAndBBirthdaysToday) {
             birthdays.aAndBBirthdaysToday.push(filteredBirthdays.aAndBBirthdaysToday)
@@ -562,16 +566,16 @@ function remindersSystem(people, lastBirthdayCheck) {
         (birthdays.otherBirthdaysToday.length > 0)
     ) {
         // block ref other today birthdays to the DNP
-        const blockJSON = [
-            {
-                string: `((${getBlockUidByContainsTextOnPage("Birthdays Today", "roam/templates")}))`,
+        createBlock({
+            parentUid: todaysDNPUID,
+            node: {
+                text: `((${getBlockUidByContainsTextOnPage("Birthdays Today", "roam/templates")}))`,
                 children: birthdays.otherBirthdaysToday.map((p) => ({
-                    string: `[${p.name} is ${calculateAge(p.birthday)} years old](((${p.birthday_UID})))`,
+                    text: `[${p.name} is ${calculateAge(p.birthday)} years old](((${p.birthday_UID})))`,
                 })),
             },
-        ]
-
-        createChildren(todaysDNPUID, blockJSON)
+            
+        })
     }
 
     const mergedReminders = {
