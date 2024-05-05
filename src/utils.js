@@ -211,7 +211,9 @@ export async function getEventInfo(people, extensionAPI, testing) {
             startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date()),
         })
         .then(async (results) => {
-            // console.log("Events: ", results)
+            console.log("Events: ", results)
+            // reverse results so they come in the correct order
+            results.reverse()
             if (results[0].text !== "No Events Scheduled for Selected Date(s)!") {
                 // get the uid for today's DNP
                 let newBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
@@ -254,9 +256,7 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                         // push the formatted person page name
                                         attendeeNames.push(`[[${name[0]}]]`)
                                         // update each person's last contacted
-                                        let person = findPersonByEmail(people, a.email)
-                                        console.log(a, person);
-                                        
+                                        let person = findPersonByEmail(people, a.email)                                        
                                         updateBlock({
                                             uid: person[0].last_contact_uid,
                                             text: `Last Contacted:: [[${dt}]]`,
@@ -272,22 +272,7 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                 } else {
                                     headerString = `[[Call]] with ${attendeeNames.join(" and ")}`
                                 }
-                                
-                                
 
-                                const blockJSON = [
-                                    {
-                                        string: headerString,
-                                        children: [
-                                            {
-                                                string: "Next Actions::",
-                                                children: [{ string: "" }],
-                                            },
-                                            { string: "Notes::", children: [{ string: "" }] },
-                                        ],
-                                        open:false,
-                                    },
-                                ]
                                 createBlock({
                                     parentUid: newBlockUID,
                                     node: {
