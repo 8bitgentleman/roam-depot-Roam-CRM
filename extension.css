@@ -25,9 +25,6 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
     display: none !important;
 }
 
-.rollup-table .roamjs-query-page tfoot {
-    /* display:none; */
-}
 .rollup-table thead {
     background: rgb(247, 244, 253) !important;
     background-color: rgb(247, 244, 253) !important;

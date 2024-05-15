@@ -249,6 +249,8 @@ export async function getEventInfo(people, extensionAPI, testing) {
                             if (attendees.length > 1) {
                                 let attendeeNames = []
                                 let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date())
+                                // filter out self from attendees 
+                                attendees = attendees.filter(attendee => attendee.email !== calendar);
                                 attendees.forEach((a) => {
                                     let name = findPersonNameByEmail(people, a.email)
 
