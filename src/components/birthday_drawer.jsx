@@ -1,6 +1,5 @@
 import { Drawer, Classes, Tooltip, AnchorButton } from "@blueprintjs/core"
 import React, { useState, useEffect } from "react"
-import ReactDOM from "react-dom"
 import renderOverlay from "roamjs-components/util/renderOverlay"
 import remindersSystem from "../utils"
 import { calculateAge } from "../utils"
@@ -61,24 +60,24 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>Roam CRM</span>
                     <Tooltip content="Coming Soon..." position="bottom">
-                            <AnchorButton 
-                                icon="fullscreen" 
-                                minimal={true} 
-                                disabled={true} 
-                            />
+                        <AnchorButton
+                            icon="fullscreen"
+                            minimal={true}
+                            disabled={true}
+                        />
                     </Tooltip>
                 </div>
             }
             position={"right"}
             hasBackdrop={false}
             canOutsideClickClose={false}
-            style={{ width: 400, height: 400 }}
+            style={{ width: 400, maxHeight: '80vh', overflowY: 'auto' }}
             portalClassName={"pointer-events-none"}
             className={"crm-reminders-drawer pointer-events-auto"}
             enforceFocus={false}
             autoFocus={false}
         >
-            <div className={`${Classes.DRAWER_BODY} p-5 `}>
+            <div className={`${Classes.DRAWER_BODY} p-5`}>
                 {/* only show if there are birthdays today */}
                 {reminders.aAndBBirthdaysToday.length > 0 && (
                     <>
@@ -133,7 +132,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                     <>
                         <div className="reminder-section">
                             <h5>Time to reach out to</h5>
-                            <ul>
+                            <ul className="multi-column-list">
                                 {reminders.toBeContacted.map(
                                     (person, index) =>
                                         !checkedContacts.includes(person) && (

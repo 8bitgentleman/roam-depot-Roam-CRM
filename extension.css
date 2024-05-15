@@ -7,7 +7,7 @@
     transform: translateX(0) !important; /* Override default transform if necessary */
     height: auto !important; /* Adjust height as necessary, remove if you want full height */
     max-height: 100%; /* Ensure the Drawer does not exceed the viewport height */
-    border-radius:4px;
+    border-radius: 4px;
 }
 
 .crm-reminders-drawer .bp3-drawer-header {
@@ -98,14 +98,39 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 }
 .crm-reminders-drawer div.reminder-section {
     background-color: hsl(204, 33%, 97%);
-    /* margin: 4px 8px; */
     margin-bottom: 0.5rem;
     padding: 4px;
     border-radius: 4px;
     border: 1px solid;
     border-color: hsl(204, 33%, 87%);
 }
+.multi-column-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two columns of equal width */
+    /* gap: 20px;  */
+    max-height: 50vh; /* Adjust the max height as needed */
+    overflow-y: scroll; /* Ensure vertical scrolling */
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+/* Optional: Custom scrollbar styling for better visibility */
+.multi-column-list::-webkit-scrollbar {
+    width: 6px; /* Width of the scrollbar */
+}
 
+.multi-column-list::-webkit-scrollbar-thumb {
+    background-color: rgb(156, 166, 175); /* Color of the scrollbar thumb */
+    border-radius: 6px; /* Rounded corners for the scrollbar thumb */
+}
+
+.multi-column-list::-webkit-scrollbar-track {
+    background-color: rgba(156, 166, 175, .1); /* Color of the scrollbar track */
+}
+.multi-column-list li {
+    display: flex;
+    align-items: center;
+}
 .crm-reminders-drawer .p-5 {
     padding: 0.5rem;
 }
