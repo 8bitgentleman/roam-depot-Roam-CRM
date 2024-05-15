@@ -120,7 +120,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                             {person.name}{" "}
                                         </a>
                                         {new Date(person.birthday).toLocaleDateString()} (in{" "}
-                                        {person.daysUntilBirthday} days)
+                                        {person.daysUntilBirthday} {person.daysUntilBirthday === 1 ? "day" : "days"})
                                     </li>
                                 ))}
                             </ul>
