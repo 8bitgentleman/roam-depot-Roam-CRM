@@ -574,6 +574,7 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
         // block ref other today birthdays to the DNP
         createBlock({
             parentUid: todaysDNPUID,
+            order:"last",
             node: {
                 text: `((${getBlockUidByContainsTextOnPage("Birthdays Today", "roam/templates")}))`,
                 children: birthdays.otherBirthdaysToday.map((p) => ({

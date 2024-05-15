@@ -127,6 +127,9 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 .multi-column-list::-webkit-scrollbar-track {
     background-color: rgba(156, 166, 175, .1); /* Color of the scrollbar track */
 }
+.multi-column-list input[type="checkbox"] {
+    cursor: pointer;
+}
 .multi-column-list li {
     display: flex;
     align-items: center;
