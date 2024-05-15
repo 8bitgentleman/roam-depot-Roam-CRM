@@ -170,9 +170,9 @@ export async function getAllPeople() {
 
 function findPersonNameByEmail(people, email) {
     const normalizedEmail = email.toLowerCase(); // Normalize the input email to lower case
-    console.log("normalizedEmail",normalizedEmail);
-    
-    
+    console.log("normalizedEmail", normalizedEmail);
+
+
     const result = people
         .filter((item) => item.Email.some((emailItem) => emailItem.string.toLowerCase().includes(normalizedEmail))) // Compare in lower case
         .map((item) => item.title);
@@ -226,12 +226,12 @@ export async function getEventInfo(people, extensionAPI, testing) {
                     ) {
                         const errorEmail = extractEmailFromString(result.text)
                         prevent_update.add(errorEmail)
-                        
+
                         if (!testing) {
                             // console.log("email issue: ", errorEmail, prevent_update)
                             showToast(result.text, "DANGER")
                         }
-                        
+
                     } else {
                         let attendees = result.event.attendees || 0
                         let calendar = result.event.calendar || null
@@ -251,12 +251,12 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                 let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date())
                                 attendees.forEach((a) => {
                                     let name = findPersonNameByEmail(people, a.email)
-                                    
+
                                     if (name.length > 0) {
                                         // push the formatted person page name
                                         attendeeNames.push(`[[${name[0]}]]`)
                                         // update each person's last contacted
-                                        let person = findPersonByEmail(people, a.email)                                        
+                                        let person = findPersonByEmail(people, a.email)
                                         updateBlock({
                                             uid: person[0].last_contact_uid,
                                             text: `Last Contacted:: [[${dt}]]`,
@@ -286,9 +286,9 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                             { text: "Notes::", children: [{ text: "" }] },
                                         ],
                                     },
-                                    
+
                                 })
-                                
+
                             }
                         }
                     }
@@ -398,8 +398,11 @@ function checkBirthdays(person) {
         }
     } else if (daysDiff > 0 && daysDiff <= 14) {
         person["daysUntilBirthday"] = Math.ceil(daysDiff)
-        if (person.contact_list === "A List" || person.contact_list === "B List") {
-            filteredUpcomingBirthdays = person
+        const specificDays = [1, 7, 14];
+        if (specificDays.includes(person.daysUntilBirthday)) {
+            if (person.contact_list === "A List" || person.contact_list === "B List") {
+                filteredUpcomingBirthdays = person
+            }
         }
     }
 
@@ -544,7 +547,7 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
         person = fixPersonJSON(person)
 
         // check the last contact date compared to the contact list
-        if(displayToBeContacted){
+        if (displayToBeContacted) {
             if (shouldContact(person)) {
                 toBeContacted.push(person)
             }
@@ -577,7 +580,7 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
                     text: `[${p.name} is ${calculateAge(p.birthday)} years old](((${p.birthday_UID})))`,
                 })),
             },
-            
+
         })
     }
 
