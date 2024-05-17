@@ -8,7 +8,7 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 
-const testing = false
+const testing = true
 const version = "v1.1"
 
 const plugin_title = "Roam CRM"
@@ -384,6 +384,20 @@ async function onload({ extensionAPI }) {
             }
         },
     })
+
+
+
+        // Command Palette Sidebar - Close first block
+        extensionAPI.ui.commandPalette.addCommand({
+            label: "Roam CRM - Open Modal",
+            "disable-hotkey": false,
+            callback: async () => {
+                const allPeople = await getAllPeople()
+                const lastBirthdayCheckDate = getLastBirthdayCheckDate(extensionAPI)
+
+                displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
+            },
+        })
 
     // run the initial agenda addr
     await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity))
