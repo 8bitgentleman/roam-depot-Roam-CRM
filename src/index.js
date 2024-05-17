@@ -1,6 +1,6 @@
 import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from "./components/toast"
-import { getAllPeople, getEventInfo, getPageUID, parseAgendaPull } from "./utils"
+import { getAllPeople, getEventInfo, getPageUID, parseAgendaPull, checkAndFetchEvents } from "./utils"
 import {
     createLastWeekCalls,
     createLastMonthCalls,
@@ -8,10 +8,14 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 
-const testing = false
+const testing = true
 const version = "v1.1"
 
 const plugin_title = "Roam CRM"
+
+var runners = {
+    intervals: [],
+  };
 
 let googleLoadedHandler
 
@@ -243,7 +247,10 @@ async function onload({ extensionAPI }) {
         googleLoadedHandler = createGoogleLoadedHandler(people, extensionAPI)
         document.body.addEventListener("roamjs:google:loaded", googleLoadedHandler)
     }
-
+    // Set an interval to run the check and fetch google events every hour
+    const intervalId = setInterval(() => checkAndFetchEvents(people, extensionAPI, testing), 60 * 60 * 1000); 
+    runners.intervals.push(intervalId);
+    
     // always set people pages to hide DONE
     // TODO see if they want more granulity
     people.forEach(async (page) => {
@@ -384,20 +391,17 @@ async function onload({ extensionAPI }) {
             }
         },
     })
+    // Command Palette Sidebar - Close first block
+    extensionAPI.ui.commandPalette.addCommand({
+        label: "Roam CRM - Open Modal",
+        "disable-hotkey": false,
+        callback: async () => {
+            const allPeople = await getAllPeople()
+            const lastBirthdayCheckDate = getLastBirthdayCheckDate(extensionAPI)
 
-
-
-        // Command Palette Sidebar - Close first block
-        extensionAPI.ui.commandPalette.addCommand({
-            label: "Roam CRM - Open Modal",
-            "disable-hotkey": false,
-            callback: async () => {
-                const allPeople = await getAllPeople()
-                const lastBirthdayCheckDate = getLastBirthdayCheckDate(extensionAPI)
-
-                displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
-            },
-        })
+            displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
+        },
+    })
 
     // run the initial agenda addr
     await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity))
@@ -416,6 +420,12 @@ function onunload() {
     window.roamAlphaAPI.data.removePullWatch(pullPattern, entity, pullFunction)
     var crmDiv = document.getElementById("crmDiv")
     crmDiv.remove()
+
+    // make sure to remove the google calendar check
+    for (let i = 0; i < runners.intervals.length; i++) {
+        clearInterval(runners.intervals[i]);
+      }
+      runners.intervals = []; // Clear the array after stopping all intervals
 
     if (!testing) {
         console.log(`unload ${plugin_title} plugin`)

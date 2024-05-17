@@ -12,11 +12,9 @@ function isSecondDateAfter(firstDateString, secondDateString) {
     return secondDate > firstDate
 }
 
-// function getLastCalendarCheckDate(extensionAPI) {
-//   return extensionAPI.settings.get('last-calendar-check-date') || "01-19-2024"
-// }
 function getLastCalendarCheckDate(extensionAPI) {
     const value = extensionAPI.settings.get("last-calendar-check-date") || {}
+    // update old schema
     if (typeof value === "string") {
         extensionAPI.settings.set("last-calendar-check-date", {})
         return {}
@@ -24,6 +22,24 @@ function getLastCalendarCheckDate(extensionAPI) {
         return value
     }
 }
+// check if events have been fetched yet today
+function checkAndFetchEvents(people, extensionAPI, testing) {
+    const lastFetchDate = JSON.parse(getLastCalendarCheckDate(extensionAPI)) || {};
+    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+    let fetchPromises = [];
+
+    // Iterate over all email addresses and check if a fetch is needed
+    // TODO what happens when an email is removed from the google extension?
+    // the last checked date will always be old so the events will fetch every hour...
+    for (const email in lastFetchDate) {
+      if (lastFetchDate[email] !== today) {
+        console.log("Fetch Events from Google", new Date().toISOString());
+        
+        getEventInfo(people, extensionAPI, testing)
+        break;
+      }
+    }
+  }
 
 function checkBatchContactSetting(extensionAPI) {
     const userSetting = extensionAPI.settings.get("batch-contact-notification") || "No Batch"
@@ -170,8 +186,6 @@ export async function getAllPeople() {
 
 function findPersonNameByEmail(people, email) {
     const normalizedEmail = email.toLowerCase(); // Normalize the input email to lower case
-    console.log("normalizedEmail", normalizedEmail);
-
 
     const result = people
         .filter((item) => item.Email.some((emailItem) => emailItem.string.toLowerCase().includes(normalizedEmail))) // Compare in lower case
@@ -306,7 +320,7 @@ export async function getEventInfo(people, extensionAPI, testing) {
                 }
                 await extensionAPI.settings.set("last-calendar-check-date", new_calendar_check_date)
             }
-            console.log("new values ", await extensionAPI.settings.get("last-calendar-check-date"))
+            // console.log("new values ", await extensionAPI.settings.get("last-calendar-check-date"))
         })
         .catch((error) => {
             console.error(error)
