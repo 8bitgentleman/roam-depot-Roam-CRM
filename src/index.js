@@ -15,6 +15,7 @@ const plugin_title = "Roam CRM"
 
 var runners = {
     intervals: [],
+    eventListeners: [],
   };
 
 let googleLoadedHandler
@@ -219,6 +220,13 @@ function createGoogleLoadedHandler(people, extensionAPI) {
         }
     }
 }
+
+// Function to add an event listener and store its reference
+function addEventListener(target, event, callback) {
+    target.addEventListener(event, callback);
+    runners.eventListeners.push({ target, event, callback });
+}
+
 //MARK: Onload function
 async function onload({ extensionAPI }) {
     extensionAPI.settings.panel.create(panelConfig)
@@ -250,6 +258,14 @@ async function onload({ extensionAPI }) {
     // Set an interval to run the check and fetch google events every hour
     const intervalId = setInterval(() => checkAndFetchEvents(people, extensionAPI, testing), 60 * 60 * 1000);
     runners.intervals.push(intervalId);
+
+    // set a listener to run the calendar check on visibility change. 
+    // This is so the check runs right when your laptop is openend 
+    addEventListener(document, 'visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            checkAndFetchEvents(people, extensionAPI, testing)
+        }
+    });
     
     // always set people pages to hide DONE
     // TODO see if they want more granulity
@@ -425,7 +441,13 @@ function onunload() {
     for (let i = 0; i < runners.intervals.length; i++) {
         clearInterval(runners.intervals[i]);
       }
-      runners.intervals = []; // Clear the array after stopping all intervals
+    runners.intervals = []; // Clear the array after stopping all intervals
+    // now remove listeners
+    for (let i = 0; i < runners.eventListeners.length; i++) {
+        const { target, event, callback } = runners.eventListeners[i];
+        target.removeEventListener(event, callback);
+      }
+    runners.eventListeners = []; // Clear the array after removing all event listeners
 
     if (!testing) {
         console.log(`unload ${plugin_title} plugin`)
