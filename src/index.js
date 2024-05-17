@@ -9,7 +9,7 @@ import {
 } from "./components/call_templates"
 
 const testing = false
-const version = "v1.2"
+const version = "v1.2.1"
 
 const plugin_title = "Roam CRM"
 
@@ -54,14 +54,17 @@ const panelConfig = {
             name: "Calendar Settings",
             action: { type: "reactComponent", component: headerTextComponent },
         },
-        // {
-        //   id: "calendar-setting",
-        //   name: "Import Today's Calender Events On Load",
-        //   description: "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot to be installed.",
-        //   action: {
-        //     type: "switch",
-        //     onChange: (evt) => { console.log("Switch!", evt); }
-        //   }},
+        {
+          id: "calendar-setting",
+          name: "Import Today's Calender Events On Load",
+          description: "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot to be installed and a reload of the Roam tab to start. See the README",
+          action: {
+            type: "switch",
+            onChange: async (evt) => { 
+                
+             }
+          }},
+        
         {
           id: "include-event-title",
           name: "Include event title ",
@@ -75,6 +78,23 @@ const panelConfig = {
             name: "Agenda Addr Settings",
             action: { type: "reactComponent", component: headerTextComponent },
         },
+        {
+            id: "agenda-addr-setting",
+            name: "Run the Agenda Addr",
+            description: "When you make a block anywhere that has as persons name `[[Bill Gates]]` and add the hashtag `#Agenda` Roam CRM will automatically nest a block-ref of that block on Bill's page under an Agenda attribute.",
+            action: {
+                type: "switch",
+                onChange: async (evt) => { 
+                    if (evt.target.checked) {
+                        await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity))
+                        // agenda addr pull watch
+                        window.roamAlphaAPI.data.addPullWatch(pullPattern, entity, pullFunction)
+                    } else {
+                        window.roamAlphaAPI.data.removePullWatch(pullPattern, entity, pullFunction)
+                    }
+
+                }
+        }},
         {
             id: "templates-header",
             name: "Setup Templates",
@@ -193,6 +213,10 @@ function getCalendarSetting(extensionAPI) {
     return extensionAPI.settings.get("calendar-setting") || false
 }
 
+function getAgendaAddrSetting(extensionAPI) {
+    return extensionAPI.settings.get("agenda-addr-setting") || false
+}
+
 async function setDONEFilter(page) {
     // sets a page filter to hide DONE tasks
     var fRemoves = await window.roamAlphaAPI.ui.filters.getPageFilters({ page: { title: page } })[
@@ -246,26 +270,28 @@ async function onload({ extensionAPI }) {
         "last-birthday-check-date",
         window.roamAlphaAPI.util.dateToPageUid(new Date()),
     )
-
-    // bring in the events, this should rely on getLastBirthdayCheckDate to avoid duplicates
-    // listen for the google extension to be loaded
-    if (window.roamjs?.extension?.google) {
-        await getEventInfo(people, extensionAPI, testing)
-    } else {
-        googleLoadedHandler = createGoogleLoadedHandler(people, extensionAPI)
-        document.body.addEventListener("roamjs:google:loaded", googleLoadedHandler)
-    }
-    // Set an interval to run the check and fetch google events every hour
-    const intervalId = setInterval(() => checkAndFetchEvents(people, extensionAPI, testing), 60 * 60 * 1000);
-    runners.intervals.push(intervalId);
-
-    // set a listener to run the calendar check on visibility change. 
-    // This is so the check runs right when your laptop is openend 
-    addEventListener(document, 'visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            checkAndFetchEvents(people, extensionAPI, testing)
+    if (getCalendarSetting(extensionAPI)) {
+        // bring in the events, this should rely on getLastBirthdayCheckDate to avoid duplicates
+        // listen for the google extension to be loaded
+        if (window.roamjs?.extension?.google) {
+            await getEventInfo(people, extensionAPI, testing)
+        } else {
+            googleLoadedHandler = createGoogleLoadedHandler(people, extensionAPI)
+            document.body.addEventListener("roamjs:google:loaded", googleLoadedHandler)
         }
-    });
+        // Set an interval to run the check and fetch google events every hour
+        const intervalId = setInterval(() => checkAndFetchEvents(people, extensionAPI, testing), 60 * 60 * 1000);
+        runners.intervals.push(intervalId);
+
+        // set a listener to run the calendar check on visibility change. 
+        // This is so the check runs right when your laptop is openend 
+        addEventListener(document, 'visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                checkAndFetchEvents(people, extensionAPI, testing)
+            }
+        });
+    }
+    
     
     // always set people pages to hide DONE
     // TODO see if they want more granulity
@@ -361,7 +387,7 @@ async function onload({ extensionAPI }) {
             }
         },
     })
-    // Command Palette Sidebar - pin current block/page
+    // Command Palette Sidebar - Pin focused block or page
     extensionAPI.ui.commandPalette.addCommand({
         label: "Sidebar - Pin focused block or page",
         "disable-hotkey": false,
@@ -407,7 +433,7 @@ async function onload({ extensionAPI }) {
             }
         },
     })
-    // Command Palette Sidebar - Close first block
+    // Command Roam CRM - Open Modal
     extensionAPI.ui.commandPalette.addCommand({
         label: "Roam CRM - Open Modal",
         "disable-hotkey": false,
@@ -419,12 +445,14 @@ async function onload({ extensionAPI }) {
         },
     })
 
-    // run the initial agenda addr
-    await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity))
+    if (getAgendaAddrSetting(extensionAPI)) {
+        // run the initial agenda addr
+        await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity))
 
-    // agenda addr pull watch
-    window.roamAlphaAPI.data.addPullWatch(pullPattern, entity, pullFunction)
-
+        // agenda addr pull watch
+        window.roamAlphaAPI.data.addPullWatch(pullPattern, entity, pullFunction)
+    }
+    
     if (!testing) {
         console.log(`load ${plugin_title} plugin`)
     }
