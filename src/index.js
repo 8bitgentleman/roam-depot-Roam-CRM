@@ -8,8 +8,8 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 
-const testing = true
-const version = "v1.1"
+const testing = false
+const version = "v1.2"
 
 const plugin_title = "Roam CRM"
 
@@ -248,7 +248,7 @@ async function onload({ extensionAPI }) {
         document.body.addEventListener("roamjs:google:loaded", googleLoadedHandler)
     }
     // Set an interval to run the check and fetch google events every hour
-    const intervalId = setInterval(() => checkAndFetchEvents(people, extensionAPI, testing), 60 * 60 * 1000); 
+    const intervalId = setInterval(() => checkAndFetchEvents(people, extensionAPI, testing), 60 * 60 * 1000);
     runners.intervals.push(intervalId);
     
     // always set people pages to hide DONE

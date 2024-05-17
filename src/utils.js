@@ -23,21 +23,19 @@ function getLastCalendarCheckDate(extensionAPI) {
     }
 }
 // check if events have been fetched yet today
-function checkAndFetchEvents(people, extensionAPI, testing) {
-    const lastFetchDate = JSON.parse(getLastCalendarCheckDate(extensionAPI)) || {};
-    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
-    let fetchPromises = [];
+export function checkAndFetchEvents(people, extensionAPI, testing) {
+    const lastFetchDate = getLastCalendarCheckDate(extensionAPI) || {};
+    const today = window.roamAlphaAPI.util.dateToPageUid(new Date())
+    
 
     // Iterate over all email addresses and check if a fetch is needed
     // TODO what happens when an email is removed from the google extension?
     // the last checked date will always be old so the events will fetch every hour...
     for (const email in lastFetchDate) {
       if (lastFetchDate[email] !== today) {
-        console.log("Fetch Events from Google", new Date().toISOString());
-        
         getEventInfo(people, extensionAPI, testing)
         break;
-      }
+      } 
     }
   }
 
