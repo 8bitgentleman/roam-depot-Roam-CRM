@@ -10,8 +10,8 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 
-const testing = true
-const version = "v1.2.2"
+const testing = false
+const version = "v1.2.3"
 
 const plugin_title = "Roam CRM"
 
