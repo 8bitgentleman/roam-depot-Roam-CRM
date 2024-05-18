@@ -9,7 +9,7 @@ import {
 } from "./components/call_templates"
 
 const testing = false
-const version = "v1.2.1"
+const version = "v1.2.2s"
 
 const plugin_title = "Roam CRM"
 
