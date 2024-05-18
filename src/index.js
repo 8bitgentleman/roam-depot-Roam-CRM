@@ -1,6 +1,8 @@
 import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from "./components/toast"
-import { getAllPeople, getEventInfo, getPageUID, parseAgendaPull, checkAndFetchEvents } from "./utils"
+import { getAllPeople, parseAgendaPull} from "./utils_reminders"
+import { getPageUID } from "./utils"
+import { checkAndFetchEvents, getEventInfo } from "./utils_gcal"
 import {
     createLastWeekCalls,
     createLastMonthCalls,
@@ -8,8 +10,8 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 
-const testing = false
-const version = "v1.2.2s"
+const testing = true
+const version = "v1.2.2"
 
 const plugin_title = "Roam CRM"
 

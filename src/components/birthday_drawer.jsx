@@ -1,8 +1,8 @@
 import { Drawer, Classes, Tooltip, AnchorButton } from "@blueprintjs/core"
 import React, { useState, useEffect } from "react"
 import renderOverlay from "roamjs-components/util/renderOverlay"
-import remindersSystem from "../utils"
-import { calculateAge } from "../utils"
+import remindersSystem from "../utils_reminders"
+import { calculateAge } from "../utils_reminders"
 import updateBlock from "roamjs-components/writes/updateBlock"
 
 const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI }) => {
