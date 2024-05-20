@@ -144,11 +144,8 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                         text: headerString,
                                         open: false,
                                         children: [
-                                            {
-                                                text: `Next Actions::`,
-                                                children: [{ text: "" }],
-                                            },
                                             { text: "Notes::", children: [{ text: "" }] },
+                                            { text: `Next Actions::`, children: [{ text: "" }]},
                                         ],
                                     },
 
