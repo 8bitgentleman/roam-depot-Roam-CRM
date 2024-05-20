@@ -410,7 +410,6 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
         toBeContacted: toBeContacted,
     }
 
-    console.log(mergedReminders, isModalEmpty);
     if (isModalEmpty(mergedReminders, "otherBirthdaysToday")) {
         // there's nothign for the modal to show so let's pop up a toast notify the user
         showToast("No birthdays or reminders to show", "SUCCESS")
@@ -420,7 +419,7 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
 }
 
 //MARK:Agenda Addr
-export async function parseAgendaPull(after) {
+export async function parseAgendaPull(after, extensionAPI) {
     // Function to clean up the original block
     function cleanUpBlock(block) {
         const cleanedString = block[":block/string"].replace(agendaRegex, "").trim()
@@ -455,7 +454,6 @@ export async function parseAgendaPull(after) {
         })
         if (filteredBlocks.length > 0) {
             const people = await getAllPeople()
-            console.log(filteredBlocks)
 
             filteredBlocks.forEach((block) => {
                 const relevantRefs = block[":block/refs"].filter(
@@ -467,7 +465,6 @@ export async function parseAgendaPull(after) {
                         "title",
                         ref[":node/title"],
                     )
-                    console.log("match", matchingPerson)
 
                     if (matchingPerson) {
                         const personAgendaBlock = getBlockUidByContainsTextOnPage(

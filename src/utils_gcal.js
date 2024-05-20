@@ -92,7 +92,6 @@ export async function getEventInfo(people, extensionAPI, testing) {
                         prevent_update.add(errorEmail)
 
                         if (!testing) {
-                            // console.log("email issue: ", errorEmail, prevent_update)
                             showToast(result.text, "DANGER")
                         }
 
@@ -170,7 +169,6 @@ export async function getEventInfo(people, extensionAPI, testing) {
                 }
                 await extensionAPI.settings.set("last-calendar-check-date", new_calendar_check_date)
             }
-            // console.log("new values ", await extensionAPI.settings.get("last-calendar-check-date"))
         })
         .catch((error) => {
             console.error(error)

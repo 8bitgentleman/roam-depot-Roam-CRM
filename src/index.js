@@ -1,7 +1,7 @@
 import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from "./components/toast"
 import { getAllPeople, parseAgendaPull} from "./utils_reminders"
-import { getPageUID } from "./utils"
+import { getPageUID, isSecondDateAfter } from "./utils"
 import { checkAndFetchEvents, getEventInfo } from "./utils_gcal"
 import {
     createLastWeekCalls,
@@ -11,7 +11,7 @@ import {
 } from "./components/call_templates"
 
 const testing = false
-const version = "v1.2.3"
+const version = "v1.2.4"
 
 const plugin_title = "Roam CRM"
 
@@ -45,6 +45,21 @@ const panelConfig = {
             name: "Version",
             action: { type: "reactComponent", component: versionTextComponent },
         },
+        {
+            id: "modal-header",
+            name: "Modal Settings",
+            action: { type: "reactComponent", component: headerTextComponent },
+        },
+        {
+            id: "trigger-modal",
+            name: "Trigger Modal at start of Day",
+            description: "In addition to triggering on load this will also trigger the modal at the start of each day. This will be most useful for people who leave Roam open for extended periods.",
+            action: {
+              type: "switch",
+              onChange: async (evt) => { 
+                  
+               }
+            }},
         {id:     "batch-contact-notification",
          name:   "Batch Contact Reminders",
          description: "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",
@@ -97,6 +112,7 @@ const panelConfig = {
 
                 }
         }},
+        
         {
             id: "templates-header",
             name: "Setup Templates",
@@ -219,6 +235,10 @@ function getAgendaAddrSetting(extensionAPI) {
     return extensionAPI.settings.get("agenda-addr-setting") || false
 }
 
+function getDailyTriggerSetting(extensionAPI) {
+    return extensionAPI.settings.get("trigger-modal") || false
+}
+
 async function setDONEFilter(page) {
     // sets a page filter to hide DONE tasks
     var fRemoves = await window.roamAlphaAPI.ui.filters.getPageFilters({ page: { title: page } })[
@@ -293,7 +313,25 @@ async function onload({ extensionAPI }) {
             }
         });
     }
+    console.log(getDailyTriggerSetting(extensionAPI));
     
+    if (getDailyTriggerSetting(extensionAPI)) {
+        // This is so the check runs right when your laptop is openend 
+        addEventListener(document, 'visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
+                const lastBirthdayCheckDate = getLastBirthdayCheckDate(extensionAPI)
+                if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
+                    // is this redundant code?
+                    displayBirthdays(people, lastBirthdayCheckDate, extensionAPI)
+                    extensionAPI.settings.set(
+                        "last-birthday-check-date",
+                        window.roamAlphaAPI.util.dateToPageUid(new Date()),
+                    )
+                }
+            }
+        });
+    }
     
     // always set people pages to hide DONE
     // TODO see if they want more granulity
@@ -449,7 +487,7 @@ async function onload({ extensionAPI }) {
 
     if (getAgendaAddrSetting(extensionAPI)) {
         // run the initial agenda addr
-        await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity))
+        await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity), extensionAPI)
 
         // agenda addr pull watch
         window.roamAlphaAPI.data.addPullWatch(pullPattern, entity, pullFunction)
