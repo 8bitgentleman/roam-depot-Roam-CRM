@@ -9,6 +9,7 @@ import {
     createPersonTemplates,
     createCallTemplates,
 } from "./components/call_templates"
+import TimeButton from "./components/time_button"
 
 const testing = false
 const version = "v1.2.4"
@@ -37,163 +38,171 @@ function headerTextComponent() {
     return React.createElement("h1", {})
 }
 //MARK: config panel
-const panelConfig = {
-    tabTitle: plugin_title,
-    settings: [
-        {
-            id: "version-text",
-            name: "Version",
-            action: { type: "reactComponent", component: versionTextComponent },
-        },
-        {
-            id: "modal-header",
-            name: "Modal Settings",
-            action: { type: "reactComponent", component: headerTextComponent },
-        },
-        {
-            id: "trigger-modal",
-            name: "Trigger Modal at start of Day",
-            description: "In addition to triggering on load this will also trigger the modal at the start of each day. This will be most useful for people who leave Roam open for extended periods.",
-            action: {
-              type: "switch",
-              onChange: async (evt) => { 
-                  
-               }
-            }},
-        {id:     "batch-contact-notification",
-         name:   "Batch Contact Reminders",
-         description: "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",
-         action: {type:     "select",
-                  items:    ["No Batch", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                  onChange: (evt) => { console.log("Select Changed!", evt); }}},
-        {
-            id: "calendar-header",
-            name: "Calendar Settings",
-            action: { type: "reactComponent", component: headerTextComponent },
-        },
-        {
-          id: "calendar-setting",
-          name: "Import Today's Calender Events On Load",
-          description: "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot to be installed and a reload of the Roam tab to start. See the README",
-          action: {
-            type: "switch",
-            onChange: async (evt) => { 
-                
-             }
-          }},
-        
-        {
-          id: "include-event-title",
-          name: "Include event title ",
-          description: "When events import, include the events title in the call template header text",
-          action: {
-            type: "switch",
-            onChange: (evt) => {  }
-          }},
-        {
-            id: "agenda-header",
-            name: "Agenda Addr Settings",
-            action: { type: "reactComponent", component: headerTextComponent },
-        },
-        {
-            id: "agenda-addr-setting",
-            name: "Run the Agenda Addr",
-            description: "When you make a block anywhere that has as persons name `[[Bill Gates]]` and add the hashtag `#Agenda` Roam CRM will automatically nest a block-ref of that block on Bill's page under an Agenda attribute.",
+function createPanelConfig(extensionAPI) {
+    const wrappedTimeConfig = () => TimeButton({ extensionAPI });
+    return {
+        tabTitle: plugin_title,
+        settings: [
+            {
+                id: "version-text",
+                name: "Version",
+                action: { type: "reactComponent", component: versionTextComponent },
+            },
+            {
+                id: "modal-header",
+                name: "Modal Settings",
+                action: { type: "reactComponent", component: headerTextComponent },
+            },
+            {id:	 "a-list",
+            name:   "A-List duration",
+            description: "",
+            action: {type:	 "reactComponent",
+                      component: wrappedTimeConfig}},
+            {
+                id: "trigger-modal",
+                name: "Trigger Modal at start of Day",
+                description: "In addition to triggering on load this will also trigger the modal at the start of each day. This will be most useful for people who leave Roam open for extended periods.",
+                action: {
+                type: "switch",
+                onChange: async (evt) => { 
+                    
+                }
+                }},
+            {id:     "batch-contact-notification",
+            name:   "Batch Contact Reminders",
+            description: "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",
+            action: {type:     "select",
+                    items:    ["No Batch", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                    onChange: (evt) => { console.log("Select Changed!", evt); }}},
+            {
+                id: "calendar-header",
+                name: "Calendar Settings",
+                action: { type: "reactComponent", component: headerTextComponent },
+            },
+            {
+            id: "calendar-setting",
+            name: "Import Today's Calender Events On Load",
+            description: "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot to be installed and a reload of the Roam tab to start. See the README",
             action: {
                 type: "switch",
                 onChange: async (evt) => { 
-                    if (evt.target.checked) {
-                        await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity))
-                        // agenda addr pull watch
-                        window.roamAlphaAPI.data.addPullWatch(pullPattern, entity, pullFunction)
-                    } else {
-                        window.roamAlphaAPI.data.removePullWatch(pullPattern, entity, pullFunction)
-                    }
-
+                    
                 }
-        }},
-        
-        {
-            id: "templates-header",
-            name: "Setup Templates",
-            description: "These are the templates that facilitate Roam CRM. Each button only needs to be hit once the first time you setup the extension in a graph. See the README for more information.",
-            action: { type: "reactComponent", component: headerTextComponent },
-        },
-        {
-            id: "call-rollup-query",
-            name: "Import Call Rollup Queries",
-            description:
-                "Imports the rollup query templates to your `[[Call]]` page. These can be referenced or added to templates as needed.",
+            }},
+            
+            {
+            id: "include-event-title",
+            name: "Include event title ",
+            description: "When events import, include the events title in the call template header text",
             action: {
-                type: "button",
-                onClick: async () => {
-                    const callPageUID = await getPageUID("Call")
-                    createLastMonthCalls(callPageUID)
-                    createLastWeekCalls(callPageUID)
+                type: "switch",
+                onChange: (evt) => {  }
+            }},
+            {
+                id: "agenda-header",
+                name: "Agenda Addr Settings",
+                action: { type: "reactComponent", component: headerTextComponent },
+            },
+            {
+                id: "agenda-addr-setting",
+                name: "Run the Agenda Addr",
+                description: "When you make a block anywhere that has as persons name `[[Bill Gates]]` and add the hashtag `#Agenda` Roam CRM will automatically nest a block-ref of that block on Bill's page under an Agenda attribute.",
+                action: {
+                    type: "switch",
+                    onChange: async (evt) => { 
+                        if (evt.target.checked) {
+                            await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity))
+                            // agenda addr pull watch
+                            window.roamAlphaAPI.data.addPullWatch(pullPattern, entity, pullFunction)
+                        } else {
+                            window.roamAlphaAPI.data.removePullWatch(pullPattern, entity, pullFunction)
+                        }
 
-                    showToast(`Templates Added.`, "SUCCESS")
-                },
-                content: "Import",
+                    }
+            }},
+            
+            {
+                id: "templates-header",
+                name: "Setup Templates",
+                description: "These are the templates that facilitate Roam CRM. Each button only needs to be hit once the first time you setup the extension in a graph. See the README for more information.",
+                action: { type: "reactComponent", component: headerTextComponent },
             },
-        },
-        {
-            id: "call-template",
-            name: "Import Call Template",
-            description:
-                "Imports the call template into your roam/templates page. This template structure is important for the rolloup queries to work.",
-            action: {
-                type: "button",
-                onClick: async () => {
-                    const templatePageUID = await getPageUID("roam/templates")
-                    createCallTemplates(templatePageUID)
-                    showToast(`Template Added.`, "SUCCESS")
+            {
+                id: "call-rollup-query",
+                name: "Import Call Rollup Queries",
+                description:
+                    "Imports the rollup query templates to your `[[Call]]` page. These can be referenced or added to templates as needed.",
+                action: {
+                    type: "button",
+                    onClick: async () => {
+                        const callPageUID = await getPageUID("Call")
+                        createLastMonthCalls(callPageUID)
+                        createLastWeekCalls(callPageUID)
+
+                        showToast(`Templates Added.`, "SUCCESS")
+                    },
+                    content: "Import",
                 },
-                content: "Import",
             },
-        },
-        {
-            id: "person-template",
-            name: "Imports Person Metadata Template",
-            description:
-                "Imports the persom metadata template into your roam/templates page. This template structure is important for Roam CRM to work.",
-            action: {
-                type: "button",
-                onClick: async () => {
-                    const templatePageUID = await getPageUID("roam/templates")
-                    createPersonTemplates(templatePageUID)
-                    showToast(`Template Added.`, "SUCCESS")
+            {
+                id: "call-template",
+                name: "Import Call Template",
+                description:
+                    "Imports the call template into your roam/templates page. This template structure is important for the rolloup queries to work.",
+                action: {
+                    type: "button",
+                    onClick: async () => {
+                        const templatePageUID = await getPageUID("roam/templates")
+                        createCallTemplates(templatePageUID)
+                        showToast(`Template Added.`, "SUCCESS")
+                    },
+                    content: "Import",
                 },
-                content: "Import",
             },
-        },
-        // {
-        //   id: "switch-setting",
-        //   name: "Switch Test",
-        //   description: "Test switch component",
-        //   action: {
-        //     type: "switch",
-        //     onChange: (evt) => { console.log("Switch!", evt); }
-        //   }
-        // },
-        // {
-        //   id: "input-setting",
-        //   name: "Input test",
-        //   action: {
-        //     type: "input",
-        //     placeholder: "placeholder",
-        //     onChange: (evt) => { console.log("Input Changed!", evt); }
-        //   }
-        // },
-        // {
-        //   id: "select-setting",
-        //   name: "Select test",
-        //   action: {
-        //     type: "select",
-        //     items: ["one", "two", "three"],
-        //     onChange: (evt) => { console.log("Select Changed!", evt); }
-        //   }
-        // }
-    ],
+            {
+                id: "person-template",
+                name: "Imports Person Metadata Template",
+                description:
+                    "Imports the persom metadata template into your roam/templates page. This template structure is important for Roam CRM to work.",
+                action: {
+                    type: "button",
+                    onClick: async () => {
+                        const templatePageUID = await getPageUID("roam/templates")
+                        createPersonTemplates(templatePageUID)
+                        showToast(`Template Added.`, "SUCCESS")
+                    },
+                    content: "Import",
+                },
+            },
+            // {
+            //   id: "switch-setting",
+            //   name: "Switch Test",
+            //   description: "Test switch component",
+            //   action: {
+            //     type: "switch",
+            //     onChange: (evt) => { console.log("Switch!", evt); }
+            //   }
+            // },
+            // {
+            //   id: "input-setting",
+            //   name: "Input test",
+            //   action: {
+            //     type: "input",
+            //     placeholder: "placeholder",
+            //     onChange: (evt) => { console.log("Input Changed!", evt); }
+            //   }
+            // },
+            // {
+            //   id: "select-setting",
+            //   name: "Select test",
+            //   action: {
+            //     type: "select",
+            //     items: ["one", "two", "three"],
+            //     onChange: (evt) => { console.log("Select Changed!", evt); }
+            //   }
+            // }
+        ],
+    }
 }
 
 async function crmbutton(extensionAPI) {
@@ -275,6 +284,7 @@ function addEventListener(target, event, callback) {
 
 //MARK: Onload function
 async function onload({ extensionAPI }) {
+    const panelConfig = createPanelConfig(extensionAPI);
     extensionAPI.settings.panel.create(panelConfig)
     const ts1 = new Date().getTime()
 
@@ -313,7 +323,6 @@ async function onload({ extensionAPI }) {
             }
         });
     }
-    console.log(getDailyTriggerSetting(extensionAPI));
     
     if (getDailyTriggerSetting(extensionAPI)) {
         // This is so the check runs right when your laptop is openend 
