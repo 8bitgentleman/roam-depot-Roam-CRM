@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react"
 import renderOverlay from "roamjs-components/util/renderOverlay"
 import remindersSystem from "../utils_reminders"
 import { calculateAge } from "../utils_reminders"
+import { getEventInfo } from "../utils_gcal"
 import updateBlock from "roamjs-components/writes/updateBlock"
 
 const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI }) => {
@@ -60,18 +61,19 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>Roam CRM</span>
                     <div style={{  justifyContent: 'flex-end' }}>
-                        <Tooltip content="Sync Calendar" position="bottom">
-                            <AnchorButton
-                                icon="cloud-download"
-                                minimal={true}
-                                disabled={true}
-                            />
-                        </Tooltip>
                         <Tooltip content="Coming Soon..." position="bottom">
                             <AnchorButton
                                 icon="fullscreen"
                                 minimal={true}
                                 disabled={true}
+                            />
+                        </Tooltip>
+                        <Tooltip content="Sync Calendar" position="bottom">
+                            <AnchorButton
+                                icon="cloud-download"
+                                minimal={true}
+                                disabled={false}
+                                onClick={() => getEventInfo(people, extensionAPI, false)}
                             />
                         </Tooltip>
                     </div>
