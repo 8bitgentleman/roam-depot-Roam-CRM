@@ -12,7 +12,7 @@ import {
 import TimeButton from "./components/time_button"
 
 const testing = false
-const version = "v1.2.4"
+const version = "v1.3"
 
 const plugin_title = "Roam CRM"
 
@@ -53,21 +53,21 @@ function createPanelConfig(extensionAPI) {
                 name: "Modal Settings",
                 action: { type: "reactComponent", component: headerTextComponent },
             },
-            {id:	 "a-list",
-            name:   "A-List duration",
-            description: "",
-            action: {type:	 "reactComponent",
-                      component: wrappedTimeConfig}},
-            {
-                id: "trigger-modal",
-                name: "Trigger Modal at start of Day",
-                description: "In addition to triggering on load this will also trigger the modal at the start of each day. This will be most useful for people who leave Roam open for extended periods.",
-                action: {
-                type: "switch",
-                onChange: async (evt) => { 
+            // {id:	 "a-list",
+            // name:   "A-List duration",
+            // description: "",
+            // action: {type:	 "reactComponent",
+            //           component: wrappedTimeConfig}},
+            // {
+            //     id: "trigger-modal",
+            //     name: "Trigger Modal at start of Day",
+            //     description: "In addition to triggering on load this will also trigger the modal at the start of each day. This will be most useful for people who leave Roam open for extended periods.",
+            //     action: {
+            //     type: "switch",
+            //     onChange: async (evt) => { 
                     
-                }
-                }},
+            //     }
+            //     }},
             {id:     "batch-contact-notification",
             name:   "Batch Contact Reminders",
             description: "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",

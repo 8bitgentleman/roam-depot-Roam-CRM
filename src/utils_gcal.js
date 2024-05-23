@@ -47,6 +47,14 @@ function getLastCalendarCheckDate(extensionAPI) {
     }
 }
 
+function checkStringForOneOnOne(event){
+    if (event.summary && event.summary.includes("1:1")) {
+        return true
+    } else {
+        return false
+    }
+}
+
 // check if events have been fetched yet today
 export function checkAndFetchEvents(people, extensionAPI, testing) {
     const lastFetchDate = getLastCalendarCheckDate(extensionAPI) || {};
@@ -81,7 +89,8 @@ export async function getEventInfo(people, extensionAPI, testing) {
             if (results[0].text !== "No Events Scheduled for Selected Date(s)!") {
                 // get the uid for today's DNP
                 let newBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
-
+                console.log("Events", results);
+                
                 results.forEach(async (result) => {
                     // check if there are logged in errors
                     if (
@@ -110,6 +119,10 @@ export async function getEventInfo(people, extensionAPI, testing) {
                             to_update.add(calendar)
                             // only process events with more than 1 confirmed attendee
                             if (attendees.length > 1) {
+                                let childrenBlocks = [
+                                    { text: "Notes::", children: [{ text: "" }] },
+                                    { text: `Next Actions::`, children: [{ text: "" }]},
+                                ]
                                 let attendeeNames = []
                                 let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date())
                                 // filter out self from attendees 
@@ -130,12 +143,35 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                         attendeeNames.push(a.email)
                                     }
                                 })
+                                if (result.event.attachments && result.event.attachments.length > 0) {
+                                    result.event.attachments.forEach(attachment => {
+                                        let resultString;
+                                        if (attachment.fileUrl.includes("www.notion.so")) {
+                                            resultString = `Notion:: [${attachment.title}](${attachment.fileUrl})`;
+                                        } else {
+                                            resultString = `Attachment:: [${attachment.title}](${attachment.fileUrl})`;
+                                        }
+                                        // Create the new object
+                                        let newBlock = { text: resultString};
+                                        // Add the new object to the start of the childrenBlocks list
+                                        childrenBlocks.unshift(newBlock);
+                                        console.log(newBlock);
+                                    });
+                                }
                                 const includeEventTitle = extensionAPI.settings.get("include-event-title") || false
                                 let headerString;
                                 if (includeEventTitle === true) {
-                                    headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
+                                    if (checkStringForOneOnOne(result.event)) {
+                                        headerString = `[[1:1]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
+                                    } else {
+                                        headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
+                                    }
                                 } else {
-                                    headerString = `[[Call]] with ${attendeeNames.join(" and ")}`
+                                    if (checkStringForOneOnOne(result.event)) {
+                                        headerString = `[[1:1]] with ${attendeeNames.join(" and ")}`
+                                    } else {
+                                        headerString = `[[Call]] with ${attendeeNames.join(" and ")}`
+                                    }
                                 }
 
                                 createBlock({
@@ -143,10 +179,7 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                     node: {
                                         text: headerString,
                                         open: false,
-                                        children: [
-                                            { text: "Notes::", children: [{ text: "" }] },
-                                            { text: `Next Actions::`, children: [{ text: "" }]},
-                                        ],
+                                        children: childrenBlocks,
                                     },
 
                                 })
