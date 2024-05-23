@@ -154,6 +154,7 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                         // Create the new object
                                         let newBlock = { text: resultString};
                                         // Add the new object to the start of the childrenBlocks list
+                                        childrenBlocks.unshift({ text: "---"});
                                         childrenBlocks.unshift(newBlock);
                                         console.log(newBlock);
                                     });
