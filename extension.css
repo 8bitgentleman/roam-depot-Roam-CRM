@@ -141,3 +141,8 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 .crm-reminders-drawer li > label {
     margin-bottom: 0px;
 }
+
+/* settings page */
+.rm-settings-panel__section.crm-reminders-api-setting > div:first-child{
+    width:10px;
+}

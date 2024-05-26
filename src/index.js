@@ -10,9 +10,10 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 import TimeButton from "./components/time_button"
+import apiToggle from "./components/apiToggle"
 
-const testing = false
-const version = "v1.3.1"
+const testing = true
+const version = "v1.4"
 
 const plugin_title = "Roam CRM"
 
@@ -74,6 +75,27 @@ function createPanelConfig(extensionAPI) {
             action: {type:     "select",
                     items:    ["No Batch", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
                     onChange: (evt) => { console.log("Select Changed!", evt); }}},
+                    
+            {
+                id: "religion-api",
+                name: "Religion API",
+                className:"crm-reminders-api-setting",
+                description: React.createElement(
+                                'span',
+                                null,
+                                'Integrates with the  ',
+                                React.createElement(
+                                'a',
+                                { href: 'https://api-ninjas.com/api/holidays' },
+                                'holiday API from api-ninjas.'
+                                ),
+                                ' Input your API key (free) here. Roam CRM will only call this once a year.'
+                            ),
+                action: {
+                    type: "reactComponent",
+                    component: apiToggle(extensionAPI),
+                },
+            },
             {
                 id: "calendar-header",
                 name: "Calendar Settings",
@@ -103,6 +125,7 @@ function createPanelConfig(extensionAPI) {
                 name: "Agenda Addr Settings",
                 action: { type: "reactComponent", component: headerTextComponent },
             },
+            
             {
                 id: "agenda-addr-setting",
                 name: "Run the Agenda Addr",
@@ -120,7 +143,6 @@ function createPanelConfig(extensionAPI) {
 
                     }
             }},
-            
             {
                 id: "templates-header",
                 name: "Setup Templates",
@@ -248,6 +270,10 @@ function getDailyTriggerSetting(extensionAPI) {
     return extensionAPI.settings.get("trigger-modal") || false
 }
 
+function getReligionAPIToggleSetting(extensionAPI) {
+    return extensionAPI.settings.get("religion-api-toggle") || false
+}
+
 async function setDONEFilter(page) {
     // sets a page filter to hide DONE tasks
     var fRemoves = await window.roamAlphaAPI.ui.filters.getPageFilters({ page: { title: page } })[
@@ -292,11 +318,15 @@ async function onload({ extensionAPI }) {
     // add left sidebar button
     crmbutton(extensionAPI)
     if (testing) {
-        displayBirthdays(people, "01-19-2024", extensionAPI)
+        // displayBirthdays(people, "01-19-2024", extensionAPI)
+        console.log("");
+        
     } else {
         displayBirthdays(people, getLastBirthdayCheckDate(extensionAPI), extensionAPI)
     }
-
+    console.log(extensionAPI.settings.get("religion-api-toggle"));
+    console.log(extensionAPI.settings.get("religion-api"));
+    
     // update last birthday check since it's already happened
     extensionAPI.settings.set(
         "last-birthday-check-date",
@@ -341,7 +371,53 @@ async function onload({ extensionAPI }) {
             }
         });
     }
-    
+    const religionAPIKey = extensionAPI.settings.get("religion-api")
+    if (getReligionAPIToggleSetting(extensionAPI) && religionAPIKey !== null) {
+        const country = extensionAPI.settings.get('religion-country-code').toLowerCase() || 'us';
+        const year = new Date().getFullYear().toString();
+        const url = `https://api.api-ninjas.com/v1/holidays?country=${country}&year=${year}&type=muslim`;
+        // christian
+        // observance_hebrew
+        // jewish_holiday
+        // muslim
+        // hindu_holiday
+        fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Api-Key': religionAPIKey,
+            'Content-Type': 'application/json'
+        }
+        })
+        .then(response => {
+            if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            
+            const transformedHolidays = data.reduce((acc, holiday) => {
+                const { year, date, country, iso, name, type } = holiday;
+            
+                if (!acc.has(year)) {
+                    acc.set(year, new Map());
+                }
+            
+                if (!acc.get(year).has(date)) {
+                    acc.get(year).set(date, []);
+                }
+            
+                acc.get(year).get(date).push({ country, iso, name, type });
+            
+                return acc;
+            }, new Map());
+            console.log(transformedHolidays.get(2024).get('2024-03-11'));
+            
+        })
+        .catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+        });
+    }
     // always set people pages to hide DONE
     // TODO see if they want more granulity
     people.forEach(async (page) => {
