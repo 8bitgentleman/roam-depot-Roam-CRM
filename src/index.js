@@ -12,7 +12,7 @@ import {
 import TimeButton from "./components/time_button"
 
 const testing = false
-const version = "v1.3"
+const version = "v1.3.1"
 
 const plugin_title = "Roam CRM"
 

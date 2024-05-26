@@ -55,6 +55,14 @@ function checkStringForOneOnOne(event){
     }
 }
 
+function checkStringForDinner(event){
+    if (event.summary && event.summary.toLowerCase().includes("dinner")) {
+        return true
+    } else {
+        return false
+    }
+}
+
 // check if events have been fetched yet today
 export function checkAndFetchEvents(people, extensionAPI, testing) {
     const lastFetchDate = getLastCalendarCheckDate(extensionAPI) || {};
@@ -89,7 +97,6 @@ export async function getEventInfo(people, extensionAPI, testing) {
             if (results[0].text !== "No Events Scheduled for Selected Date(s)!") {
                 // get the uid for today's DNP
                 let newBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
-                console.log("Events", results);
                 
                 results.forEach(async (result) => {
                     // check if there are logged in errors
@@ -156,7 +163,6 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                         // Add the new object to the start of the childrenBlocks list
                                         childrenBlocks.unshift({ text: "---"});
                                         childrenBlocks.unshift(newBlock);
-                                        console.log(newBlock);
                                     });
                                 }
                                 const includeEventTitle = extensionAPI.settings.get("include-event-title") || false
@@ -164,12 +170,16 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                 if (includeEventTitle === true) {
                                     if (checkStringForOneOnOne(result.event)) {
                                         headerString = `[[1:1]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
+                                    } else if (checkStringForDinner(result.event)) {
+                                        headerString = `[[Dinner]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
                                     } else {
                                         headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
                                     }
                                 } else {
                                     if (checkStringForOneOnOne(result.event)) {
                                         headerString = `[[1:1]] with ${attendeeNames.join(" and ")}`
+                                    } else if (checkStringForDinner(result.event)) {
+                                        headerString = `[[Dinner]] with ${attendeeNames.join(" and ")}`
                                     } else {
                                         headerString = `[[Call]] with ${attendeeNames.join(" and ")}`
                                     }
