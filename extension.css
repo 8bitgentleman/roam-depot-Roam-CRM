@@ -101,7 +101,7 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
     border: 1px solid;
     border-color: hsl(204, 33%, 87%);
 }
-.multi-column-list {
+.multi-column-list:not(.roam-block-container) {
     display: grid;
     grid-template-columns: 1fr 1fr; /* Two columns of equal width */
     /* gap: 20px;  */

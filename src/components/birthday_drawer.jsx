@@ -1,10 +1,10 @@
-import { Drawer, Classes, Tooltip, AnchorButton, Collapse, Button, TextArea, Checkbox } from "@blueprintjs/core";
-import React, { useState, useEffect } from "react"
-import renderOverlay from "roamjs-components/util/renderOverlay"
-import remindersSystem from "../utils_reminders"
-import { calculateAge } from "../utils_reminders"
-import { getEventInfo } from "../utils_gcal"
-import updateBlock from "roamjs-components/writes/updateBlock"
+import { Drawer, Classes, Tooltip, AnchorButton, Collapse, Button, Checkbox } from "@blueprintjs/core";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import renderOverlay from "roamjs-components/util/renderOverlay";
+import remindersSystem from "../utils_reminders";
+import { calculateAge } from "../utils_reminders";
+import { getEventInfo } from "../utils_gcal";
+import updateBlock from "roamjs-components/writes/updateBlock";
 
 const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI }) => {
     // State to store the reminders data
@@ -13,44 +13,44 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         otherBirthdaysToday: [],
         filteredUpcomingBirthdays: [],
         toBeContacted: [],
-    })
-    console.log(people);
-    
+    });
+
     // State to track which contacts have been checked
-    const [checkedContacts, setCheckedContacts] = useState([])
+    const [checkedContacts, setCheckedContacts] = useState([]);
 
     // State to track which accordions are open
     const [openIndexes, setOpenIndexes] = useState([]);
 
-    // State to track the messages for each person
-    const [messages, setMessages] = useState({});
+    // Refs to store the DOM nodes for rendering blocks
+    const blockRefs = useRef({});
 
     // Fetch the reminders data only once when the component mounts
     useEffect(() => {
-        const data = remindersSystem(people, lastBirthdayCheck, extensionAPI)
-        setReminders(data)
-    }, [lastBirthdayCheck])
+        const data = remindersSystem(people, lastBirthdayCheck, extensionAPI);
+        setReminders(data);
+    }, [lastBirthdayCheck]);
 
     // Handler for checkbox change
     const handleCheckboxChange = (contactName) => {
-        let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date())
+        let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date());
         // update the attribute when the checkbox is clicked
         updateBlock({
             uid: contactName.last_contact_uid,
             text: `Last Contacted:: [[${dt}]]`,
-        })
+        });
 
         setCheckedContacts((prev) => {
             if (prev.includes(contactName)) {
-                return prev.filter((name) => name !== contactName)
+                return prev.filter((name) => name !== contactName);
             } else {
-                return [...prev, contactName]
+                return [...prev, contactName];
             }
-        })
-    }
+        });
+    };
 
     // Toggle accordion state
-    const toggleAccordion = (index) => {
+    const toggleAccordion = (index, person) => {
+        console.log(index, person);
         setOpenIndexes((prevOpenIndexes) =>
             prevOpenIndexes.includes(index)
                 ? prevOpenIndexes.filter((i) => i !== index)
@@ -58,30 +58,36 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         );
     };
 
-    // Handle message change
-    const handleMessageChange = (index, value) => {
-        setMessages((prevMessages) => ({
-            ...prevMessages,
-            [index]: value,
-        }));
-    };
+    // Use effect to render blocks when openIndexes change
+    useEffect(() => {
+        openIndexes.forEach(index => {
+            const person = reminders.toBeContacted[index];
+            const blockUid = person['Relationship Metadata'][0]?.uid;
+            console.log(blockUid, blockRefs.current[index]);
+            if (blockUid) {
+                const el = blockRefs.current[index];
+                console.log(blockUid, el);
+                
+                if (el) {
+                    window.roamAlphaAPI.ui.components.renderBlock({
+                        uid: blockUid,
+                        el,
+                        "zoom-path?": true,
+                    });
+                }
+            }
+        });
+    }, [openIndexes, reminders.toBeContacted]);
 
-    const handleSendMessage = (index) => {
-        const message = messages[index];
-        if (message) {
-            console.log(`Message to ${reminders.toBeContacted[index].name}: ${message}`);
-            // You can add additional logic here to actually send the message
-        }
-    };   
     // Check if the relevant reminders arrays are empty
     const areRelevantRemindersEmpty =
         reminders.aAndBBirthdaysToday.length === 0 &&
         reminders.filteredUpcomingBirthdays.length === 0 &&
-        reminders.toBeContacted.length === 0
+        reminders.toBeContacted.length === 0;
 
     // If all relevant reminders are empty, do not render the Drawer
     if (areRelevantRemindersEmpty) {
-        return null
+        return null;
     }
 
     return (
@@ -91,7 +97,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
             title={
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>Roam CRM</span>
-                    <div style={{  justifyContent: 'flex-end' }}>
+                    <div style={{ justifyContent: 'flex-end' }}>
                         <Tooltip content="Coming Soon..." position="bottom">
                             <AnchorButton
                                 icon="fullscreen"
@@ -135,8 +141,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                                 })
                                             }
                                         >
-                                            {person.name} is {calculateAge(person.birthday)} years
-                                            old
+                                            {person.name} is {calculateAge(person.birthday)} years old
                                         </a>
                                     </li>
                                 ))}
@@ -181,14 +186,10 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                             <div key={index}>
                                                 <li>
                                                     <Button
-                                                        onClick={() => toggleAccordion(index)}
+                                                        onClick={() => toggleAccordion(index, person)}
                                                         icon={openIndexes.includes(index) ? "chevron-up" : "chevron-down"}
                                                         minimal
                                                         small
-                                                        style={{ 
-                                                            padding: '5px',
-                                                            margin: '0 5px '
-                                                         }}
                                                     />
                                                     <Checkbox
                                                         checked={checkedContacts.includes(person)}
@@ -206,26 +207,11 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                                 </li>
                                                 <li style={{ gridColumn: "span 2" }}>
                                                     <Collapse isOpen={openIndexes.includes(index)}>
-                                                        <TextArea
-                                                            placeholder={`Type a message to ${person.name}`}
-                                                            growVertically={true}
-                                                            fill={true}
-                                                            value={messages[index] || ''}
-                                                            onChange={(e) => handleMessageChange(index, e.target.value)}
-                                                        />
-                                                        <Button
-                                                            intent="primary"
-                                                            // icon="send-message"
-                                                            text="Send to Person's Page"
-                                                            
-                                                            onClick={() => handleSendMessage(index)}
-                                                            style={{ margin: '10px 0' }}
-                                                        >
-                                                        </Button>
+                                                        <div ref={(el) => (blockRefs.current[index] = el)} />
                                                     </Collapse>
                                                 </li>
                                             </div>
-                                        ),
+                                        )
                                 )}
                             </ul>
                         </div>
@@ -233,8 +219,8 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                 )}
             </div>
         </Drawer>
-    )
-}
+    );
+};
 
 const displayBirthdays = async (people, lastBirthdayCheck, extensionAPI) => {
     // only show the modal if there isn't already one shown
@@ -242,7 +228,7 @@ const displayBirthdays = async (people, lastBirthdayCheck, extensionAPI) => {
         renderOverlay({
             Overlay: BirthdayDrawer,
             props: { people, lastBirthdayCheck, extensionAPI },
-        })
-}
+        });
+};
 
-export default displayBirthdays
+export default displayBirthdays;
