@@ -5,6 +5,7 @@ import remindersSystem from "../utils_reminders"
 import { calculateAge } from "../utils_reminders"
 import { getEventInfo } from "../utils_gcal"
 import updateBlock from "roamjs-components/writes/updateBlock"
+import createBlock from "roamjs-components/writes/createBlock"
 
 const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI }) => {
     // State to store the reminders data
@@ -14,7 +15,6 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         filteredUpcomingBirthdays: [],
         toBeContacted: [],
     })
-    console.log(people);
     
     // State to track which contacts have been checked
     const [checkedContacts, setCheckedContacts] = useState([])
@@ -66,10 +66,20 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         }));
     };
 
-    const handleSendMessage = (index) => {
-        const message = messages[index];
+    const handleSendMessage = (index, person) => {
+        const today = window.roamAlphaAPI.util.dateToPageTitle(new Date())
+        const message = `${messages[index]} [[${today}]]`;
         if (message) {
             console.log(`Message to ${reminders.toBeContacted[index].name}: ${message}`);
+            createBlock({
+                parentUid: person.uid,
+                node: {
+                    text: message,
+                    open: false
+                },
+                order: 'last'
+
+            })
             // You can add additional logic here to actually send the message
         }
     };   
@@ -218,7 +228,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                                             // icon="send-message"
                                                             text="Send to Person's Page"
                                                             
-                                                            onClick={() => handleSendMessage(index)}
+                                                            onClick={() => handleSendMessage(index, person)}
                                                             style={{ margin: '10px 0' }}
                                                         >
                                                         </Button>

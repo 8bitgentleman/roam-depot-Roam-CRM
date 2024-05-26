@@ -12,7 +12,7 @@ import {
 import TimeButton from "./components/time_button"
 import apiToggle from "./components/apiToggle"
 
-const testing = true
+const testing = false
 const version = "v1.4"
 
 const plugin_title = "Roam CRM"
