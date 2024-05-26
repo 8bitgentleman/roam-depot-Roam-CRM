@@ -1,4 +1,4 @@
-import { Drawer, Classes, Tooltip, AnchorButton } from "@blueprintjs/core"
+import { Drawer, Classes, Tooltip, AnchorButton, Collapse, Button, TextArea, Checkbox } from "@blueprintjs/core";
 import React, { useState, useEffect } from "react"
 import renderOverlay from "roamjs-components/util/renderOverlay"
 import remindersSystem from "../utils_reminders"
@@ -14,9 +14,16 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         filteredUpcomingBirthdays: [],
         toBeContacted: [],
     })
-
+    console.log(people);
+    
     // State to track which contacts have been checked
     const [checkedContacts, setCheckedContacts] = useState([])
+
+    // State to track which accordions are open
+    const [openIndexes, setOpenIndexes] = useState([]);
+
+    // State to track the messages for each person
+    const [messages, setMessages] = useState({});
 
     // Fetch the reminders data only once when the component mounts
     useEffect(() => {
@@ -42,6 +49,30 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         })
     }
 
+    // Toggle accordion state
+    const toggleAccordion = (index) => {
+        setOpenIndexes((prevOpenIndexes) =>
+            prevOpenIndexes.includes(index)
+                ? prevOpenIndexes.filter((i) => i !== index)
+                : [...prevOpenIndexes, index]
+        );
+    };
+
+    // Handle message change
+    const handleMessageChange = (index, value) => {
+        setMessages((prevMessages) => ({
+            ...prevMessages,
+            [index]: value,
+        }));
+    };
+
+    const handleSendMessage = (index) => {
+        const message = messages[index];
+        if (message) {
+            console.log(`Message to ${reminders.toBeContacted[index].name}: ${message}`);
+            // You can add additional logic here to actually send the message
+        }
+    };   
     // Check if the relevant reminders arrays are empty
     const areRelevantRemindersEmpty =
         reminders.aAndBBirthdaysToday.length === 0 &&
@@ -147,26 +178,53 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                 {reminders.toBeContacted.map(
                                     (person, index) =>
                                         !checkedContacts.includes(person) && (
-                                            <li key={index}>
-                                                <label>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={checkedContacts.includes(person)}
-                                                        onChange={() =>
-                                                            handleCheckboxChange(person)
-                                                        }
+                                            <div key={index}>
+                                                <li>
+                                                    <Button
+                                                        onClick={() => toggleAccordion(index)}
+                                                        icon={openIndexes.includes(index) ? "chevron-up" : "chevron-down"}
+                                                        minimal
+                                                        small
+                                                        style={{ 
+                                                            padding: '5px',
+                                                            margin: '0 5px '
+                                                         }}
                                                     />
-                                                </label>
-                                                <a
-                                                    onClick={() =>
-                                                        window.roamAlphaAPI.ui.mainWindow.openPage({
-                                                            page: { title: person.name },
-                                                        })
-                                                    }
-                                                >
-                                                    {person.name}
-                                                </a>
-                                            </li>
+                                                    <Checkbox
+                                                        checked={checkedContacts.includes(person)}
+                                                        onChange={() => handleCheckboxChange(person)}
+                                                    />
+                                                    <a
+                                                        onClick={() =>
+                                                            window.roamAlphaAPI.ui.mainWindow.openPage({
+                                                                page: { title: person.name },
+                                                            })
+                                                        }
+                                                    >
+                                                        {person.name}
+                                                    </a>
+                                                </li>
+                                                <li style={{ gridColumn: "span 2" }}>
+                                                    <Collapse isOpen={openIndexes.includes(index)}>
+                                                        <TextArea
+                                                            placeholder={`Type a message to ${person.name}`}
+                                                            growVertically={true}
+                                                            fill={true}
+                                                            value={messages[index] || ''}
+                                                            onChange={(e) => handleMessageChange(index, e.target.value)}
+                                                        />
+                                                        <Button
+                                                            intent="primary"
+                                                            // icon="send-message"
+                                                            text="Send to Person's Page"
+                                                            
+                                                            onClick={() => handleSendMessage(index)}
+                                                            style={{ margin: '10px 0' }}
+                                                        >
+                                                        </Button>
+                                                    </Collapse>
+                                                </li>
+                                            </div>
                                         ),
                                 )}
                             </ul>

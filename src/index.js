@@ -38,6 +38,8 @@ function versionTextComponent() {
 function headerTextComponent() {
     return React.createElement("h1", {})
 }
+
+
 //MARK: config panel
 function createPanelConfig(extensionAPI) {
     const wrappedTimeConfig = () => TimeButton({ extensionAPI });
@@ -76,26 +78,46 @@ function createPanelConfig(extensionAPI) {
                     items:    ["No Batch", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
                     onChange: (evt) => { console.log("Select Changed!", evt); }}},
                     
-            {
-                id: "religion-api",
-                name: "Religion API",
-                className:"crm-reminders-api-setting",
-                description: React.createElement(
-                                'span',
-                                null,
-                                'Integrates with the  ',
-                                React.createElement(
-                                'a',
-                                { href: 'https://api-ninjas.com/api/holidays' },
-                                'holiday API from api-ninjas.'
-                                ),
-                                ' Input your API key (free) here. Roam CRM will only call this once a year.'
-                            ),
-                action: {
-                    type: "reactComponent",
-                    component: apiToggle(extensionAPI),
-                },
-            },
+            // {
+            //     id: "religion-api",
+            //     name: "Religion API",
+            //     className:"crm-reminders-api-setting",
+            //     description: React.createElement(
+            //                     'span',
+            //                     null,
+            //                     'Integrates with the  ',
+            //                     React.createElement(
+            //                     'a',
+            //                     { href: 'https://api-ninjas.com/api/holidays' },
+            //                     'holiday API from api-ninjas.'
+            //                     ),
+            //                     ' Input your API key (free) here. Roam CRM will only call this once a year.'
+            //                 ),
+            //     action: {
+            //         type: "reactComponent",
+            //         component: apiToggle(extensionAPI),
+            //     },
+            // },
+            // {
+            //     id: "postcard-api",
+            //     name: "LOB Postcard Integration",
+            //     className:"crm-reminders-postcard-setting",
+            //     description: React.createElement(
+            //                     'span',
+            //                     null,
+            //                     'Integrates with the  ',
+            //                     React.createElement(
+            //                     'a',
+            //                     { href: 'https://dashboard.lob.com/settings/api-keys' },
+            //                     'postcard API from LOB.'
+            //                     ),
+            //                     ' Allows you to send a physical postcard to a contact.'
+            //                 ),
+            //     action: {
+            //         type: "reactComponent",
+            //         component: apiToggle(extensionAPI),
+            //     },
+            // },
             {
                 id: "calendar-header",
                 name: "Calendar Settings",
@@ -318,14 +340,12 @@ async function onload({ extensionAPI }) {
     // add left sidebar button
     crmbutton(extensionAPI)
     if (testing) {
-        // displayBirthdays(people, "01-19-2024", extensionAPI)
+        displayBirthdays(people, "01-19-2024", extensionAPI)
         console.log("");
         
     } else {
         displayBirthdays(people, getLastBirthdayCheckDate(extensionAPI), extensionAPI)
     }
-    console.log(extensionAPI.settings.get("religion-api-toggle"));
-    console.log(extensionAPI.settings.get("religion-api"));
     
     // update last birthday check since it's already happened
     extensionAPI.settings.set(
@@ -372,21 +392,17 @@ async function onload({ extensionAPI }) {
         });
     }
     const religionAPIKey = extensionAPI.settings.get("religion-api")
+    const religionList = ['christian', 'observance_christian', 'observance_hebrew', 'jewish_holiday', 'muslim', 'hindu_holiday']
     if (getReligionAPIToggleSetting(extensionAPI) && religionAPIKey !== null) {
         const country = extensionAPI.settings.get('religion-country-code').toLowerCase() || 'us';
         const year = new Date().getFullYear().toString();
-        const url = `https://api.api-ninjas.com/v1/holidays?country=${country}&year=${year}&type=muslim`;
-        // christian
-        // observance_hebrew
-        // jewish_holiday
-        // muslim
-        // hindu_holiday
+        const url = `https://api.api-ninjas.com/v1/holidays?country=${country}&year=${year}&type=muslim`; 
         fetch(url, {
-        method: 'GET',
-        headers: {
-            'X-Api-Key': religionAPIKey,
-            'Content-Type': 'application/json'
-        }
+            method: 'GET',
+            headers: {
+                'X-Api-Key': religionAPIKey,
+                'Content-Type': 'application/json'
+            }
         })
         .then(response => {
             if (!response.ok) {
@@ -411,13 +427,14 @@ async function onload({ extensionAPI }) {
             
                 return acc;
             }, new Map());
-            console.log(transformedHolidays.get(2024).get('2024-03-11'));
+            console.log(transformedHolidays, data);
             
         })
         .catch(error => {
             console.error('There was a problem with the fetch operation:', error);
         });
     }
+
     // always set people pages to hide DONE
     // TODO see if they want more granulity
     people.forEach(async (page) => {
