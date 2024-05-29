@@ -445,7 +445,7 @@ export async function parseAgendaPull(after, extensionAPI) {
     }
     // Precompile the regex
     const agendaRegex = /\[\[Agenda\]\]|\#Agenda|\#\[\[Agenda\]\]/g
-
+    
     // Function to create a TODO block
     function createTodoBlock(sourceUID, personAgendaBlock) {
         const newBlockString = `{{[[TODO]]}} ((${sourceUID}))`
@@ -488,6 +488,8 @@ export async function parseAgendaPull(after, extensionAPI) {
                             matchingPerson.title,
                         )
                         createTodoBlock(block[":block/uid"], personAgendaBlock)
+                        console.log("Matching person", matchingPerson.title, ref[":node/title"], block);
+                        
                         cleanUpBlock(block)
                     }
                 })

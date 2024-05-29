@@ -9,7 +9,6 @@ import {
     createPersonTemplates,
     createCallTemplates,
 } from "./components/call_templates"
-import apiToggle from "./components/apiToggle"
 import IntervalSettings from "./components/list_intervals"
 
 const testing = false
@@ -95,48 +94,6 @@ function createPanelConfig(extensionAPI) {
                     
             //     }
             //     }},
-
-                    
-            // {
-            //     id: "religion-api",
-            //     name: "Religion API",
-            //     className:"crm-reminders-api-setting",
-            //     description: React.createElement(
-            //                     'span',
-            //                     null,
-            //                     'Integrates with the  ',
-            //                     React.createElement(
-            //                     'a',
-            //                     { href: 'https://api-ninjas.com/api/holidays' },
-            //                     'holiday API from api-ninjas.'
-            //                     ),
-            //                     ' Input your API key (free) here. Roam CRM will only call this once a year.'
-            //                 ),
-            //     action: {
-            //         type: "reactComponent",
-            //         component: apiToggle(extensionAPI),
-            //     },
-            // },
-            // {
-            //     id: "postcard-api",
-            //     name: "LOB Postcard Integration",
-            //     className:"crm-reminders-postcard-setting",
-            //     description: React.createElement(
-            //                     'span',
-            //                     null,
-            //                     'Integrates with the  ',
-            //                     React.createElement(
-            //                     'a',
-            //                     { href: 'https://dashboard.lob.com/settings/api-keys' },
-            //                     'postcard API from LOB.'
-            //                     ),
-            //                     ' Allows you to send a physical postcard to a contact.'
-            //                 ),
-            //     action: {
-            //         type: "reactComponent",
-            //         component: apiToggle(extensionAPI),
-            //     },
-            // },
             {
                 id: "calendar-header",
                 name: "Calendar Settings",
@@ -175,7 +132,7 @@ function createPanelConfig(extensionAPI) {
                     type: "switch",
                     onChange: async (evt) => { 
                         if (evt.target.checked) {
-                            await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity))
+                            await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity), extensionAPI)
                             // agenda addr pull watch
                             window.roamAlphaAPI.data.addPullWatch(pullPattern, entity, pullFunction)
                         } else {
@@ -184,6 +141,11 @@ function createPanelConfig(extensionAPI) {
 
                     }
             }},
+            {
+                id: "agenda-addr-remove-names",
+                name: "Remove #tagged names in Agenda Addr blocks",
+                description: "In a block tagged [[Agenda]] (and when the Agenda Addr is turned on) If a person's name is tagged with a hashtag ( #[[Steve Jobs]] ), then the tagged name will be auto removed after the Agenda Addr is run.",
+                action: {type: "switch"}},
             {
                 id: "templates-header",
                 name: "Setup Templates",
@@ -237,33 +199,6 @@ function createPanelConfig(extensionAPI) {
                     content: "Import",
                 },
             },
-            // {
-            //   id: "switch-setting",
-            //   name: "Switch Test",
-            //   description: "Test switch component",
-            //   action: {
-            //     type: "switch",
-            //     onChange: (evt) => { console.log("Switch!", evt); }
-            //   }
-            // },
-            // {
-            //   id: "input-setting",
-            //   name: "Input test",
-            //   action: {
-            //     type: "input",
-            //     placeholder: "placeholder",
-            //     onChange: (evt) => { console.log("Input Changed!", evt); }
-            //   }
-            // },
-            // {
-            //   id: "select-setting",
-            //   name: "Select test",
-            //   action: {
-            //     type: "select",
-            //     items: ["one", "two", "three"],
-            //     onChange: (evt) => { console.log("Select Changed!", evt); }
-            //   }
-            // }
         ],
     }
 }
@@ -309,10 +244,6 @@ function getAgendaAddrSetting(extensionAPI) {
 
 function getDailyTriggerSetting(extensionAPI) {
     return extensionAPI.settings.get("trigger-modal") || false
-}
-
-function getReligionAPIToggleSetting(extensionAPI) {
-    return extensionAPI.settings.get("religion-api-toggle") || false
 }
 
 async function setDONEFilter(page) {
@@ -410,49 +341,6 @@ async function onload({ extensionAPI }) {
                     )
                 }
             }
-        });
-    }
-    const religionAPIKey = extensionAPI.settings.get("religion-api")
-    const religionList = ['christian', 'observance_christian', 'observance_hebrew', 'jewish_holiday', 'muslim', 'hindu_holiday']
-    if (getReligionAPIToggleSetting(extensionAPI) && religionAPIKey !== null) {
-        const country = extensionAPI.settings.get('religion-country-code').toLowerCase() || 'us';
-        const year = new Date().getFullYear().toString();
-        const url = `https://api.api-ninjas.com/v1/holidays?country=${country}&year=${year}&type=muslim`; 
-        fetch(url, {
-            method: 'GET',
-            headers: {
-                'X-Api-Key': religionAPIKey,
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-            throw new Error('Network response was not ok ' + response.statusText);
-            }
-            return response.json();
-        })
-        .then(data => {
-            
-            const transformedHolidays = data.reduce((acc, holiday) => {
-                const { year, date, country, iso, name, type } = holiday;
-            
-                if (!acc.has(year)) {
-                    acc.set(year, new Map());
-                }
-            
-                if (!acc.get(year).has(date)) {
-                    acc.get(year).set(date, []);
-                }
-            
-                acc.get(year).get(date).push({ country, iso, name, type });
-            
-                return acc;
-            }, new Map());
-            console.log(transformedHolidays, data);
-            
-        })
-        .catch(error => {
-            console.error('There was a problem with the fetch operation:', error);
         });
     }
 
