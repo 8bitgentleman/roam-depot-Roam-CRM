@@ -38,10 +38,8 @@ function headerTextComponent() {
     return React.createElement("h1", {})
 }
 
-
 //MARK: config panel
 function createPanelConfig(extensionAPI) {
-    const wrappedTimeConfig = () => TimeButton({ extensionAPI });
     const wrappedIntervalConfig = () => IntervalSettings({ extensionAPI });
     return {
         tabTitle: plugin_title,
@@ -84,16 +82,16 @@ function createPanelConfig(extensionAPI) {
                     }
                  }
                 }},
-            // {
-            //     id: "trigger-modal",
-            //     name: "Trigger Modal at start of Day",
-            //     description: "In addition to triggering on load this will also trigger the modal at the start of each day. This will be most useful for people who leave Roam open for extended periods.",
-            //     action: {
-            //     type: "switch",
-            //     onChange: async (evt) => { 
+            {
+                id: "trigger-modal",
+                name: "Trigger Modal at start of Day",
+                description: "In addition to triggering on load this will also trigger the modal at the start of each day. This will be most useful for people who leave Roam open for extended periods.",
+                action: {
+                    type: "switch",
+                    onChange: async (evt) => { 
                     
-            //     }
-            //     }},
+                }
+                }},
             {
                 id: "calendar-header",
                 name: "Calendar Settings",
@@ -234,18 +232,6 @@ function getLastBirthdayCheckDate(extensionAPI) {
     return extensionAPI.settings.get("last-birthday-check-date") || "01-19-2024"
 }
 
-function getCalendarSetting(extensionAPI) {
-    return extensionAPI.settings.get("calendar-setting") || false
-}
-
-function getAgendaAddrSetting(extensionAPI) {
-    return extensionAPI.settings.get("agenda-addr-setting") || false
-}
-
-function getDailyTriggerSetting(extensionAPI) {
-    return extensionAPI.settings.get("trigger-modal") || false
-}
-
 async function setDONEFilter(page) {
     // sets a page filter to hide DONE tasks
     var fRemoves = await window.roamAlphaAPI.ui.filters.getPageFilters({ page: { title: page } })[
@@ -304,7 +290,8 @@ async function onload({ extensionAPI }) {
         "last-birthday-check-date",
         window.roamAlphaAPI.util.dateToPageUid(new Date()),
     )
-    if (getCalendarSetting(extensionAPI)) {
+    
+    if (getExtensionAPISetting(extensionAPI, "calendar-setting", false)){
         // bring in the events, this should rely on getLastBirthdayCheckDate to avoid duplicates
         // listen for the google extension to be loaded
         if (window.roamjs?.extension?.google) {
@@ -326,7 +313,7 @@ async function onload({ extensionAPI }) {
         });
     }
     
-    if (getDailyTriggerSetting(extensionAPI)) {
+    if (getExtensionAPISetting(extensionAPI, "trigger-modal", false)){
         // This is so the check runs right when your laptop is openend 
         addEventListener(document, 'visibilitychange', () => {
             if (document.visibilityState === 'visible') {
@@ -495,8 +482,7 @@ async function onload({ extensionAPI }) {
             displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
         },
     })
-
-    if (getAgendaAddrSetting(extensionAPI)) {
+    if (getExtensionAPISetting(extensionAPI, "agenda-addr-setting", false)){
         // run the initial agenda addr
         await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity), extensionAPI)
 
