@@ -5,7 +5,8 @@ import { showToast } from "./components/toast"
 import { 
     getDictionaryWithKeyValue, 
     getBlockUidByContainsTextOnPage,
-    isSecondDateAfter
+    isSecondDateAfter,
+    getExtensionAPISetting
 
  } from "./utils"
 
@@ -20,6 +21,27 @@ function checkBatchContactSetting(extensionAPI) {
 
     // Compare the current day with the user's setting
     return today === userSetting;
+}
+
+function getIntervalsFromSettings(extensionAPI) {
+    
+    // Retrieve the settings values asynchronously
+    const aList = getExtensionAPISetting(extensionAPI, 'aList', 14); // Two weeks
+    const bList = getExtensionAPISetting(extensionAPI, 'bList', 60); // Two months
+    const cList = getExtensionAPISetting(extensionAPI, 'cList', 180); // Six months
+    const dList = getExtensionAPISetting(extensionAPI, 'dList', 365); // Once a year
+    const fList = getExtensionAPISetting(extensionAPI, 'fList', 0); // Never contact
+    
+    // Convert intervals to milliseconds
+    const intervals = {
+        "A List": aList * 24 * 60 * 60 * 1000, // Every two weeks
+        "B List": bList * 24 * 60 * 60 * 1000, // Roughly every two months
+        "C List": cList * 24 * 60 * 60 * 1000, // Roughly every six months
+        "D List": dList * 24 * 60 * 60 * 1000, // Once a year
+        "F List": fList === 0 ? null : fList * 24 * 60 * 60 * 1000, // Never contact or custom interval
+    };
+  
+    return intervals;
 }
 
 function parseStringToDate(dateString) {
@@ -152,18 +174,9 @@ export async function getAllPeople() {
     return extractElementsWithKeywords(results, keywords)
 }
 
-function shouldContact(person) {
+function shouldContact(person, intervals) {
     // Define the current date
     const currentDate = new Date()
-
-    // Define the intervals in milliseconds
-    const intervals = {
-        "A List": 14 * 24 * 60 * 60 * 1000, // Every two weeks
-        "B List": 2 * 30 * 24 * 60 * 60 * 1000, // Roughly every two months
-        "C List": 6 * 30 * 24 * 60 * 60 * 1000, // Roughly every six months
-        "D List": 365 * 24 * 60 * 60 * 1000, // Once a year
-        "F List": null, //never contact
-    }
 
     // Extract the relevant properties from the person object
     const { contact_list, last_contact, name } = person
@@ -362,13 +375,16 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     // for each person extract the needed info
     // TODO fetch the extensionAPI and check if batching is enabled
     let displayToBeContacted = checkBatchContactSetting(extensionAPI)
+    // Get the list durations from 
+    const contactIntervals = getIntervalsFromSettings(extensionAPI);
+    
     people.forEach((person) => {
         // fix the json
         person = fixPersonJSON(person)
 
         // check the last contact date compared to the contact list
         if (displayToBeContacted) {
-            if (shouldContact(person)) {
+            if (shouldContact(person, contactIntervals)) {
                 toBeContacted.push(person)
             }
         }

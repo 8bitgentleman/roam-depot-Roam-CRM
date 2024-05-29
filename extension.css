@@ -143,6 +143,13 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 }
 
 /* settings page */
-.rm-settings-panel__section.crm-reminders-api-setting > div:first-child{
-    width:10px;
+.rm-settings-panel__section.crm-reminders-interval-setting > div:first-child{
+    max-width: 250px;
+}
+.crm-reminders-interval-setting input{
+    margin:0 10px;
+}
+.rm-settings-panel__section.crm-reminders-interval-setting{
+    display: flex;
+    justify-content: space-between;
 }

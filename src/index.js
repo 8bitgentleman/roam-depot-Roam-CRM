@@ -1,7 +1,7 @@
 import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from "./components/toast"
 import { getAllPeople, parseAgendaPull} from "./utils_reminders"
-import { getPageUID, isSecondDateAfter } from "./utils"
+import { getPageUID, isSecondDateAfter, getExtensionAPISetting } from "./utils"
 import { checkAndFetchEvents, getEventInfo } from "./utils_gcal"
 import {
     createLastWeekCalls,
@@ -9,11 +9,11 @@ import {
     createPersonTemplates,
     createCallTemplates,
 } from "./components/call_templates"
-import TimeButton from "./components/time_button"
 import apiToggle from "./components/apiToggle"
+import IntervalSettings from "./components/list_intervals"
 
 const testing = false
-const version = "v1.4"
+const version = "v1.5"
 
 const plugin_title = "Roam CRM"
 
@@ -43,6 +43,7 @@ function headerTextComponent() {
 //MARK: config panel
 function createPanelConfig(extensionAPI) {
     const wrappedTimeConfig = () => TimeButton({ extensionAPI });
+    const wrappedIntervalConfig = () => IntervalSettings({ extensionAPI });
     return {
         tabTitle: plugin_title,
         settings: [
@@ -56,11 +57,34 @@ function createPanelConfig(extensionAPI) {
                 name: "Modal Settings",
                 action: { type: "reactComponent", component: headerTextComponent },
             },
-            // {id:	 "a-list",
-            // name:   "A-List duration",
-            // description: "",
-            // action: {type:	 "reactComponent",
-            //           component: wrappedTimeConfig}},
+            {id:     "batch-contact-notification",
+            name:   "Batch Contact Reminders",
+            description: "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",
+            action: {type:     "select",
+                    items:    ["No Batch", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                    onChange: (evt) => { console.log("Select Changed!", evt); }}},
+            {
+                id: "interval-settings",
+                name: "Contact Frequency Intervals",
+                description:"Set custom contact frequency durations. See the README for more info.",
+                className:"crm-reminders-interval-setting",
+                action: { type: "reactComponent", component: wrappedIntervalConfig },
+            },
+            {
+                id: "sidebar-button",
+                name: "Left Sidebar Button",
+                description: "Add a button to the left sidebar to quickly launch the CRM",
+                action: {
+                type: "switch",
+                onChange: (evt) => { 
+                    if (evt.target.checked) {
+                        crmbutton(extensionAPI)
+                    } else {
+                        var crmDiv = document.getElementById("crmDiv")
+                        crmDiv.remove()
+                    }
+                 }
+                }},
             // {
             //     id: "trigger-modal",
             //     name: "Trigger Modal at start of Day",
@@ -71,12 +95,7 @@ function createPanelConfig(extensionAPI) {
                     
             //     }
             //     }},
-            {id:     "batch-contact-notification",
-            name:   "Batch Contact Reminders",
-            description: "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",
-            action: {type:     "select",
-                    items:    ["No Batch", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                    onChange: (evt) => { console.log("Select Changed!", evt); }}},
+
                     
             // {
             //     id: "religion-api",
@@ -303,10 +322,8 @@ async function setDONEFilter(page) {
     ]
     // check if DONE is already filtered. if not add it
     const containsDONE = fRemoves.includes("DONE")
-    // console.log(fRemoves, containsDONE);
 
     if (!containsDONE) {
-        // console.log(`Set DONE filter for: ${page}`);
         fRemoves.push("DONE")
         await window.roamAlphaAPI.ui.filters.setPageFilters({
             page: { title: page },
@@ -338,10 +355,14 @@ async function onload({ extensionAPI }) {
 
     const people = await getAllPeople()
     // add left sidebar button
-    crmbutton(extensionAPI)
+    // sidebar-button
+    if (getExtensionAPISetting(extensionAPI, "sidebar-button", false)) {
+        crmbutton(extensionAPI)
+    }
+    
     if (testing) {
         displayBirthdays(people, "01-19-2024", extensionAPI)
-        console.log("");
+        // console.log("");
         
     } else {
         displayBirthdays(people, getLastBirthdayCheckDate(extensionAPI), extensionAPI)
@@ -604,6 +625,7 @@ function onunload() {
     document.body.removeEventListener("roamjs:google:loaded", googleLoadedHandler)
 
     window.roamAlphaAPI.data.removePullWatch(pullPattern, entity, pullFunction)
+    // remove the sidebar button
     var crmDiv = document.getElementById("crmDiv")
     crmDiv.remove()
 

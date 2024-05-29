@@ -39,9 +39,15 @@ Roam CRM relies on several excellent Roam extensions to extend it's functionalit
 -   We create metadata for each `#people` page inspired by [Matt Mochary](https://docs.google.com/spreadsheets/d/1Ti_xaV9IVvj-bklxOjNY-IeGsC-YqcgvB03qvfFQrnI/)
 
 ### Contact Reminders
+Set contact frequency reminders for each person. This can be customized in the settings.
 
--   Set contact frequency reminders for each person - #[[A List]]: Contact every two weeks - #[[B List]]: Contact every two months - #[[C List]]: Contact every six months - #[[D List]]: Contact once a year - #[[F List]]: Never contact
--   A modal on the daily note remind you to contact someone
+- #[[A List]]: Contact every two weeks 
+- #[[B List]]: Contact every two months 
+- #[[C List]]: Contact every six months 
+- #[[D List]]: Contact once a year 
+- #[[F List]]: Never contact
+
+A modal will remind you to contact someone
 
 ### Birthday Reminders
 
