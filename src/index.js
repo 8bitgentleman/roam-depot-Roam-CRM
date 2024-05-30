@@ -19,6 +19,7 @@ const plugin_title = "Roam CRM"
 var runners = {
     intervals: [],
     eventListeners: [],
+    pullFunctions: [],
   };
 
 let googleLoadedHandler
@@ -26,9 +27,7 @@ let googleLoadedHandler
 const pullPattern =
     "[:block/_refs :block/uid :node/title {:block/_refs [{:block/refs[:node/title]} :node/title :block/uid :block/string]}]"
 const entity = '[:node/title "Agenda"]'
-const pullFunction = async function a(before, after) {
-    await parseAgendaPull(after)
-}
+
 
 function versionTextComponent() {
     return React.createElement("div", {}, version)
@@ -39,7 +38,7 @@ function headerTextComponent() {
 }
 
 //MARK: config panel
-function createPanelConfig(extensionAPI) {
+function createPanelConfig(extensionAPI, pullFunction) {
     const wrappedIntervalConfig = () => IntervalSettings({ extensionAPI });
     return {
         tabTitle: plugin_title,
@@ -54,12 +53,14 @@ function createPanelConfig(extensionAPI) {
                 name: "Modal Settings",
                 action: { type: "reactComponent", component: headerTextComponent },
             },
-            {id:     "batch-contact-notification",
-            name:   "Batch Contact Reminders",
-            description: "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",
-            action: {type:     "select",
-                    items:    ["No Batch", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                    onChange: (evt) => { console.log("Select Changed!", evt); }}},
+            {
+                id:     "batch-contact-notification",
+                name:   "Batch Contact Reminders",
+                description: "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",
+                action: {type:     "select",
+                        items:    ["No Batch", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                        onChange: (evt) => { console.log("Select Changed!", evt); }}
+            },
             {
                 id: "interval-settings",
                 name: "Contact Frequency Intervals",
@@ -89,7 +90,7 @@ function createPanelConfig(extensionAPI) {
                 action: {
                     type: "switch",
                     onChange: async (evt) => { 
-                    
+                    // TODO Actually add this
                 }
                 }},
             {
@@ -264,9 +265,15 @@ function addEventListener(target, event, callback) {
     runners.eventListeners.push({ target, event, callback });
 }
 
-//MARK: Onload function
+//MARK: onload
 async function onload({ extensionAPI }) {
-    const panelConfig = createPanelConfig(extensionAPI);
+    const pullFunction = async function a(before, after) {
+        await parseAgendaPull(after, extensionAPI)
+    }
+    // add to runners so it can be removed later
+    runners.pullFunctions.push(pullFunction);
+
+    const panelConfig = createPanelConfig(extensionAPI, pullFunction);
     extensionAPI.settings.panel.create(panelConfig)
     const ts1 = new Date().getTime()
 
@@ -494,21 +501,29 @@ async function onload({ extensionAPI }) {
         console.log(`load ${plugin_title} plugin`)
     }
 }
-
+// MARK: unload
 function onunload() {
     document.body.removeEventListener("roamjs:google:loaded", googleLoadedHandler)
 
-    window.roamAlphaAPI.data.removePullWatch(pullPattern, entity, pullFunction)
+    // remove pull watches
+    for (let i = 0; i < runners.pullFunctions.length; i++) {
+        window.roamAlphaAPI.data.removePullWatch(pullPattern, entity, runners.pullFunctions[i])
+    }
+    runners.pullFunctions = []; // Clear the array after stopping all intervals
+
     // remove the sidebar button
     var crmDiv = document.getElementById("crmDiv")
-    crmDiv.remove()
+    if (crmDiv) {
+        crmDiv.remove();
+    }
 
     // make sure to remove the google calendar check
     for (let i = 0; i < runners.intervals.length; i++) {
         clearInterval(runners.intervals[i]);
       }
     runners.intervals = []; // Clear the array after stopping all intervals
-    // now remove listeners
+
+    //\ remove listeners
     for (let i = 0; i < runners.eventListeners.length; i++) {
         const { target, event, callback } = runners.eventListeners[i];
         target.removeEventListener(event, callback);

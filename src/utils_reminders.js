@@ -435,7 +435,7 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
 }
 
 //MARK:Agenda Addr
-export async function parseAgendaPull(after, extensionAPI) {
+export async function parseAgendaPull(after, extensionAPI) {    
     // Function to clean up the original block
     function cleanUpBlock(block) {
         const cleanedString = block[":block/string"].replace(agendaRegex, "").trim()
@@ -488,7 +488,10 @@ export async function parseAgendaPull(after, extensionAPI) {
                             matchingPerson.title,
                         )
                         createTodoBlock(block[":block/uid"], personAgendaBlock)
-                        console.log("Matching person", matchingPerson.title, ref[":node/title"], block);
+                        if (getExtensionAPISetting(extensionAPI, "agenda-addr-remove-names", false)) {
+                            console.log("Matching person", matchingPerson.title, ref[":node/title"], block);
+                        }
+                        
                         
                         cleanUpBlock(block)
                     }
