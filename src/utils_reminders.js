@@ -435,12 +435,24 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
 }
 
 //MARK:Agenda Addr
+function removeTagFromBlock(blockString, tag) {
+    // Create the regex pattern
+    const varRegex = new RegExp(`#${tag}|#\\[\\[${tag}\\]\\]`, 'g');
+
+    // Replace all occurrences
+    let replacedStr = blockString.replace(varRegex, '');
+    // cleanup excess spaces
+    replacedStr = replacedStr.replace(/\s+/g, ' ').trim();
+
+    return replacedStr;
+}
+
 export async function parseAgendaPull(after, extensionAPI) {    
     // Function to clean up the original block
-    function cleanUpBlock(block) {
-        const cleanedString = block[":block/string"].replace(agendaRegex, "").trim()
+    function cleanUpBlock(blockUID, blockString) {
+        const cleanedString = blockString.replace(agendaRegex, "").trim()
         window.roamAlphaAPI.updateBlock({
-            block: { uid: block[":block/uid"], string: cleanedString },
+            block: { uid: blockUID, string: cleanedString },
         })
     }
     // Precompile the regex
@@ -457,8 +469,7 @@ export async function parseAgendaPull(after, extensionAPI) {
     }
 
     if (":block/_refs" in after) {
-        const agendaBlocks = after[":block/_refs"]
-
+        const agendaBlocks = after[":block/_refs"]        
         const filteredBlocks = agendaBlocks.filter((block) => {
             // Check if ":block/refs" key exists and has at least 2 refs
             const hasRefs = block[":block/refs"] && block[":block/refs"].length >= 2
@@ -471,11 +482,14 @@ export async function parseAgendaPull(after, extensionAPI) {
         if (filteredBlocks.length > 0) {
             const people = await getAllPeople()
 
-            filteredBlocks.forEach((block) => {
+            filteredBlocks.forEach(async (block) => {
+                // pull out the block string to create a source of truth through the changes
+                let blockString = block[':block/string']
+
                 const relevantRefs = block[":block/refs"].filter(
                     (ref) => ref[":node/title"] !== "Agenda",
                 )
-                relevantRefs.forEach((ref) => {
+                relevantRefs.forEach(async (ref) => {
                     const matchingPerson = getDictionaryWithKeyValue(
                         people,
                         "title",
@@ -488,12 +502,19 @@ export async function parseAgendaPull(after, extensionAPI) {
                             matchingPerson.title,
                         )
                         createTodoBlock(block[":block/uid"], personAgendaBlock)
+
                         if (getExtensionAPISetting(extensionAPI, "agenda-addr-remove-names", false)) {
-                            console.log("Matching person", matchingPerson.title, ref[":node/title"], block);
+                            // remove people tags #john but not [[john]]
+                           blockString = removeTagFromBlock(blockString, matchingPerson.title)                           
+                           await window.roamAlphaAPI.updateBlock({
+                                block: { 
+                                    uid: block[":block/uid"],
+                                    string: blockString
+                                },
+                            })
                         }
-                        
-                        
-                        cleanUpBlock(block)
+                        // remove the #Agenda block
+                        cleanUpBlock(block[":block/uid"], blockString)
                     }
                 })
             })

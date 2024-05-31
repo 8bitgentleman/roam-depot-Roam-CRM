@@ -1,7 +1,11 @@
 import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from "./components/toast"
 import { getAllPeople, parseAgendaPull} from "./utils_reminders"
-import { getPageUID, isSecondDateAfter, getExtensionAPISetting } from "./utils"
+import { 
+    getPageUID,
+    isSecondDateAfter,
+    getExtensionAPISetting 
+} from "./utils"
 import { checkAndFetchEvents, getEventInfo } from "./utils_gcal"
 import {
     createLastWeekCalls,
@@ -12,7 +16,7 @@ import {
 import IntervalSettings from "./components/list_intervals"
 
 const testing = false
-const version = "v1.5"
+const version = "v1.6"
 
 const plugin_title = "Roam CRM"
 
@@ -222,15 +226,10 @@ async function crmbutton(extensionAPI) {
         }
         divCRM.onclick = async () => {
             const allPeople = await getAllPeople()
-            const lastBirthdayCheckDate = getLastBirthdayCheckDate(extensionAPI)
-
+            const lastBirthdayCheckDate = getExtensionAPISetting(extensionAPI, "last-birthday-check-date", "01-19-2024")
             displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
         }
     }
-}
-
-function getLastBirthdayCheckDate(extensionAPI) {
-    return extensionAPI.settings.get("last-birthday-check-date") || "01-19-2024"
 }
 
 async function setDONEFilter(page) {
@@ -289,7 +288,10 @@ async function onload({ extensionAPI }) {
         // console.log("");
         
     } else {
-        displayBirthdays(people, getLastBirthdayCheckDate(extensionAPI), extensionAPI)
+        displayBirthdays(
+            people,
+            getExtensionAPISetting(extensionAPI, "last-birthday-check-date", "01-19-2024"),
+            extensionAPI)
     }
     
     // update last birthday check since it's already happened
@@ -299,7 +301,7 @@ async function onload({ extensionAPI }) {
     )
     
     if (getExtensionAPISetting(extensionAPI, "calendar-setting", false)){
-        // bring in the events, this should rely on getLastBirthdayCheckDate to avoid duplicates
+        // bring in the events, this should rely on "last-birthday-check-date" to avoid duplicates
         // listen for the google extension to be loaded
         if (window.roamjs?.extension?.google) {
             await getEventInfo(people, extensionAPI, testing)
@@ -325,7 +327,9 @@ async function onload({ extensionAPI }) {
         addEventListener(document, 'visibilitychange', () => {
             if (document.visibilityState === 'visible') {
                 const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
-                const lastBirthdayCheckDate = getLastBirthdayCheckDate(extensionAPI)
+                const lastBirthdayCheckDate = getExtensionAPISetting(extensionAPI,
+                                                                    "last-birthday-check-date",
+                                                                    "01-19-2024")
                 if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
                     // is this redundant code?
                     displayBirthdays(people, lastBirthdayCheckDate, extensionAPI)
@@ -344,6 +348,7 @@ async function onload({ extensionAPI }) {
         await setDONEFilter(page.title)
     })
 
+    //MARK: command palette
     // Command Palette Sidebar - Close first block
     extensionAPI.ui.commandPalette.addCommand({
         label: "Sidebar - Close first block",
@@ -484,11 +489,15 @@ async function onload({ extensionAPI }) {
         "disable-hotkey": false,
         callback: async () => {
             const allPeople = await getAllPeople()
-            const lastBirthdayCheckDate = getLastBirthdayCheckDate(extensionAPI)
+            const lastBirthdayCheckDate = getExtensionAPISetting(extensionAPI,
+                                                                "last-birthday-check-date",
+                                                                "01-19-2024")
 
             displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
         },
     })
+
+    //MARK: agenda addr
     if (getExtensionAPISetting(extensionAPI, "agenda-addr-setting", false)){
         // run the initial agenda addr
         await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity), extensionAPI)
