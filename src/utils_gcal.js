@@ -1,9 +1,8 @@
 import createBlock from "roamjs-components/writes/createBlock"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import { showToast } from "./components/toast"
-import { isSecondDateAfter
-    
- } from "./utils"
+import { isSecondDateAfter, getExtensionAPISetting } from "./utils"
+
 function extractEmailFromString(text) {
     // Regular expression for matching an email address
     const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/
@@ -71,6 +70,54 @@ export function checkAndFetchEvents(people, extensionAPI, testing) {
       } 
     }
   }
+
+export async function testEventInfo(people, extensionAPI, testing) {
+    const syncedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
+    await window.roamjs.extension.google
+        .fetchGoogleCalendar({
+            startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date()),
+        })
+        .then(async (results) => {
+            console.log("Events: ", results)
+            // reverse results so they come in the correct order
+            results.reverse()
+            results.forEach(async (result) => {
+                let attendees = result.event.attendees || 0
+                let calendar = result.event.calendar || null
+                if (attendees.length > 1) {
+                    let childrenBlocks = [
+                        { text: "Notes::", children: [{ text: "" }] },
+                        { text: `Next Actions::`, children: [{ text: "" }]},
+                    ]
+                    let attendeeNames = []
+                    let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date())
+                    // filter out self from attendees 
+                    attendees = attendees.filter(attendee => attendee.email !== calendar);
+                    let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
+                    let blockUID = window.roamAlphaAPI.util.generateUID()
+                    let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
+                    let syncedEvent = {
+                        
+                        blockUID:blockUID,
+                        summary:result.event.summary,
+                        event_id:result.event.id,
+                        event_updated:result.event.updated,
+                        event_start:result.event.start
+                    }
+                    createBlock({
+                        parentUid: parentBlockUID,
+                        node: {
+                            text: headerString,
+                            open: false,
+                            children: childrenBlocks,
+                            uid:blockUID
+                        },
+
+                    })
+                }
+            })
+        })
+}
 
 export async function getEventInfo(people, extensionAPI, testing) {
     const lastCalendarCheck = getLastCalendarCheckDate(extensionAPI)
