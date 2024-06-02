@@ -7,7 +7,7 @@ import { getEventInfo, testEventInfo } from "../utils_gcal"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import createBlock from "roamjs-components/writes/createBlock"
 
-const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI }) => {
+const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI, sidebarButton=false }) => {
     // State to store the reminders data
     const [reminders, setReminders] = useState({
         aAndBBirthdaysToday: [],
@@ -90,8 +90,8 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         reminders.toBeContacted.length === 0
 
     // If all relevant reminders are empty, do not render the Drawer
-    if (areRelevantRemindersEmpty) {
-        return null
+    if (areRelevantRemindersEmpty && !sidebarButton) {
+        return null;
     }
 
     return (
@@ -241,17 +241,25 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                         </div>
                     </>
                 )}
+                {reminders.toBeContacted.length == 0 && reminders.filteredUpcomingBirthdays.length == 0 && reminders.aAndBBirthdaysToday.length == 0 &&(
+                    <>
+                        <div className="reminder-section">
+                            <h5>Nothing to see today 👀, come back later</h5>
+                            
+                        </div>
+                    </>
+                )}
             </div>
         </Drawer>
     )
 }
 
-const displayBirthdays = async (people, lastBirthdayCheck, extensionAPI) => {
+const displayBirthdays = async (people, lastBirthdayCheck, extensionAPI, sidebarButton=false) => {
     // only show the modal if there isn't already one shown
     if (document.getElementsByClassName("crm-reminders-drawer").length === 0)
         renderOverlay({
             Overlay: BirthdayDrawer,
-            props: { people, lastBirthdayCheck, extensionAPI },
+            props: { people, lastBirthdayCheck, extensionAPI, sidebarButton },
         })
 }
 

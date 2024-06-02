@@ -236,7 +236,7 @@ async function crmbutton(extensionAPI) {
         divCRM.onclick = async () => {
             const allPeople = await getAllPeople()
             const lastBirthdayCheckDate = getExtensionAPISetting(extensionAPI, "last-birthday-check-date", "01-19-2024")
-            displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
+            displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI, true)
         }
     }
 }
