@@ -14,8 +14,9 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 import IntervalSettings from "./components/list_intervals"
+import lastContactedPanel from "./components/custom_page_resets_panel"
 
-const testing = false
+const testing = true
 const version = "v1.6"
 
 const plugin_title = "Roam CRM"
@@ -44,6 +45,7 @@ function headerTextComponent() {
 //MARK: config panel
 function createPanelConfig(extensionAPI, pullFunction) {
     const wrappedIntervalConfig = () => IntervalSettings({ extensionAPI });
+    const wrappedLastContact = () => lastContactedPanel({ extensionAPI });
     return {
         tabTitle: plugin_title,
         settings: [
@@ -97,6 +99,13 @@ function createPanelConfig(extensionAPI, pullFunction) {
                     // TODO Actually add this
                 }
                 }},
+            {
+                id: "custom-contact-reset-pages",
+                name: "Last Contacted Resets",
+                className:"crm-reminders-custom-contact-setting",
+                description:"Set custom tags to reset a person's last contacted date. See the README for more info.",
+                action: { type: "reactComponent", component: wrappedLastContact },
+            },
             {
                 id: "calendar-header",
                 name: "Calendar Settings",
@@ -284,8 +293,8 @@ async function onload({ extensionAPI }) {
     }
     
     if (testing) {
-        displayBirthdays(people, "01-19-2024", extensionAPI)
-        // console.log("");
+        // displayBirthdays(people, "01-19-2024", extensionAPI)
+        console.log("");
         
     } else {
         displayBirthdays(

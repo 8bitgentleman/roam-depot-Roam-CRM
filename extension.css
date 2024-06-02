@@ -153,3 +153,9 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
     display: flex;
     justify-content: space-between;
 }
+.rm-settings-panel__section.crm-reminders-custom-contact-setting > div:first-child{
+    max-width: 150px;
+}
+.rm-settings .rm-settings-panel__section.crm-reminders-custom-contact-setting input[type="text"] {
+    min-width: inherit !important;
+}

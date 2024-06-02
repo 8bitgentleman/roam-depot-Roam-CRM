@@ -63,6 +63,14 @@ function checkStringForDinner(event){
     }
 }
 
+function checkStringForSubstring(summary, substring) {
+    if (summary.toLowerCase().includes(substring)) {
+        return true
+    } else {
+        return false
+    }
+}
+
 // check if events have been fetched yet today
 export function checkAndFetchEvents(people, extensionAPI, testing) {
     const lastFetchDate = getLastCalendarCheckDate(extensionAPI) || {};
@@ -168,17 +176,17 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                 const includeEventTitle = extensionAPI.settings.get("include-event-title") || false
                                 let headerString;
                                 if (includeEventTitle === true) {
-                                    if (checkStringForOneOnOne(result.event)) {
+                                    if (checkStringForSubstring(result.event.summary, '1:1')) {
                                         headerString = `[[1:1]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
-                                    } else if (checkStringForDinner(result.event)) {
+                                    } else if (checkStringForSubstring(result.event.summary, 'dinner')) {
                                         headerString = `[[Dinner]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
                                     } else {
                                         headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
                                     }
                                 } else {
-                                    if (checkStringForOneOnOne(result.event)) {
+                                    if (checkStringForSubstring(result.event.summary, '1:1')) {
                                         headerString = `[[1:1]] with ${attendeeNames.join(" and ")}`
-                                    } else if (checkStringForDinner(result.event)) {
+                                    } else if (checkStringForSubstring(result.event.summary, 'dinner')) {
                                         headerString = `[[Dinner]] with ${attendeeNames.join(" and ")}`
                                     } else {
                                         headerString = `[[Call]] with ${attendeeNames.join(" and ")}`
