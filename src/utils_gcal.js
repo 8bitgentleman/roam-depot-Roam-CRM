@@ -47,22 +47,6 @@ function getLastCalendarCheckDate(extensionAPI) {
     }
 }
 
-function checkStringForOneOnOne(event){
-    if (event.summary && event.summary.includes("1:1")) {
-        return true
-    } else {
-        return false
-    }
-}
-
-function checkStringForDinner(event){
-    if (event.summary && event.summary.toLowerCase().includes("dinner")) {
-        return true
-    } else {
-        return false
-    }
-}
-
 function checkStringForSubstring(summary, substring) {
     if (summary.toLowerCase().includes(substring)) {
         return true

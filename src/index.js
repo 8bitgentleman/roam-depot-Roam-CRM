@@ -17,7 +17,7 @@ import IntervalSettings from "./components/list_intervals"
 import lastContactedPanel from "./components/custom_page_resets_panel"
 
 const testing = true
-const version = "v1.6"
+const version = "v1.6.5"
 
 const plugin_title = "Roam CRM"
 
@@ -101,7 +101,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 }},
             {
                 id: "custom-contact-reset-pages",
-                name: "Last Contacted Resets",
+                name: "WIP:Last Contacted Resets",
                 className:"crm-reminders-custom-contact-setting",
                 description:"Set custom tags to reset a person's last contacted date. See the README for more info.",
                 action: { type: "reactComponent", component: wrappedLastContact },
