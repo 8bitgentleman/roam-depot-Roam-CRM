@@ -72,6 +72,8 @@ export function checkAndFetchEvents(people, extensionAPI, testing) {
   }
 
 export async function testEventInfo(people, extensionAPI, testing) {
+    console.log("test event info");
+    
     const syncedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
     await window.roamjs.extension.google
         .fetchGoogleCalendar({
@@ -93,14 +95,14 @@ export async function testEventInfo(people, extensionAPI, testing) {
                     let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date())
                     // filter out self from attendees 
                     attendees = attendees.filter(attendee => attendee.email !== calendar);
-                    let headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${result.event.summary}`
+                    let headerString = `[[Call]] with ${attendees.join(" and ")} about ${result.event.summary}`
                     let blockUID = window.roamAlphaAPI.util.generateUID()
                     let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
-                    let syncedEvent = {
-                        
+                    // syncedEvents[result.event.id] = 
+                    let test =
+                    {
                         blockUID:blockUID,
                         summary:result.event.summary,
-                        event_id:result.event.id,
                         event_updated:result.event.updated,
                         event_start:result.event.start
                     }
@@ -112,8 +114,9 @@ export async function testEventInfo(people, extensionAPI, testing) {
                             children: childrenBlocks,
                             uid:blockUID
                         },
-
                     })
+                    console.log(test);
+                    
                 }
             })
         })
