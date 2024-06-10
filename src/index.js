@@ -15,6 +15,7 @@ import {
 } from "./components/call_templates"
 import IntervalSettings from "./components/list_intervals"
 import lastContactedPanel from "./components/custom_page_resets_panel"
+import displayCRMDialog from "./components/clay"
 
 const testing = true
 const version = "v1.6.5"
@@ -234,9 +235,10 @@ async function crmbutton(extensionAPI) {
             sidebartoprow.parentNode.insertBefore(divCRM, sidebartoprow.nextSibling)
         }
         divCRM.onclick = async () => {
-            const allPeople = await getAllPeople()
+            const allPeople = await getAllPeople()            
             const lastBirthdayCheckDate = getExtensionAPISetting(extensionAPI, "last-birthday-check-date", "01-19-2024")
-            displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
+            // displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
+            displayCRMDialog(allPeople)
         }
     }
 }
