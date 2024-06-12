@@ -71,13 +71,39 @@ export function checkAndFetchEvents(people, extensionAPI, testing) {
     }
   }
 
+const compareLists = (list1, list2) => {
+    if (list1.length !== list2.length) {
+        return false;
+    }
+
+    const sortedList1 = list1.slice().sort();
+    const sortedList2 = list2.slice().sort();
+
+    for (let i = 0; i < sortedList1.length; i++) {
+        if (sortedList1[i] !== sortedList2[i]) {
+            return false;
+        }
+    }
+
+    return true;
+};
+
 export async function testEventInfo(people, extensionAPI, testing) {
-    console.log("test event info");
+    console.log("Getting: test event info");
+
+    const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
+    console.log(storedEvents);
+    const today = new Date();
+    const endDate = new Date();
+    endDate.setDate(today.getDate() + 7);
+
+    const startDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(today);
+    const endDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(endDate);
     
-    const syncedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
     await window.roamjs.extension.google
         .fetchGoogleCalendar({
-            startDatePageTitle: window.roamAlphaAPI.util.dateToPageTitle(new Date()),
+            startDatePageTitle: startDatePageTitle,
+            endDatePageTitle:   endDatePageTitle,
         })
         .then(async (results) => {
             console.log("Events: ", results)
@@ -87,38 +113,107 @@ export async function testEventInfo(people, extensionAPI, testing) {
                 let attendees = result.event.attendees || 0
                 let calendar = result.event.calendar || null
                 if (attendees.length > 1) {
-                    let childrenBlocks = [
-                        { text: "Notes::", children: [{ text: "" }] },
-                        { text: `Next Actions::`, children: [{ text: "" }]},
-                    ]
-                    let attendeeNames = []
-                    let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date())
-                    // filter out self from attendees 
-                    attendees = attendees.filter(attendee => attendee.email !== calendar);
-                    let headerString = `[[Call]] with ${attendees.join(" and ")} about ${result.event.summary}`
-                    let blockUID = window.roamAlphaAPI.util.generateUID()
-                    let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
-                    // syncedEvents[result.event.id] = 
-                    let test =
-                    {
-                        blockUID:blockUID,
-                        summary:result.event.summary,
-                        event_updated:result.event.updated,
-                        event_start:result.event.start
+                    const eventId = result.event.id;
+                    const storedEvent = storedEvents[eventId];
+                    
+                    
+                    // check if the event exists in the saved roam history
+                    if (storedEvent ) {
+                        // the event exists
+                        if (storedEvent.event_updated !== result.event.updated) {
+                            // The event exists and needs to be updated
+                            console.log(storedEvent);
+                            // things that could have been changed
+                                // date the event is on
+                                // summary of the event or attendees
+                                attendees = attendees.filter(attendee => attendee.email !== calendar);
+
+                                const emails = attendees.map(attendee => attendee.email);
+                                if (storedEvent.summary !== result.event.summary || !compareLists(storedEvent.attendees, emails)){
+                                    // just update the text
+                                    
+                                    let headerString = `[[Call]] with ${emails.join(" and ")} about ${result.event.summary}`
+                                    updateBlock({
+                                        uid: storedEvent.blockUID,
+                                        text: headerString,
+                                    })
+                                    // update the local record
+                                    storedEvents[eventId] = {
+                                        blockUID:storedEvent.blockUID,
+                                        summary:result.event.summary,
+                                        event_updated:result.event.updated,
+                                        event_start:storedEvent.event_start,
+                                        attendees: emails
+                                    }
+                                }
+                                if (storedEvent.event_start !== result.event.start.dateTime) {
+                                    // move block to new page
+                                    // TODO FIX why does the block string still change when only moving it?
+                                    let newParentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date(result.event.start.dateTime))
+                                    window.roamAlphaAPI.moveBlock(
+                                        {"location": 
+                                            {"parent-uid": newParentBlockUID, 
+                                            "order": 0}, 
+                                        "block": 
+                                            {"uid": storedEvent.blockUID}})
+
+                                    // update the local record
+                                    storedEvents[eventId] = {
+                                        blockUID:storedEvent.blockUID,
+                                        summary:storedEvent.summary,
+                                        event_updated:result.event.updated,
+                                        event_start:result.event.start.dateTime,
+                                        attendees: storedEvent.attendees
+                                    }
+                                    
+                                }
+                            console.log(`Event ${eventId} updated.`);
+                        } else {
+                            // The event exists and does not need to be updated
+                        }
+                    } else {
+                        // if it does not exist create the new block 
+                        console.log(`Event ${eventId} does not exist yet.`);
+                        let childrenBlocks = [
+                            { text: "Notes::", children: [{ text: "" }] },
+                            { text: `Next Actions::`, children: [{ text: "" }]},
+                        ]                    
+                                            
+                        let attendeeNames = []
+                        let dt = window.roamAlphaAPI.util.dateToPageTitle(new Date())
+                        // filter out self from attendees 
+                        attendees = attendees.filter(attendee => attendee.email !== calendar);
+
+                        const emails = attendees.map(attendee => attendee.email);
+                        let headerString = `[[Call]] with ${emails.join(" and ")} about ${result.event.summary}`
+                        let blockUID = window.roamAlphaAPI.util.generateUID()
+                        let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
+                        // let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date(result.event.start.dateTime))
+                        createBlock({
+                            parentUid: parentBlockUID,
+                            node: {
+                                text: headerString,
+                                open: false,
+                                children: childrenBlocks,
+                                uid:blockUID
+                            },
+                        })
+
+                        storedEvents[eventId] = {
+                            blockUID:blockUID,
+                            summary:result.event.summary,
+                            event_updated:result.event.updated,
+                            event_start:result.event.start.dateTime,
+                            attendees: emails
+                        }
+
+
+
                     }
-                    createBlock({
-                        parentUid: parentBlockUID,
-                        node: {
-                            text: headerString,
-                            open: false,
-                            children: childrenBlocks,
-                            uid:blockUID
-                        },
-                    })
-                    console.log(test);
                     
                 }
             })
+            extensionAPI.settings.set("synced-cal-events", storedEvents)
         })
 }
 
