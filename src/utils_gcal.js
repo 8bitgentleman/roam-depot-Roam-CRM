@@ -87,6 +87,23 @@ const compareLists = (list1, list2) => {
 
     return true;
 };
+
+function convertEventDateFormats(start) {
+    let date;
+  
+    if (start.dateTime) {
+      // Case where start has a dateTime property
+      date = new Date(start.dateTime);
+    } else if (start.date) {
+      // Case where start has a date property
+      date = new Date(start.date);
+    } else {
+      throw new Error("Invalid start object: missing dateTime or date property");
+    }
+  
+    return date;
+  }
+
 // MARK:test event
 export async function getEventInfo(people, extensionAPI, testing) {
     const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
