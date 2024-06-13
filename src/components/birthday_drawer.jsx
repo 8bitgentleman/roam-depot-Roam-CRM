@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react"
 import renderOverlay from "roamjs-components/util/renderOverlay"
 import remindersSystem from "../utils_reminders"
 import { calculateAge } from "../utils_reminders"
-import { getEventInfo, testEventInfo } from "../utils_gcal"
+import { getEventInfo } from "../utils_gcal"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import createBlock from "roamjs-components/writes/createBlock"
 
@@ -114,7 +114,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                 icon="cloud-download"
                                 minimal={true}
                                 disabled={false}
-                                onClick={() => testEventInfo(people, extensionAPI, false)}
+                                onClick={() => getEventInfo(people, extensionAPI, false)}
                             />
                         </Tooltip>
                     </div>

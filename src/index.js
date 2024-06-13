@@ -16,7 +16,6 @@ import {
 import IntervalSettings from "./components/list_intervals"
 import lastContactedPanel from "./components/custom_page_resets_panel"
 
-import { testEventInfo } from "./utils_gcal"
 const testing = true
 const version = "v1.6.5"
 
@@ -295,7 +294,7 @@ async function onload({ extensionAPI }) {
     
     if (testing) {
         // displayBirthdays(people, "01-19-2024", extensionAPI)
-        testEventInfo(people, extensionAPI, false)
+        getEventInfo(people, extensionAPI, false)
         console.log("");
         
     } else {

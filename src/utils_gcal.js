@@ -88,8 +88,9 @@ const compareLists = (list1, list2) => {
     return true;
 };
 // MARK:test event
-export async function testEventInfo(people, extensionAPI, testing) {
+export async function getEventInfo(people, extensionAPI, testing) {
     const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
+    console.log("Stored", storedEvents);
     
     let prevent_update = new Set()
     let to_update = new Set()
@@ -182,9 +183,13 @@ export async function testEventInfo(people, extensionAPI, testing) {
                             } else {
                                 // if it does not exist create the new block 
                                 console.log(`Event ${eventId} does not exist yet.`);
+                                console.log(result.event);
+                                
                                 let { headerString, childrenBlocks } = createEventBlocks(result.event, attendees, people, extensionAPI);
                                 let blockUID = window.roamAlphaAPI.util.generateUID()
                                 // let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
+                                console.log(result.event.start.dateTime);
+                                
                                 let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date(result.event.start.dateTime))
                                 createBlock({
                                     parentUid: parentBlockUID,
@@ -211,8 +216,8 @@ export async function testEventInfo(people, extensionAPI, testing) {
                         }
                     }
                 })
-                extensionAPI.settings.set("synced-cal-events", storedEvents)
-                // extensionAPI.settings.set("synced-cal-events", {})
+                // extensionAPI.settings.set("synced-cal-events", storedEvents)
+                extensionAPI.settings.set("synced-cal-events", {})
             }
         })
 }
@@ -282,7 +287,7 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     return {headerString, childrenBlocks}
 }
 // MARK: eventInfo
-export async function getEventInfo(people, extensionAPI, testing) {
+export async function OLDgetEventInfo(people, extensionAPI, testing) {
     const lastCalendarCheck = getLastCalendarCheckDate(extensionAPI)
     const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
 
