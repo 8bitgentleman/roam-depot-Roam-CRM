@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import renderOverlay from 'roamjs-components/util/renderOverlay';
-import { Dialog, Classes, Tab, Tabs, InputGroup, Button, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
-
+import { 
+  Dialog,
+  Classes, 
+  Tab, 
+  Tabs, 
+  InputGroup, 
+  Button, 
+  Menu, 
+  MenuItem, 
+  Popover, 
+  Position} from '@blueprintjs/core';
 const CRMDialog = ({ onClose, isOpen, people }) => {
   const [selectedPersonUID, setSelectedPersonUID] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('firstName');
   const [sortOrder, setSortOrder] = useState('asc');
-
+  
   const getPersonTitle = (person) => {
     return person && person.title ? person.title.replace('PERSON: ', '') : 'Unknown';
   };
@@ -19,10 +28,6 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
   const getPersonLastName = (person) => {
     const nameParts = getPersonTitle(person).split(' ');
     return nameParts[nameParts.length - 1];
-  };
-
-  const formatDetailString = (detail) => {
-    return detail && detail.length > 0 ? detail[0].string.split('::')[1].trim() : 'Not available';
   };
 
   const handleSearchChange = (event) => {
@@ -59,23 +64,42 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
   const filteredPeople = sortPeople(
     people.filter((person) => getPersonTitle(person).toLowerCase().includes(searchQuery))
   );
-
+  
   const selectedPerson = people.find((person) => person.uid === selectedPersonUID);
+  // MARK:useEffect
+  useEffect(() => {
+    const blockContainer1 = document.getElementById('block-container-1');
 
-  const PeopleList = () => (
-    <div className="main-section" style={{ flex: '1', overflowY: 'auto', padding: '10px' }}>
-      {filteredPeople.map((person) => (
-        <div
-          key={person.uid}
-          className={`person-list-item ${person.uid === selectedPersonUID ? 'selected' : ''}`}
-          onClick={() => setSelectedPersonUID(person.uid)}
-          style={{ padding: '5px', cursor: 'pointer', backgroundColor: person.uid === selectedPersonUID ? '#f5f8fa' : 'transparent' }}
-        >
-          {getPersonTitle(person)}
-        </div>
-      ))}
-    </div>
-  );
+    if (blockContainer1) {
+      // Unmount previous blocks if they exist
+      window.roamAlphaAPI.ui.components.unmountNode({
+        el: blockContainer1,
+      }).then(() => {
+
+        if (selectedPerson) {
+          // Render new block
+          window.roamAlphaAPI.ui.components.renderBlock({
+            uid: selectedPerson.uid,
+            el: blockContainer1,
+          });
+        }
+      });
+    }
+  }, [selectedPerson]);
+
+
+const PeopleList = () => (
+  <Menu className="main-section" style={{ flex: '1', overflowY: 'auto', padding: '10px' }}>
+    {filteredPeople.map((person) => (
+      <MenuItem
+        key={person.uid}
+        text={getPersonTitle(person)}
+        active={person.uid === selectedPersonUID}
+        onClick={() => setSelectedPersonUID(person.uid)}
+      />
+    ))}
+  </Menu>
+);
 
   const SortMenu = () => (
     <Menu>
@@ -125,7 +149,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
             backgroundColor:"#ebf1f5",
             zIndex: '1',
             padding:"30px 0 10px 0" }}>
-            <h4 style={{ margin: 0 }}>People</h4>
+            <h4 style={{ margin: 0 }}>People ({filteredPeople.length})</h4>
             <InputGroup onChange={handleSearchChange} leftIcon="search" placeholder="Search..." style={{ width: '200px' }} />
             <Popover content={<SortMenu />} position={Position.BOTTOM_RIGHT}>
               <Button icon="sort" minimal />
@@ -138,20 +162,14 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
           {selectedPerson ? (
             <>
               <h4 style={{ marginTop: '10px' }}>{getPersonTitle(selectedPerson)}</h4>
-              <p>Last Contacted: {formatDetailString(selectedPerson['Last Contacted'])}</p>
-              <p>Contact Frequency: {formatDetailString(selectedPerson['Contact Frequency'])}</p>
-              <p>Relationship Metadata: {formatDetailString(selectedPerson['Relationship Metadata'])}</p>
+              {/* manually show the name so that I could potentially add extra buttons here */}
+              <div id="block-container-1" style={{ marginTop: '10px' }}></div>
             </>
           ) : (
             <div>Select a person to view details</div>
           )}
         </div>
       </div>
-      {/* <div className={Classes.DIALOG_FOOTER}>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button onClick={onClose}>Close</Button>
-        </div>
-      </div> */}
     </Dialog>
   );
 };

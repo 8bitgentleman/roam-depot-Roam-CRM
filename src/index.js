@@ -4,7 +4,8 @@ import { getAllPeople, parseAgendaPull} from "./utils_reminders"
 import { 
     getPageUID,
     isSecondDateAfter,
-    getExtensionAPISetting 
+    getExtensionAPISetting,
+    parseLastContactedDate
 } from "./utils"
 import { checkAndFetchEvents, getEventInfo } from "./utils_gcal"
 import {
@@ -238,7 +239,7 @@ async function crmbutton(extensionAPI) {
             const allPeople = await getAllPeople()            
             const lastBirthdayCheckDate = getExtensionAPISetting(extensionAPI, "last-birthday-check-date", "01-19-2024")
             // displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
-            displayCRMDialog(allPeople)
+            displayCRMDialog(allPeople)            
         }
     }
 }

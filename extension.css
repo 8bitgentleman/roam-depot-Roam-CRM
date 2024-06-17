@@ -159,3 +159,12 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 .rm-settings .rm-settings-panel__section.crm-reminders-custom-contact-setting input[type="text"] {
     min-width: inherit !important;
 }
+
+.bp3-dark .people-list-section>div{
+    background-color:#293742 !important;
+}
+
+/* Hide the title so that I could potentially add extra buttons below */
+.crm-dialog .rm-api-render--page .rm-title-display{
+    display:none;
+}
