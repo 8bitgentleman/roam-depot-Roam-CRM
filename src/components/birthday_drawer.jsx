@@ -6,6 +6,7 @@ import { calculateAge } from "../utils_reminders"
 import { getEventInfo, testEventInfo } from "../utils_gcal"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import createBlock from "roamjs-components/writes/createBlock"
+import displayCRMDialog from "./clay"
 
 const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI }) => {
     // State to store the reminders data
@@ -102,11 +103,15 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>Roam CRM</span>
                     <div style={{  justifyContent: 'flex-end' }}>
-                        <Tooltip content="Coming Soon..." position="bottom">
-                            <AnchorButton
+                        <Tooltip content="WIP" position="bottom">
+                        <AnchorButton
                                 icon="fullscreen"
                                 minimal={true}
-                                disabled={true}
+                                // disabled={true}
+                                onClick={() => {
+                                    onClose(); // Close the Drawer
+                                    displayCRMDialog(people); // Display the CRM dialog
+                                }}
                             />
                         </Tooltip>
                         <Tooltip content="Sync Calendar" position="bottom">

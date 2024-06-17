@@ -149,7 +149,8 @@ const PeopleList = () => (
             backgroundColor:"#ebf1f5",
             zIndex: '1',
             padding:"30px 0 10px 0" }}>
-            <h4 style={{ margin: 0 }}>People ({filteredPeople.length})</h4>
+            <h4 style={{ 
+              margin: 0}}>People ({filteredPeople.length})</h4>
             <InputGroup onChange={handleSearchChange} leftIcon="search" placeholder="Search..." style={{ width: '200px' }} />
             <Popover content={<SortMenu />} position={Position.BOTTOM_RIGHT}>
               <Button icon="sort" minimal />
@@ -161,7 +162,10 @@ const PeopleList = () => (
         <div className="details-section" style={{ width: '300px', padding: '10px', overflowY: 'auto', padding:"20px"}}>
           {selectedPerson ? (
             <>
-              <h4 style={{ marginTop: '10px' }}>{getPersonTitle(selectedPerson)}</h4>
+              <h4 style={{ 
+                marginTop: '10px',
+                borderBottom: '1px solid rgb(225, 232, 237)',
+                padding:"7px 0 10px 0" }}>{getPersonTitle(selectedPerson)}</h4>
               {/* manually show the name so that I could potentially add extra buttons here */}
               <div id="block-container-1" style={{ marginTop: '10px' }}></div>
             </>

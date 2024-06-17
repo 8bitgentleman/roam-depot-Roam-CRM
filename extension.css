@@ -168,3 +168,11 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 .crm-dialog .rm-api-render--page .rm-title-display{
     display:none;
 }
+
+.bp3-dark .crm-reminders-drawer div.reminder-section, 
+.bp3-dark .crm-reminders-drawer .bp3-drawer-header {
+    background-color: var(--dark-left-bg);
+}
+.bp3-dark  .crm-reminders-drawer a{
+    color: inherit;
+}
