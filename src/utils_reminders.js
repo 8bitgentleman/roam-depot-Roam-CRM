@@ -373,7 +373,6 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     }
     let toBeContacted = []
     // for each person extract the needed info
-    // TODO fetch the extensionAPI and check if batching is enabled
     let displayToBeContacted = checkBatchContactSetting(extensionAPI)
     // Get the list durations from 
     const contactIntervals = getIntervalsFromSettings(extensionAPI);

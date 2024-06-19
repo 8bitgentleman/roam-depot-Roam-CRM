@@ -6,7 +6,7 @@ import {
     isSecondDateAfter,
     getExtensionAPISetting 
 } from "./utils"
-import { checkAndFetchEvents, getEventInfo } from "./utils_gcal"
+import { getEventInfo } from "./utils_gcal"
 import {
     createLastWeekCalls,
     createLastMonthCalls,
@@ -14,10 +14,9 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 import IntervalSettings from "./components/list_intervals"
-import lastContactedPanel from "./components/custom_page_resets_panel"
 
-const testing = true
-const version = "v1.6.5"
+const testing = false
+const version = "v1.7"
 
 const plugin_title = "Roam CRM"
 
@@ -45,7 +44,6 @@ function headerTextComponent() {
 //MARK: config panel
 function createPanelConfig(extensionAPI, pullFunction) {
     const wrappedIntervalConfig = () => IntervalSettings({ extensionAPI });
-    const wrappedLastContact = () => lastContactedPanel({ extensionAPI });
     return {
         tabTitle: plugin_title,
         settings: [
@@ -65,7 +63,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 description: "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",
                 action: {type:     "select",
                         items:    ["No Batch", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                        onChange: (evt) => { console.log("Select Changed!", evt); }}
+                    }
             },
             {
                 id: "interval-settings",
@@ -96,16 +94,9 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 action: {
                     type: "switch",
                     onChange: async (evt) => { 
-                    // TODO Actually add this
+                    // TODO is this ever removed?
                 }
                 }},
-            {
-                id: "custom-contact-reset-pages",
-                name: "WIP:Last Contacted Resets",
-                className:"crm-reminders-custom-contact-setting",
-                description:"Set custom tags to reset a person's last contacted date. See the README for more info.",
-                action: { type: "reactComponent", component: wrappedLastContact },
-            },
             {
                 id: "calendar-header",
                 name: "Calendar Settings",
@@ -161,8 +152,23 @@ function createPanelConfig(extensionAPI, pullFunction) {
             {
                 id: "templates-header",
                 name: "Setup Templates",
-                description: "These are the templates that facilitate Roam CRM. Each button only needs to be hit once the first time you setup the extension in a graph. See the README for more information.",
+                description: "Below are the templates that facilitate Roam CRM. Each button only needs to be hit once the first time you setup the extension in a graph. See the README for more information.",
                 action: { type: "reactComponent", component: headerTextComponent },
+            },
+            {
+                id: "person-template",
+                name: "Imports Person Metadata Template",
+                description:
+                    "Imports the persom metadata template into your roam/templates page. This template structure is important for Roam CRM to work.",
+                action: {
+                    type: "button",
+                    onClick: async () => {
+                        const templatePageUID = await getPageUID("roam/templates")
+                        createPersonTemplates(templatePageUID)
+                        showToast(`Template Added.`, "SUCCESS")
+                    },
+                    content: "Import",
+                },
             },
             {
                 id: "call-rollup-query",
@@ -195,22 +201,8 @@ function createPanelConfig(extensionAPI, pullFunction) {
                     },
                     content: "Import",
                 },
-            },
-            {
-                id: "person-template",
-                name: "Imports Person Metadata Template",
-                description:
-                    "Imports the persom metadata template into your roam/templates page. This template structure is important for Roam CRM to work.",
-                action: {
-                    type: "button",
-                    onClick: async () => {
-                        const templatePageUID = await getPageUID("roam/templates")
-                        createPersonTemplates(templatePageUID)
-                        showToast(`Template Added.`, "SUCCESS")
-                    },
-                    content: "Import",
-                },
-            },
+            }
+
         ],
     }
 }
@@ -293,10 +285,9 @@ async function onload({ extensionAPI }) {
     }
     
     if (testing) {
-        // displayBirthdays(people, "01-19-2024", extensionAPI)
-        getEventInfo(people, extensionAPI, false)
-        console.log("");
-        
+        displayBirthdays(people, "01-19-2024", extensionAPI)
+        // FIXME after testing
+        // getEventInfo(people, extensionAPI, false)        
     } else {
         displayBirthdays(
             people,
@@ -311,7 +302,7 @@ async function onload({ extensionAPI }) {
     )
     
     if (getExtensionAPISetting(extensionAPI, "calendar-setting", false)){
-        // bring in the events, this should rely on "last-birthday-check-date" to avoid duplicates
+        // bring in the events
         // listen for the google extension to be loaded
         if (window.roamjs?.extension?.google) {
             await getEventInfo(people, extensionAPI, testing)
@@ -319,15 +310,15 @@ async function onload({ extensionAPI }) {
             googleLoadedHandler = createGoogleLoadedHandler(people, extensionAPI)
             document.body.addEventListener("roamjs:google:loaded", googleLoadedHandler)
         }
-        // Set an interval to run the check and fetch google events every hour
-        const intervalId = setInterval(() => checkAndFetchEvents(people, extensionAPI, testing), 60 * 60 * 1000);
+        // Set an interval to fetch google events every hour
+        const intervalId = setInterval(() => getEventInfo(people, extensionAPI, testing), 60 * 60 * 1000);
         runners.intervals.push(intervalId);
 
         // set a listener to run the calendar check on visibility change. 
         // This is so the check runs right when your laptop is openend 
         addEventListener(document, 'visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                checkAndFetchEvents(people, extensionAPI, testing)
+                getEventInfo(people, extensionAPI, testing)
             }
         });
     }
@@ -351,9 +342,11 @@ async function onload({ extensionAPI }) {
             }
         });
     }
+    console.log("runners", runners);
+    
 
     // always set people pages to hide DONE
-    // TODO see if they want more granulity
+    // TODO put this behind a flag
     people.forEach(async (page) => {
         await setDONEFilter(page.title)
     })

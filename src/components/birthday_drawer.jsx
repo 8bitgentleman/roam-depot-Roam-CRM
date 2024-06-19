@@ -80,7 +80,6 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                 order: 'last'
 
             })
-            // You can add additional logic here to actually send the message
         }
     };   
     // Check if the relevant reminders arrays are empty
@@ -115,6 +114,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                 minimal={true}
                                 disabled={false}
                                 onClick={() => getEventInfo(people, extensionAPI, false)}
+                                // TODO add a toast if there are no changes or updates
                             />
                         </Tooltip>
                     </div>

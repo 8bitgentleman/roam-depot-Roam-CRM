@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-
+import React, { useState } from 'react';
+// custom component to let a user change the reminder intervales for 
+// aList, bList, cList, dList, and fList contacts
 function IntervalSettings({ extensionAPI }) {    
     // Function to get initial settings from extensionAPI
     const getInitialSettings = (key, defaultValue) => {
