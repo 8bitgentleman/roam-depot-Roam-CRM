@@ -15,24 +15,28 @@ function extractEmailFromString(text) {
 }
 
 function findPersonByEmail(people, email) {
-    const emailLower = email.toLowerCase();  // Convert the search email to lowercase
+    const emailLower = email.toLowerCase() // Convert the search email to lowercase
 
     const result = people.filter((item) =>
-        item.Email.some((emailItem) =>
-            emailItem.string.toLowerCase().includes(emailLower)  // Convert each email item to lowercase before comparison
+        item.Email.some(
+            (emailItem) => emailItem.string.toLowerCase().includes(emailLower), // Convert each email item to lowercase before comparison
         ),
-    );
+    )
 
-    return result;
+    return result
 }
 
 function findPersonNameByEmail(people, email) {
-    const normalizedEmail = email.toLowerCase(); // Normalize the input email to lower case
+    const normalizedEmail = email.toLowerCase() // Normalize the input email to lower case
 
     const result = people
-        .filter((item) => item.Email.some((emailItem) => emailItem.string.toLowerCase().includes(normalizedEmail))) // Compare in lower case
-        .map((item) => item.title);
-    return result;
+        .filter((item) =>
+            item.Email.some((emailItem) =>
+                emailItem.string.toLowerCase().includes(normalizedEmail),
+            ),
+        ) // Compare in lower case
+        .map((item) => item.title)
+    return result
 }
 
 function checkStringForSubstring(summary, substring) {
@@ -45,60 +49,60 @@ function checkStringForSubstring(summary, substring) {
 
 const compareLists = (list1, list2) => {
     if (list1.length !== list2.length) {
-        return false;
+        return false
     }
 
-    const sortedList1 = list1.slice().sort();
-    const sortedList2 = list2.slice().sort();
+    const sortedList1 = list1.slice().sort()
+    const sortedList2 = list2.slice().sort()
 
     for (let i = 0; i < sortedList1.length; i++) {
         if (sortedList1[i] !== sortedList2[i]) {
-            return false;
+            return false
         }
     }
 
-    return true;
-};
+    return true
+}
 
 function convertEventDateFormats(start) {
-    // sometimes an event start time is an actual time 
+    // sometimes an event start time is an actual time
     // and sometimes it's a date (all day events)
-    
-    let date;
-  
+
+    let date
+
     if (start.dateTime) {
-      // Case where start has a dateTime property
-      date = new Date(start.dateTime);
+        // Case where start has a dateTime property
+        date = new Date(start.dateTime)
     } else if (start.date) {
         // Parse the date string 2024-06-19 ignoring the JS timezone offset
         let offsetdate = new Date(start.date)
-        let userTimezoneOffset = offsetdate.getTimezoneOffset() * 60000;
-        date = new Date(offsetdate.getTime() + userTimezoneOffset);
+        let userTimezoneOffset = offsetdate.getTimezoneOffset() * 60000
+        date = new Date(offsetdate.getTime() + userTimezoneOffset)
     } else {
-      throw new Error("Invalid start object: missing dateTime or date property");
+        throw new Error("Invalid start object: missing dateTime or date property")
     }
-  
-    return date;
-  }
+
+    return date
+}
 
 // MARK: eventInfo
-export async function getEventInfo(people, extensionAPI, testing, modal=false) {
+export async function getEventInfo(people, extensionAPI, testing, modal = false) {
     const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
-    
+
     let prevent_update = new Set()
     let no_update = new Set() //TODO add a toast if there are no updates
 
-    const today = new Date();
-    const endDate = new Date();
-    endDate.setDate(today.getDate() + 7);
+    const today = new Date()
+    const endDate = new Date()
+    endDate.setDate(today.getDate() + 7)
 
-    const startDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(today);
-    const endDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(endDate);
-    
+    const startDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(today)
+    const endDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(endDate)
+
     await window.roamjs.extension.google
         .fetchGoogleCalendar({
             startDatePageTitle: startDatePageTitle,
-            endDatePageTitle:   endDatePageTitle,
+            endDatePageTitle: endDatePageTitle,
         })
         .then(async (results) => {
             console.log("Events: ", results)
@@ -118,13 +122,11 @@ export async function getEventInfo(people, extensionAPI, testing, modal=false) {
                             showToast(result.text, "DANGER")
                         }
                     } else {
-                        let attendees = result.event.attendees || []                        
-                        
-                        // TODO add calendar date check
-                        // this should check every hour
+                        let attendees = result.event.attendees || []
+
                         if (attendees.length > 1) {
-                            const eventId = result.event.id;
-                            const storedEvent = storedEvents[eventId];
+                            const eventId = result.event.id
+                            const storedEvent = storedEvents[eventId]
 
                             // check if the event exists in the saved roam history
                             if (storedEvent) {
@@ -132,75 +134,87 @@ export async function getEventInfo(people, extensionAPI, testing, modal=false) {
                                 if (storedEvent.event_updated !== result.event.updated) {
                                     // The event exists and needs to be updated
                                     // things that could have been changed
-                                        // date the event is on
-                                        // summary of the event or attendees
+                                    // date the event is on
+                                    // summary of the event or attendees
 
-                                    if (storedEvent.summary !== result.event.summary || !compareLists(storedEvent.attendees, attendees)){
+                                    if (
+                                        storedEvent.summary !== result.event.summary ||
+                                        !compareLists(storedEvent.attendees, attendees)
+                                    ) {
                                         // the event summary or attendees has changed
                                         // just update the event text
-                                        let { headerString, childrenBlocks } = createEventBlocks(result.event, attendees, people, extensionAPI);
+                                        let { headerString, childrenBlocks } = createEventBlocks(
+                                            result.event,
+                                            attendees,
+                                            people,
+                                            extensionAPI,
+                                        )
                                         updateBlock({
                                             uid: storedEvent.blockUID,
                                             text: headerString,
                                         })
                                         // update the local record
                                         storedEvents[eventId] = {
-                                            blockUID:storedEvent.blockUID,
-                                            summary:result.event.summary,
-                                            event_updated:result.event.updated,
-                                            event_start:storedEvent.event_start,
-                                            attendees: attendees
+                                            blockUID: storedEvent.blockUID,
+                                            summary: result.event.summary,
+                                            event_updated: result.event.updated,
+                                            event_start: storedEvent.event_start,
+                                            attendees: attendees,
                                         }
                                     }
                                     if (storedEvent.event_start !== result.event.start.dateTime) {
                                         // event date has changed - move block to new page
-                                        // TODO FIX why does the block string still change when only moving it?
+                                        // FIXME why does the block string still change when only moving it?
                                         let startDate = convertEventDateFormats(result.event.start)
-                                        let newParentBlockUID = window.roamAlphaAPI.util.dateToPageUid(startDate)
-                                        window.roamAlphaAPI.moveBlock(
-                                            {"location": 
-                                                {"parent-uid": newParentBlockUID, 
-                                                "order": 0}, 
-                                            "block": 
-                                                {"uid": storedEvent.blockUID}})
+                                        let newParentBlockUID =
+                                            window.roamAlphaAPI.util.dateToPageUid(startDate)
+                                        window.roamAlphaAPI.moveBlock({
+                                            location: { "parent-uid": newParentBlockUID, order: 0 },
+                                            block: { uid: storedEvent.blockUID },
+                                        })
 
                                         // update the local record
                                         storedEvents[eventId] = {
-                                            blockUID:storedEvent.blockUID,
-                                            summary:storedEvent.summary,
-                                            event_updated:result.event.updated,
-                                            event_start:result.event.start.dateTime,
-                                            attendees: storedEvent.attendees
+                                            blockUID: storedEvent.blockUID,
+                                            summary: storedEvent.summary,
+                                            event_updated: result.event.updated,
+                                            event_start: result.event.start.dateTime,
+                                            attendees: storedEvent.attendees,
                                         }
                                     }
-                                } 
+                                }
                             } else {
-                                // if it does not exist create the new block 
-                                
-                                let { headerString, childrenBlocks } = createEventBlocks(result.event, attendees, people, extensionAPI);
+                                // if it does not exist create the new block
+
+                                let { headerString, childrenBlocks } = createEventBlocks(
+                                    result.event,
+                                    attendees,
+                                    people,
+                                    extensionAPI,
+                                )
                                 let blockUID = window.roamAlphaAPI.util.generateUID()
                                 // let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date()) //all one todays DNP
                                 let startDate = convertEventDateFormats(result.event.start)
-                                let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(startDate) //events to specific DNP
+                                let parentBlockUID =
+                                    window.roamAlphaAPI.util.dateToPageUid(startDate) //events to specific DNP
                                 createBlock({
                                     parentUid: parentBlockUID,
                                     node: {
                                         text: headerString,
                                         open: false,
                                         children: childrenBlocks,
-                                        uid:blockUID
+                                        uid: blockUID,
                                     },
                                 })
 
                                 storedEvents[eventId] = {
-                                    blockUID:blockUID,
-                                    summary:result.event.summary,
-                                    event_updated:result.event.updated,
-                                    event_start:result.event.start.dateTime,
-                                    attendees: attendees
+                                    blockUID: blockUID,
+                                    summary: result.event.summary,
+                                    event_updated: result.event.updated,
+                                    event_start: result.event.start.dateTime,
+                                    attendees: attendees,
                                 }
                             }
-                            
                         }
                     }
                 })
@@ -212,16 +226,16 @@ export async function getEventInfo(people, extensionAPI, testing, modal=false) {
 // MARK: create event block
 function createEventBlocks(event, attendees, people, extensionAPI) {
     let calendar = event.calendar || null
-    let headerString;
+    let headerString
     let childrenBlocks = [
         { text: "Notes::", children: [{ text: "" }] },
-        { text: `Next Actions::`, children: [{ text: "" }]},
+        { text: `Next Actions::`, children: [{ text: "" }] },
     ]
     const includeEventTitle = extensionAPI.settings.get("include-event-title") || false
     let attendeeNames = []
     let eventDatePage = window.roamAlphaAPI.util.dateToPageTitle(new Date(event.start.dateTime))
-    
-    attendees = attendees.filter(attendee => attendee.email !== calendar);
+
+    attendees = attendees.filter((attendee) => attendee.email !== calendar)
     attendees.forEach((a) => {
         let name = findPersonNameByEmail(people, a.email)
 
@@ -230,7 +244,7 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             attendeeNames.push(`[[${name[0]}]]`)
             // update each person's last contacted
             let person = findPersonByEmail(people, a.email)
-            
+
             updateBlock({
                 uid: person[0]["Last Contacted"][0].uid,
                 text: `Last Contacted:: [[${eventDatePage}]]`,
@@ -240,37 +254,37 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         }
     })
     if (event.attachments && event.attachments.length > 0) {
-        event.attachments.forEach(attachment => {
-            let resultString;
+        event.attachments.forEach((attachment) => {
+            let resultString
             if (attachment.fileUrl.includes("www.notion.so")) {
-                resultString = `Notion:: [${attachment.title}](${attachment.fileUrl})`;
+                resultString = `Notion:: [${attachment.title}](${attachment.fileUrl})`
             } else {
-                resultString = `Attachment:: [${attachment.title}](${attachment.fileUrl})`;
+                resultString = `Attachment:: [${attachment.title}](${attachment.fileUrl})`
             }
             // Create the new object
-            let newBlock = { text: resultString};
+            let newBlock = { text: resultString }
             // Add the new object to the start of the childrenBlocks list
-            childrenBlocks.unshift({ text: "---"});
-            childrenBlocks.unshift(newBlock);
-        });
+            childrenBlocks.unshift({ text: "---" })
+            childrenBlocks.unshift(newBlock)
+        })
     }
-  
+
     if (includeEventTitle === true) {
-        if (checkStringForSubstring(event.summary, '1:1')) {
+        if (checkStringForSubstring(event.summary, "1:1")) {
             headerString = `[[1:1]] with ${attendeeNames.join(" and ")} about ${event.summary}`
-        } else if (checkStringForSubstring(event.summary, 'dinner')) {
+        } else if (checkStringForSubstring(event.summary, "dinner")) {
             headerString = `[[Dinner]] with ${attendeeNames.join(" and ")} about ${event.summary}`
         } else {
             headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${event.summary}`
         }
     } else {
-        if (checkStringForSubstring(event.summary, '1:1')) {
+        if (checkStringForSubstring(event.summary, "1:1")) {
             headerString = `[[1:1]] with ${attendeeNames.join(" and ")}`
-        } else if (checkStringForSubstring(event.summary, 'dinner')) {
+        } else if (checkStringForSubstring(event.summary, "dinner")) {
             headerString = `[[Dinner]] with ${attendeeNames.join(" and ")}`
         } else {
             headerString = `[[Call]] with ${attendeeNames.join(" and ")}`
         }
     }
-    return {headerString, childrenBlocks}
+    return { headerString, childrenBlocks }
 }

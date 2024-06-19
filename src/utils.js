@@ -15,8 +15,8 @@ export async function getPageUID(page) {
     }
 }
 export function getExtensionAPISetting(extensionAPI, key, defaultValue) {
-    const value = extensionAPI?.settings?.get(key);
-    return value !== null ? value : defaultValue;
+    const value = extensionAPI?.settings?.get(key)
+    return value !== null ? value : defaultValue
 }
 
 function normalizeString(str) {

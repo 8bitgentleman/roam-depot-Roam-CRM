@@ -2,36 +2,34 @@ import createBlock from "roamjs-components/writes/createBlock"
 import createPage from "roamjs-components/writes/createPage"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import { showToast } from "./components/toast"
-import { 
-    getDictionaryWithKeyValue, 
+import {
+    getDictionaryWithKeyValue,
     getBlockUidByContainsTextOnPage,
     isSecondDateAfter,
-    getExtensionAPISetting
-
- } from "./utils"
+    getExtensionAPISetting,
+} from "./utils"
 
 function checkBatchContactSetting(extensionAPI) {
     const userSetting = extensionAPI.settings.get("batch-contact-notification") || "No Batch"
     // if no batch is selected than always show the contact reminder
     if (userSetting === "No Batch") {
-        return true;
+        return true
     }
     // Get the current day as a string
-    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const today = new Date().toLocaleDateString("en-US", { weekday: "long" })
 
     // Compare the current day with the user's setting
-    return today === userSetting;
+    return today === userSetting
 }
 
 function getIntervalsFromSettings(extensionAPI) {
-    
     // Retrieve the settings values asynchronously
-    const aList = getExtensionAPISetting(extensionAPI, 'aList', 14); // Two weeks
-    const bList = getExtensionAPISetting(extensionAPI, 'bList', 60); // Two months
-    const cList = getExtensionAPISetting(extensionAPI, 'cList', 180); // Six months
-    const dList = getExtensionAPISetting(extensionAPI, 'dList', 365); // Once a year
-    const fList = getExtensionAPISetting(extensionAPI, 'fList', 0); // Never contact
-    
+    const aList = getExtensionAPISetting(extensionAPI, "aList", 14) // Two weeks
+    const bList = getExtensionAPISetting(extensionAPI, "bList", 60) // Two months
+    const cList = getExtensionAPISetting(extensionAPI, "cList", 180) // Six months
+    const dList = getExtensionAPISetting(extensionAPI, "dList", 365) // Once a year
+    const fList = getExtensionAPISetting(extensionAPI, "fList", 0) // Never contact
+
     // Convert intervals to milliseconds
     const intervals = {
         "A List": aList * 24 * 60 * 60 * 1000, // Every two weeks
@@ -39,9 +37,9 @@ function getIntervalsFromSettings(extensionAPI) {
         "C List": cList * 24 * 60 * 60 * 1000, // Roughly every six months
         "D List": dList * 24 * 60 * 60 * 1000, // Once a year
         "F List": fList === 0 ? null : fList * 24 * 60 * 60 * 1000, // Never contact or custom interval
-    };
-  
-    return intervals;
+    }
+
+    return intervals
 }
 
 function parseStringToDate(dateString) {
@@ -225,7 +223,7 @@ function checkBirthdays(person) {
         }
     } else if (daysDiff > 0 && daysDiff <= 14) {
         person["daysUntilBirthday"] = Math.ceil(daysDiff)
-        const specificDays = [1, 7, 14];
+        const specificDays = [1, 7, 14]
         if (specificDays.includes(person.daysUntilBirthday)) {
             if (person.contact_list === "A List" || person.contact_list === "B List") {
                 filteredUpcomingBirthdays = person
@@ -361,8 +359,8 @@ export function calculateAge(birthdate) {
 
 function isModalEmpty(obj, excludeKey) {
     return Object.keys(obj)
-        .filter(key => key !== excludeKey)
-        .every(key => Array.isArray(obj[key]) && obj[key].length === 0);
+        .filter((key) => key !== excludeKey)
+        .every((key) => Array.isArray(obj[key]) && obj[key].length === 0)
 }
 
 function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
@@ -374,9 +372,9 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     let toBeContacted = []
     // for each person extract the needed info
     let displayToBeContacted = checkBatchContactSetting(extensionAPI)
-    // Get the list durations from 
-    const contactIntervals = getIntervalsFromSettings(extensionAPI);
-    
+    // Get the list durations from
+    const contactIntervals = getIntervalsFromSettings(extensionAPI)
+
     people.forEach((person) => {
         // fix the json
         person = fixPersonJSON(person)
@@ -409,14 +407,13 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
         // block ref other today birthdays to the DNP
         createBlock({
             parentUid: todaysDNPUID,
-            order:"last",
+            order: "last",
             node: {
                 text: `((${getBlockUidByContainsTextOnPage("Birthdays Today", "roam/templates")}))`,
                 children: birthdays.otherBirthdaysToday.map((p) => ({
                     text: `[${p.name} is ${calculateAge(p.birthday)} years old](((${p.birthday_UID})))`,
                 })),
             },
-
         })
     }
 
@@ -428,7 +425,7 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     if (isModalEmpty(mergedReminders, "otherBirthdaysToday")) {
         // there's nothign for the modal to show so let's pop up a toast notify the user
         showToast("No birthdays or reminders to show", "SUCCESS")
-    } 
+    }
 
     return mergedReminders
 }
@@ -436,17 +433,17 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
 //MARK:Agenda Addr
 function removeTagFromBlock(blockString, tag) {
     // Create the regex pattern
-    const varRegex = new RegExp(`#${tag}|#\\[\\[${tag}\\]\\]`, 'g');
+    const varRegex = new RegExp(`#${tag}|#\\[\\[${tag}\\]\\]`, "g")
 
     // Replace all occurrences
-    let replacedStr = blockString.replace(varRegex, '');
+    let replacedStr = blockString.replace(varRegex, "")
     // cleanup excess spaces
-    replacedStr = replacedStr.replace(/\s+/g, ' ').trim();
+    replacedStr = replacedStr.replace(/\s+/g, " ").trim()
 
-    return replacedStr;
+    return replacedStr
 }
 
-export async function parseAgendaPull(after, extensionAPI) {    
+export async function parseAgendaPull(after, extensionAPI) {
     // Function to clean up the original block
     function cleanUpBlock(blockUID, blockString) {
         const cleanedString = blockString.replace(agendaRegex, "").trim()
@@ -456,7 +453,7 @@ export async function parseAgendaPull(after, extensionAPI) {
     }
     // Precompile the regex
     const agendaRegex = /\[\[Agenda\]\]|\#Agenda|\#\[\[Agenda\]\]/g
-    
+
     // Function to create a TODO block
     function createTodoBlock(sourceUID, personAgendaBlock) {
         const newBlockString = `{{[[TODO]]}} ((${sourceUID}))`
@@ -468,7 +465,7 @@ export async function parseAgendaPull(after, extensionAPI) {
     }
 
     if (":block/_refs" in after) {
-        const agendaBlocks = after[":block/_refs"]        
+        const agendaBlocks = after[":block/_refs"]
         const filteredBlocks = agendaBlocks.filter((block) => {
             // Check if ":block/refs" key exists and has at least 2 refs
             const hasRefs = block[":block/refs"] && block[":block/refs"].length >= 2
@@ -483,7 +480,7 @@ export async function parseAgendaPull(after, extensionAPI) {
 
             filteredBlocks.forEach(async (block) => {
                 // pull out the block string to create a source of truth through the changes
-                let blockString = block[':block/string']
+                let blockString = block[":block/string"]
 
                 const relevantRefs = block[":block/refs"].filter(
                     (ref) => ref[":node/title"] !== "Agenda",
@@ -502,13 +499,15 @@ export async function parseAgendaPull(after, extensionAPI) {
                         )
                         createTodoBlock(block[":block/uid"], personAgendaBlock)
 
-                        if (getExtensionAPISetting(extensionAPI, "agenda-addr-remove-names", false)) {
+                        if (
+                            getExtensionAPISetting(extensionAPI, "agenda-addr-remove-names", false)
+                        ) {
                             // remove people tags #john but not [[john]]
-                           blockString = removeTagFromBlock(blockString, matchingPerson.title)                           
-                           await window.roamAlphaAPI.updateBlock({
-                                block: { 
+                            blockString = removeTagFromBlock(blockString, matchingPerson.title)
+                            await window.roamAlphaAPI.updateBlock({
+                                block: {
                                     uid: block[":block/uid"],
-                                    string: blockString
+                                    string: blockString,
                                 },
                             })
                         }
