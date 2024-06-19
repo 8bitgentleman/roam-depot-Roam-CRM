@@ -159,3 +159,11 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 .rm-settings .rm-settings-panel__section.crm-reminders-custom-contact-setting input[type="text"] {
     min-width: inherit !important;
 }
+
+.bp3-dark .crm-reminders-drawer div.reminder-section,
+.bp3-dark .crm-reminders-drawer .bp3-drawer-header {
+    background-color: var(--dark-left-bg);
+}
+.bp3-dark .crm-reminders-drawer a {
+    color: inherit;
+}
