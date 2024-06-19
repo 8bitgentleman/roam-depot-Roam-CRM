@@ -590,8 +590,10 @@ function createPersonTemplates(parentUid) {
                     text: `Relationship Metadata::`,
                     children: [
                         {
-                            text: `Contact Frequency:: #[[C List]]: Contact every six months`,
-                            children: [{ text: `Last Contacted::` }],
+                            text: `Contact Frequency:: #[[C List]]: Contact every six months`
+                        },
+                        {
+                            text: `Last Contacted::`
                         },
                         {
                             text: `Friends & Family::`,
