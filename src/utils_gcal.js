@@ -89,14 +89,19 @@ const compareLists = (list1, list2) => {
 };
 
 function convertEventDateFormats(start) {
+    // sometimes an event start time is an actual time 
+    // and sometimes it's a date (all day events)
+    
     let date;
   
     if (start.dateTime) {
       // Case where start has a dateTime property
       date = new Date(start.dateTime);
     } else if (start.date) {
-      // Case where start has a date property
-      date = new Date(start.date);
+        // Parse the date string 2024-06-19 ignoring the JS timezone offset
+        let offsetdate = new Date(start.date)
+        let userTimezoneOffset = offsetdate.getTimezoneOffset() * 60000;
+        date = new Date(offsetdate.getTime() + userTimezoneOffset);
     } else {
       throw new Error("Invalid start object: missing dateTime or date property");
     }
@@ -179,7 +184,8 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                     if (storedEvent.event_start !== result.event.start.dateTime) {
                                         // event date has changed - move block to new page
                                         // TODO FIX why does the block string still change when only moving it?
-                                        let newParentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date(result.event.start.dateTime))
+                                        let startDate = convertEventDateFormats(result.event.start)
+                                        let newParentBlockUID = window.roamAlphaAPI.util.dateToPageUid(startDate)
                                         window.roamAlphaAPI.moveBlock(
                                             {"location": 
                                                 {"parent-uid": newParentBlockUID, 
@@ -204,10 +210,9 @@ export async function getEventInfo(people, extensionAPI, testing) {
                                 
                                 let { headerString, childrenBlocks } = createEventBlocks(result.event, attendees, people, extensionAPI);
                                 let blockUID = window.roamAlphaAPI.util.generateUID()
-                                // let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
-                                console.log(result.event.start.dateTime);
-                                
-                                let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date(result.event.start.dateTime))
+                                // let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date()) //all one todays DNP
+                                let startDate = convertEventDateFormats(result.event.start)
+                                let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(startDate) //events to specific DNP
                                 createBlock({
                                     parentUid: parentBlockUID,
                                     node: {
@@ -234,7 +239,7 @@ export async function getEventInfo(people, extensionAPI, testing) {
                     }
                 })
                 // extensionAPI.settings.set("synced-cal-events", storedEvents)
-                extensionAPI.settings.set("synced-cal-events", {})
+                extensionAPI.settings.set("synced-cal-events", {}) //TODO don't store for testing purposes
             }
         })
 }
