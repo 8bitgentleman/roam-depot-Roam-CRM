@@ -17,6 +17,7 @@ import {
 import IntervalSettings from "./components/list_intervals"
 import lastContactedPanel from "./components/custom_page_resets_panel"
 import displayCRMDialog from "./components/clay"
+import remindersSystem from "./utils_reminders"
 
 const testing = true
 const version = "v1.6.5"
@@ -237,9 +238,9 @@ async function crmbutton(extensionAPI) {
         }
         divCRM.onclick = async () => {
             const allPeople = await getAllPeople()            
-            const lastBirthdayCheckDate = getExtensionAPISetting(extensionAPI, "last-birthday-check-date", "01-19-2024")
-            displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
-            // displayCRMDialog(allPeople)            
+            const lastBirthdayCheckDate = getExtensionAPISetting(extensionAPI, "last-birthday-check-date", "01-19-2024")            
+            // displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
+            displayCRMDialog(allPeople)            
         }
     }
 }
@@ -296,6 +297,8 @@ async function onload({ extensionAPI }) {
     }
     
     if (testing) {
+        // const data = remindersSystem(people, "01-19-2024", extensionAPI)        
+        displayCRMDialog(people)
         // displayBirthdays(people, "01-19-2024", extensionAPI)
         console.log("");
         

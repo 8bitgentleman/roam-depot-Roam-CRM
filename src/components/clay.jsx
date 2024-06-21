@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react"
-import renderOverlay from "roamjs-components/util/renderOverlay"
+import React, { useState, useEffect } from "react";
+import renderOverlay from "roamjs-components/util/renderOverlay";
 import {
     Dialog,
     Classes,
@@ -11,65 +11,95 @@ import {
     MenuItem,
     Popover,
     Position,
-} from "@blueprintjs/core"
+    Icon,
+} from "@blueprintjs/core";
+import { getAllPageRefEvents } from "../utils_reminders";
+
 const CRMDialog = ({ onClose, isOpen, people }) => {
-    const [selectedPersonUID, setSelectedPersonUID] = useState(null)
-    const [searchQuery, setSearchQuery] = useState("")
-    const [sortOption, setSortOption] = useState("firstName")
-    const [sortOrder, setSortOrder] = useState("asc")
+    const [selectedPersonUID, setSelectedPersonUID] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [sortOption, setSortOption] = useState("firstName");
+    const [sortOrder, setSortOrder] = useState("asc");
+    const [selectedTabId, setSelectedTabId] = useState("people"); // Default to "people" tab
+    const [combinedEvents, setCombinedEvents] = useState([]);
+
+    useEffect(() => {
+        const birthdayEvents = people
+            .filter((b) => b.birthday) // Omit entries with null birthdays
+            .map((b) => ({
+                type: "birthday",
+                date: new Date(b.birthday).getTime(),
+                title: b.title,
+                ref: b.uid,
+            }));
+
+        const nameList = people.map((obj) => obj.title);
+        const peopleRefEvents = getAllPageRefEvents(nameList);
+        const events = [...birthdayEvents, ...peopleRefEvents];
+
+        // Sort the combined list by date
+        events.sort((a, b) => a.date - b.date);
+
+        setCombinedEvents(events);
+    }, [people]);
 
     const getPersonTitle = (person) => {
-        return person && person.title ? person.title.replace("PERSON: ", "") : "Unknown"
-    }
+        return person && person.title ? person.title.replace("PERSON: ", "") : "Unknown";
+    };
 
     const getPersonFirstName = (person) => {
-        return getPersonTitle(person).split(" ")[0]
-    }
+        return getPersonTitle(person).split(" ")[0];
+    };
 
     const getPersonLastName = (person) => {
-        const nameParts = getPersonTitle(person).split(" ")
-        return nameParts[nameParts.length - 1]
-    }
+        const nameParts = getPersonTitle(person).split(" ");
+        return nameParts[nameParts.length - 1];
+    };
 
     const handleSearchChange = (event) => {
-        setSearchQuery(event.target.value.toLowerCase())
-        setSelectedPersonUID(null)
-    }
+        setSearchQuery(event.target.value.toLowerCase());
+        setSelectedPersonUID(null);
+    };
 
     const handleSortChange = (option) => {
-        setSortOption(option)
-    }
+        setSortOption(option);
+    };
 
     const handleSortOrderChange = (order) => {
-        setSortOrder(order)
-    }
+        setSortOrder(order);
+    };
 
     const sortPeople = (people) => {
         return [...people].sort((a, b) => {
-            let comparison = 0
+            let comparison = 0;
 
             if (sortOption === "firstName") {
-                comparison = getPersonFirstName(a).localeCompare(getPersonFirstName(b))
+                comparison = getPersonFirstName(a).localeCompare(getPersonFirstName(b));
             } else if (sortOption === "lastName") {
-                comparison = getPersonLastName(a).localeCompare(getPersonLastName(b))
+                comparison = getPersonLastName(a).localeCompare(getPersonLastName(b));
             } else if (sortOption === "lastContacted") {
-                const dateA = new Date(a.last_contact)
-                const dateB = new Date(b.last_contact)
-                comparison = dateA - dateB
+                const dateA = new Date(a.last_contact);
+                const dateB = new Date(b.last_contact);
+                comparison = dateA - dateB;
             }
 
-            return sortOrder === "asc" ? comparison : -comparison
-        })
-    }
+            return sortOrder === "asc" ? comparison : -comparison;
+        });
+    };
 
     const filteredPeople = sortPeople(
         people.filter((person) => getPersonTitle(person).toLowerCase().includes(searchQuery)),
-    )
+    );
 
-    const selectedPerson = people.find((person) => person.uid === selectedPersonUID)
-    // MARK:useEffect
+    const filteredEvents = combinedEvents.filter((event) =>
+        (event.title || event.string).toLowerCase().includes(searchQuery),
+    );
+
+    const selectedPerson = people.find((person) => person.uid === selectedPersonUID);
+    const selectedEvent = combinedEvents.find((event) => event.ref === selectedPersonUID);
+
     useEffect(() => {
-        const blockContainer1 = document.getElementById("block-container-1")
+        const blockContainer1 = document.getElementById("block-container-1");
 
         if (blockContainer1) {
             // Unmount previous blocks if they exist
@@ -78,16 +108,17 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                     el: blockContainer1,
                 })
                 .then(() => {
-                    if (selectedPerson) {
+                    if (selectedPerson || selectedEvent) {
                         // Render new block
+                        const uid = selectedPerson ? selectedPerson.uid : selectedEvent.ref;
                         window.roamAlphaAPI.ui.components.renderBlock({
-                            uid: selectedPerson.uid,
+                            uid,
                             el: blockContainer1,
-                        })
+                        });
                     }
-                })
+                });
         }
-    }, [selectedPerson])
+    }, [selectedPerson, selectedEvent]);
 
     const PeopleList = () => (
         <Menu className="main-section" style={{ flex: "1", overflowY: "auto", padding: "10px" }}>
@@ -100,7 +131,40 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                 />
             ))}
         </Menu>
-    )
+    );
+
+    const EventList = () => (
+        <Menu className="main-section" style={{ flex: "1", overflowY: "auto", padding: "10px" }}>
+            {filteredEvents.map((event, index) => {
+                let icon;
+                if (event.type === "birthday") {
+                    icon = "crown";
+                } else if (event.string && event.string.toLowerCase().includes("call")) {
+                    icon = "phone";
+                } else if (event.string && event.string.toLowerCase().includes("meeting")) {
+                    icon = "team"; //I don't think this is available in roam's versino of blueprint
+                } else if (event.string && event.string.toLowerCase().includes("1:1")) {
+                    icon = "people";
+                } 
+                else {
+                    icon = "blank";
+                }
+
+                const eventText = event.type === "birthday"
+                    ? `${event.title || event.string}'s Birthday`
+                    : event.title || event.string;
+
+                return (
+                    <MenuItem
+                        key={index}
+                        icon={<Icon icon={icon} />}
+                        text={`${new Date(event.date).toLocaleDateString()} - ${eventText}`}
+                        onClick={() => setSelectedPersonUID(event.ref)}
+                    />
+                );
+            })}
+        </Menu>
+    );
 
     const SortMenu = () => (
         <Menu>
@@ -111,14 +175,13 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
             <MenuItem text="Ascending" onClick={() => handleSortOrderChange("asc")} />
             <MenuItem text="Descending" onClick={() => handleSortOrderChange("desc")} />
         </Menu>
-    )
+    );
 
     return (
         <Dialog
             className="crm-dialog"
             isOpen={isOpen}
             onClose={onClose}
-            //   title="CRM Workspace"
             canEscapeKeyClose={true}
             canOutsideClickClose={true}
             style={{
@@ -138,23 +201,21 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                     style={{ width: "200px", borderRight: "1px solid #e1e8ed", padding: "20px" }}
                 >
                     <h4>CRM Workspace</h4>
-                    <InputGroup
+                    {/* <InputGroup
                         onChange={handleSearchChange}
                         leftIcon="search"
                         placeholder="Search..."
                         style={{ marginBottom: "10px" }}
-                    />
+                    /> */}
                     <Tabs
                         id="tabs"
                         vertical
                         style={{ height: "calc(100% - 100px)" }}
-                        defaultSelectedTabId="people"
+                        selectedTabId={selectedTabId}
+                        onChange={(newTabId) => setSelectedTabId(newTabId)}
                     >
-                        <Tab id="home" title="Home" panel={<p>Home content</p>} disabled />
-                        <Tab id="people" title="People" panel={<div />} />{" "}
-                        {/* Empty div as panel */}
-                        {/* <Tab id="my-workspace" title="My Workspace" panel={<p>Workspace content</p>} disabled /> */}
-                        {/* <Tab id="groups" title="Groups" panel={<p>Groups content</p>} disabled /> */}
+                        <Tab id="home" title="Home" />
+                        <Tab id="people" title="People" />
                         <Tab
                             id="new-person"
                             title="New Person"
@@ -164,9 +225,9 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                     </Tabs>
                 </div>
 
-                {/* Center Section for People List */}
+                {/* Center Section for List */}
                 <div
-                    className="people-list-section"
+                    className="list-section"
                     style={{
                         flex: "1",
                         padding: "0 10px 10px 10px",
@@ -193,26 +254,29 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                                 margin: 0,
                             }}
                         >
-                            People ({filteredPeople.length})
+                            {selectedTabId === "people" ? `People (${filteredPeople.length})` : `Events (${filteredEvents.length})`}
                         </h4>
+                        {selectedTabId === "people" && (
+                            <Popover content={<SortMenu />} position={Position.BOTTOM_RIGHT}>
+                                <Button icon="sort" minimal />
+                            </Popover>
+                        )}
                         <InputGroup
                             onChange={handleSearchChange}
                             leftIcon="search"
                             placeholder="Search..."
                             style={{ width: "200px" }}
                         />
-                        <Popover content={<SortMenu />} position={Position.BOTTOM_RIGHT}>
-                            <Button icon="sort" minimal />
-                        </Popover>
+                        
                     </div>
-                    <PeopleList />
+                    {selectedTabId === "people" ? <PeopleList /> : <EventList />}
                 </div>
                 {/* Right Details Section */}
                 <div
                     className="details-section"
                     style={{ width: "300px", padding: "10px", overflowY: "auto", padding: "20px" }}
                 >
-                    {selectedPerson ? (
+                    {selectedPerson || selectedEvent ? (
                         <>
                             <h4
                                 style={{
@@ -221,27 +285,30 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                                     padding: "7px 0 10px 0",
                                 }}
                             >
-                                {getPersonTitle(selectedPerson)}
+                                {selectedPerson
+                                    ? getPersonTitle(selectedPerson)
+                                    : selectedEvent.type === "birthday"
+                                    ? `${selectedEvent.title || selectedEvent.string}'s Birthday`
+                                    : selectedEvent.title || selectedEvent.string}
                             </h4>
-                            {/* manually show the name so that I could potentially add extra buttons here */}
                             <div id="block-container-1" style={{ marginTop: "10px" }}></div>
                         </>
                     ) : (
-                        <div>Select a person to view details</div>
+                        <div>Select a person or event to view details</div>
                     )}
                 </div>
             </div>
         </Dialog>
-    )
-}
+    );
+};
 
 const displayCRMDialog = async (people) => {
     if (document.getElementsByClassName("crm-dialog").length === 0) {
         renderOverlay({
             Overlay: CRMDialog,
             props: { isOpen: true, people },
-        })
+        });
     }
-}
+};
 
-export default displayCRMDialog
+export default displayCRMDialog;
