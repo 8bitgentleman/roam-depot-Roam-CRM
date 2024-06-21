@@ -12,7 +12,7 @@ import {
 import IntervalSettings from "./components/list_intervals"
 
 const testing = false
-const version = "v1.8"
+const version = "v1.8.1"
 
 const plugin_title = "Roam CRM"
 
