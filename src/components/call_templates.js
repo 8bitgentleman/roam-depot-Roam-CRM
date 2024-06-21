@@ -589,20 +589,31 @@ function createPersonTemplates(parentUid) {
                 {
                     text: `Relationship Metadata::`,
                     children: [
-                        { text: `Contact Frequency:: #[[C List]]: Contact every six months` },
-                        { text: `Last Contacted::` },
+                        {
+                            text: `Contact Frequency:: #[[C List]]: Contact every six months`
+                        },
+                        {
+                            text: `Last Contacted::`
+                        },
+                        {
+                            text: `Friends & Family::`,
+                            children: [
+                                { text: `Partner::` },
+                                { text: `Kid::` },
+                                { text: `Pets::` },
+                            ],
+                        },
                         { text: `Birthday::` },
-                        { text: `Partner::` },
-                        { text: `Kid::` },
-                        { text: `Pet::` },
-                        { text: `What I do for fun::` },
-                        { text: `What I did for fun as a kid::` },
-                        { text: `Town I was born in::` },
+
+                        { text: `Fun now for me::` },
+                        { text: `Growing up::` },
+                        { text: `Growing up fun::` },
                         { text: `Favorite food::` },
                         { text: `Favorite place to visit::` },
                         { text: `Ask me about::` },
                     ],
                 },
+                { text: `---` },
             ],
         },
     })

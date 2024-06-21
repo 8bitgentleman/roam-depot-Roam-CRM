@@ -1,9 +1,18 @@
-import { Drawer, Classes, Tooltip, AnchorButton, Collapse, Button, TextArea, Checkbox } from "@blueprintjs/core";
+import {
+    Drawer,
+    Classes,
+    Tooltip,
+    AnchorButton,
+    Collapse,
+    Button,
+    TextArea,
+    Checkbox,
+} from "@blueprintjs/core"
 import React, { useState, useEffect } from "react"
 import renderOverlay from "roamjs-components/util/renderOverlay"
 import remindersSystem from "../utils_reminders"
 import { calculateAge } from "../utils_reminders"
-import { getEventInfo, testEventInfo } from "../utils_gcal"
+import { getEventInfo } from "../utils_gcal"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import createBlock from "roamjs-components/writes/createBlock"
 import displayCRMDialog from "./clay"
@@ -16,15 +25,15 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         filteredUpcomingBirthdays: [],
         toBeContacted: [],
     })
-    
+
     // State to track which contacts have been checked
     const [checkedContacts, setCheckedContacts] = useState([])
 
     // State to track which accordions are open
-    const [openIndexes, setOpenIndexes] = useState([]);
+    const [openIndexes, setOpenIndexes] = useState([])
 
     // State to track the messages for each person
-    const [messages, setMessages] = useState({});
+    const [messages, setMessages] = useState({})
 
     // Fetch the reminders data only once when the component mounts
     useEffect(() => {
@@ -55,35 +64,33 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         setOpenIndexes((prevOpenIndexes) =>
             prevOpenIndexes.includes(index)
                 ? prevOpenIndexes.filter((i) => i !== index)
-                : [...prevOpenIndexes, index]
-        );
-    };
+                : [...prevOpenIndexes, index],
+        )
+    }
 
     // Handle message change
     const handleMessageChange = (index, value) => {
         setMessages((prevMessages) => ({
             ...prevMessages,
             [index]: value,
-        }));
-    };
+        }))
+    }
 
     const handleSendMessage = (index, person) => {
         const today = window.roamAlphaAPI.util.dateToPageTitle(new Date())
-        const message = `${messages[index]} [[${today}]]`;
+        const message = `${messages[index]} [[${today}]]`
         if (message) {
-            console.log(`Message to ${reminders.toBeContacted[index].name}: ${message}`);
+            console.log(`Message to ${reminders.toBeContacted[index].name}: ${message}`)
             createBlock({
                 parentUid: person.uid,
                 node: {
                     text: message,
-                    open: false
+                    open: false,
                 },
-                order: 'last'
-
+                order: "last",
             })
-            // You can add additional logic here to actually send the message
         }
-    };   
+    }
     // Check if the relevant reminders arrays are empty
     const areRelevantRemindersEmpty =
         reminders.aAndBBirthdaysToday.length === 0 &&
@@ -100,7 +107,13 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
             onClose={onClose}
             isOpen={isOpen}
             title={
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                    }}
+                >
                     <span>Roam CRM</span>
                     <div style={{  justifyContent: 'flex-end' }}>
                         <Tooltip content="WIP" position="bottom">
@@ -119,7 +132,8 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                 icon="cloud-download"
                                 minimal={true}
                                 disabled={false}
-                                onClick={() => testEventInfo(people, extensionAPI, false)}
+                                onClick={() => getEventInfo(people, extensionAPI, false)}
+                                // TODO add a toast if there are no changes or updates
                             />
                         </Tooltip>
                     </div>
@@ -128,7 +142,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
             position={"right"}
             hasBackdrop={false}
             canOutsideClickClose={false}
-            style={{ width: 400, maxHeight: '80vh', overflowY: 'auto' }}
+            style={{ width: 400, maxHeight: "80vh", overflowY: "auto" }}
             portalClassName={"pointer-events-none"}
             className={"crm-reminders-drawer pointer-events-auto"}
             enforceFocus={false}
@@ -177,7 +191,8 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                             {person.name}{" "}
                                         </a>
                                         {new Date(person.birthday).toLocaleDateString()} (in{" "}
-                                        {person.daysUntilBirthday} {person.daysUntilBirthday === 1 ? "day" : "days"})
+                                        {person.daysUntilBirthday}{" "}
+                                        {person.daysUntilBirthday === 1 ? "day" : "days"})
                                     </li>
                                 ))}
                             </ul>
@@ -197,23 +212,31 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                                 <li>
                                                     <Button
                                                         onClick={() => toggleAccordion(index)}
-                                                        icon={openIndexes.includes(index) ? "chevron-up" : "chevron-down"}
+                                                        icon={
+                                                            openIndexes.includes(index)
+                                                                ? "chevron-up"
+                                                                : "chevron-down"
+                                                        }
                                                         minimal
                                                         small
-                                                        style={{ 
-                                                            padding: '5px',
-                                                            margin: '0 5px '
-                                                         }}
+                                                        style={{
+                                                            padding: "5px",
+                                                            margin: "0 5px ",
+                                                        }}
                                                     />
                                                     <Checkbox
                                                         checked={checkedContacts.includes(person)}
-                                                        onChange={() => handleCheckboxChange(person)}
+                                                        onChange={() =>
+                                                            handleCheckboxChange(person)
+                                                        }
                                                     />
                                                     <a
                                                         onClick={() =>
-                                                            window.roamAlphaAPI.ui.mainWindow.openPage({
-                                                                page: { title: person.name },
-                                                            })
+                                                            window.roamAlphaAPI.ui.mainWindow.openPage(
+                                                                {
+                                                                    page: { title: person.name },
+                                                                },
+                                                            )
                                                         }
                                                     >
                                                         {person.name}
@@ -225,18 +248,23 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                                             placeholder={`Type a message to ${person.name}`}
                                                             growVertically={true}
                                                             fill={true}
-                                                            value={messages[index] || ''}
-                                                            onChange={(e) => handleMessageChange(index, e.target.value)}
+                                                            value={messages[index] || ""}
+                                                            onChange={(e) =>
+                                                                handleMessageChange(
+                                                                    index,
+                                                                    e.target.value,
+                                                                )
+                                                            }
                                                         />
                                                         <Button
                                                             intent="primary"
                                                             // icon="send-message"
                                                             text="Send to Person's Page"
-                                                            
-                                                            onClick={() => handleSendMessage(index, person)}
-                                                            style={{ margin: '10px 0' }}
-                                                        >
-                                                        </Button>
+                                                            onClick={() =>
+                                                                handleSendMessage(index, person)
+                                                            }
+                                                            style={{ margin: "10px 0" }}
+                                                        ></Button>
                                                     </Collapse>
                                                 </li>
                                             </div>
