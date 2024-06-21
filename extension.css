@@ -160,10 +160,19 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
     min-width: inherit !important;
 }
 
-.bp3-dark .crm-reminders-drawer div.reminder-section,
+.bp3-dark .people-list-section>div{
+    background-color:#293742 !important;
+}
+
+/* Hide the title so that I could potentially add extra buttons below */
+.crm-dialog .rm-api-render--page .rm-title-display{
+    display:none;
+}
+
+.bp3-dark .crm-reminders-drawer div.reminder-section, 
 .bp3-dark .crm-reminders-drawer .bp3-drawer-header {
     background-color: var(--dark-left-bg);
 }
-.bp3-dark .crm-reminders-drawer a {
+.bp3-dark  .crm-reminders-drawer a{
     color: inherit;
 }

@@ -1,8 +1,13 @@
 import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from "./components/toast"
-import { getAllPeople, parseAgendaPull } from "./utils_reminders"
-import { getPageUID, isSecondDateAfter, getExtensionAPISetting } from "./utils"
-import { getEventInfo } from "./utils_gcal"
+import { getAllPeople, parseAgendaPull} from "./utils_reminders"
+import { 
+    getPageUID,
+    isSecondDateAfter,
+    getExtensionAPISetting,
+    parseLastContactedDate
+} from "./utils"
+import { checkAndFetchEvents, getEventInfo } from "./utils_gcal"
 import {
     createLastWeekCalls,
     createLastMonthCalls,
@@ -10,9 +15,11 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 import IntervalSettings from "./components/list_intervals"
+import remindersSystem from "./utils_reminders"
+
 
 const testing = false
-const version = "v1.7"
+const version = "v1.8"
 
 const plugin_title = "Roam CRM"
 
@@ -248,6 +255,7 @@ async function crmbutton(extensionAPI) {
             sidebartoprow.parentNode.insertBefore(divCRM, sidebartoprow.nextSibling)
         }
         divCRM.onclick = async () => {
+
             const allPeople = await getAllPeople()
             const lastBirthdayCheckDate = getExtensionAPISetting(
                 extensionAPI,
@@ -311,9 +319,9 @@ async function onload({ extensionAPI }) {
     }
 
     if (testing) {
-        displayBirthdays(people, "01-19-2024", extensionAPI)
-        // FIXME after testing
-        // getEventInfo(people, extensionAPI, false)
+        // const data = remindersSystem(people, "01-19-2024", extensionAPI)        
+        displayCRMDialog(people)
+        // displayBirthdays(people, "01-19-2024", extensionAPI)
     } else {
         displayBirthdays(
             people,

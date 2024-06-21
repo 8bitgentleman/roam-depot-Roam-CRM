@@ -105,7 +105,24 @@ function parseStringToDate(dateString) {
 
     return dateObject
 }
-
+export function getAllPageRefEvents(pages) {
+    let query = `[:find
+    (pull ?node [:block/string :node/title :block/uid :edit/time])
+    :in $ [?namespace ...]
+  :where
+    [?refs :node/title ?namespace]
+    [?node :block/refs ?refs]
+  ]`;
+  
+    let result = window.roamAlphaAPI.q(query, pages).flat();
+    const blockRefEvents = result.map(b => ({
+        type: 'blockRef',
+        date: b.time,
+        string: b.string,
+        ref: b.uid
+    }));
+    return blockRefEvents
+}
 export async function getAllPeople() {
     let query = `[:find (pull ?PAGE [:attrs/lookup
                                   :block/string
@@ -168,8 +185,9 @@ export async function getAllPeople() {
         "Email::",
         "Relationship Metadata::",
     ]
-
-    return extractElementsWithKeywords(results, keywords)
+    let peopleList = extractElementsWithKeywords(results, keywords)
+    const fixedPeopleList = peopleList.map(fixPersonJSON);
+    return fixedPeopleList
 }
 
 function shouldContact(person, intervals) {
@@ -376,9 +394,6 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     const contactIntervals = getIntervalsFromSettings(extensionAPI)
 
     people.forEach((person) => {
-        // fix the json
-        person = fixPersonJSON(person)
-
         // check the last contact date compared to the contact list
         if (displayToBeContacted) {
             if (shouldContact(person, contactIntervals)) {
