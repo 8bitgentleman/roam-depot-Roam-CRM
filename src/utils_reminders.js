@@ -112,15 +112,15 @@ export function getAllPageRefEvents(pages) {
   :where
     [?refs :node/title ?namespace]
     [?node :block/refs ?refs]
-  ]`;
-  
-    let result = window.roamAlphaAPI.q(query, pages).flat();
-    const blockRefEvents = result.map(b => ({
-        type: 'blockRef',
+  ]`
+
+    let result = window.roamAlphaAPI.q(query, pages).flat()
+    const blockRefEvents = result.map((b) => ({
+        type: "blockRef",
         date: b.time,
         string: b.string,
-        ref: b.uid
-    }));
+        ref: b.uid,
+    }))
     return blockRefEvents
 }
 export async function getAllPeople() {
@@ -186,7 +186,7 @@ export async function getAllPeople() {
         "Relationship Metadata::",
     ]
     let peopleList = extractElementsWithKeywords(results, keywords)
-    const fixedPeopleList = peopleList.map(fixPersonJSON);
+    const fixedPeopleList = peopleList.map(fixPersonJSON)
     return fixedPeopleList
 }
 

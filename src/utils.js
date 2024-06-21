@@ -87,31 +87,31 @@ export function isSecondDateAfter(firstDateString, secondDateString) {
 
 // Helper function to parse the "Last Contacted" date
 export function parseLastContactedDate(person) {
-    const lastContacted = person["Last Contacted"];
+    const lastContacted = person["Last Contacted"]
     if (lastContacted && lastContacted.length > 0) {
-      const dateString = lastContacted[0].string.match(/\[\[(.*?)\]\]/)[1];
-      
-      return window.roamAlphaAPI.util.pageTitleToDate(dateString);
+        const dateString = lastContacted[0].string.match(/\[\[(.*?)\]\]/)[1]
+
+        return window.roamAlphaAPI.util.pageTitleToDate(dateString)
     }
-    return null;
-  };
+    return null
+}
 // Filter people with "Last Contacted" date within the last 3 months
-export function filterLastContactedWithin3Months(people){
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-    
-    return people.filter(person => {
-      const lastContactedDate = parseLastContactedDate(person);
-      console.log("lastContacted",lastContactedDate);
-      
-      return lastContactedDate && lastContactedDate >= threeMonthsAgo;
-    });
-  };
+export function filterLastContactedWithin3Months(people) {
+    const threeMonthsAgo = new Date()
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+
+    return people.filter((person) => {
+        const lastContactedDate = parseLastContactedDate(person)
+        console.log("lastContacted", lastContactedDate)
+
+        return lastContactedDate && lastContactedDate >= threeMonthsAgo
+    })
+}
 // Sort people by "Last Contacted" date
-export function sortByLastContacted(people){
+export function sortByLastContacted(people) {
     return people.sort((a, b) => {
-      const dateA = parseLastContactedDate(a);
-      const dateB = parseLastContactedDate(b);
-      return dateB - dateA; // Sort in descending order (most recent first)
-    });
-  };
+        const dateA = parseLastContactedDate(a)
+        const dateB = parseLastContactedDate(b)
+        return dateB - dateA // Sort in descending order (most recent first)
+    })
+}

@@ -115,15 +115,15 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                     }}
                 >
                     <span>Roam CRM</span>
-                    <div style={{  justifyContent: 'flex-end' }}>
+                    <div style={{ justifyContent: "flex-end" }}>
                         <Tooltip content="WIP" position="bottom">
-                        <AnchorButton
+                            <AnchorButton
                                 icon="fullscreen"
                                 minimal={true}
                                 // disabled={true}
                                 onClick={() => {
-                                    onClose(); // Close the Drawer
-                                    displayCRMDialog(people); // Display the CRM dialog
+                                    onClose() // Close the Drawer
+                                    displayCRMDialog(people) // Display the CRM dialog
                                 }}
                             />
                         </Tooltip>

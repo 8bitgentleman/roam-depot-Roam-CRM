@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import renderOverlay from "roamjs-components/util/renderOverlay";
+import React, { useState, useEffect } from "react"
+import renderOverlay from "roamjs-components/util/renderOverlay"
 import {
     Dialog,
     Classes,
@@ -12,16 +12,16 @@ import {
     Popover,
     Position,
     Icon,
-} from "@blueprintjs/core";
-import { getAllPageRefEvents } from "../utils_reminders";
+} from "@blueprintjs/core"
+import { getAllPageRefEvents } from "../utils_reminders"
 
 const CRMDialog = ({ onClose, isOpen, people }) => {
-    const [selectedPersonUID, setSelectedPersonUID] = useState(null);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [sortOption, setSortOption] = useState("firstName");
-    const [sortOrder, setSortOrder] = useState("asc");
-    const [selectedTabId, setSelectedTabId] = useState("people"); // Default to "people" tab
-    const [combinedEvents, setCombinedEvents] = useState([]);
+    const [selectedPersonUID, setSelectedPersonUID] = useState(null)
+    const [searchQuery, setSearchQuery] = useState("")
+    const [sortOption, setSortOption] = useState("firstName")
+    const [sortOrder, setSortOrder] = useState("asc")
+    const [selectedTabId, setSelectedTabId] = useState("people") // Default to "people" tab
+    const [combinedEvents, setCombinedEvents] = useState([])
 
     useEffect(() => {
         const birthdayEvents = people
@@ -31,75 +31,75 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                 date: new Date(b.birthday).getTime(),
                 title: b.title,
                 ref: b.uid,
-            }));
+            }))
 
-        const nameList = people.map((obj) => obj.title);
-        const peopleRefEvents = getAllPageRefEvents(nameList);
-        const events = [...birthdayEvents, ...peopleRefEvents];
+        const nameList = people.map((obj) => obj.title)
+        const peopleRefEvents = getAllPageRefEvents(nameList)
+        const events = [...birthdayEvents, ...peopleRefEvents]
 
         // Sort the combined list by date
-        events.sort((a, b) => a.date - b.date);
+        events.sort((a, b) => a.date - b.date)
 
-        setCombinedEvents(events);
-    }, [people]);
+        setCombinedEvents(events)
+    }, [people])
 
     const getPersonTitle = (person) => {
-        return person && person.title ? person.title.replace("PERSON: ", "") : "Unknown";
-    };
+        return person && person.title ? person.title.replace("PERSON: ", "") : "Unknown"
+    }
 
     const getPersonFirstName = (person) => {
-        return getPersonTitle(person).split(" ")[0];
-    };
+        return getPersonTitle(person).split(" ")[0]
+    }
 
     const getPersonLastName = (person) => {
-        const nameParts = getPersonTitle(person).split(" ");
-        return nameParts[nameParts.length - 1];
-    };
+        const nameParts = getPersonTitle(person).split(" ")
+        return nameParts[nameParts.length - 1]
+    }
 
     const handleSearchChange = (event) => {
-        setSearchQuery(event.target.value.toLowerCase());
-        setSelectedPersonUID(null);
-    };
+        setSearchQuery(event.target.value.toLowerCase())
+        setSelectedPersonUID(null)
+    }
 
     const handleSortChange = (option) => {
-        setSortOption(option);
-    };
+        setSortOption(option)
+    }
 
     const handleSortOrderChange = (order) => {
-        setSortOrder(order);
-    };
+        setSortOrder(order)
+    }
 
     const sortPeople = (people) => {
         return [...people].sort((a, b) => {
-            let comparison = 0;
+            let comparison = 0
 
             if (sortOption === "firstName") {
-                comparison = getPersonFirstName(a).localeCompare(getPersonFirstName(b));
+                comparison = getPersonFirstName(a).localeCompare(getPersonFirstName(b))
             } else if (sortOption === "lastName") {
-                comparison = getPersonLastName(a).localeCompare(getPersonLastName(b));
+                comparison = getPersonLastName(a).localeCompare(getPersonLastName(b))
             } else if (sortOption === "lastContacted") {
-                const dateA = new Date(a.last_contact);
-                const dateB = new Date(b.last_contact);
-                comparison = dateA - dateB;
+                const dateA = new Date(a.last_contact)
+                const dateB = new Date(b.last_contact)
+                comparison = dateA - dateB
             }
 
-            return sortOrder === "asc" ? comparison : -comparison;
-        });
-    };
+            return sortOrder === "asc" ? comparison : -comparison
+        })
+    }
 
     const filteredPeople = sortPeople(
         people.filter((person) => getPersonTitle(person).toLowerCase().includes(searchQuery)),
-    );
+    )
 
     const filteredEvents = combinedEvents.filter((event) =>
         (event.title || event.string).toLowerCase().includes(searchQuery),
-    );
+    )
 
-    const selectedPerson = people.find((person) => person.uid === selectedPersonUID);
-    const selectedEvent = combinedEvents.find((event) => event.ref === selectedPersonUID);
+    const selectedPerson = people.find((person) => person.uid === selectedPersonUID)
+    const selectedEvent = combinedEvents.find((event) => event.ref === selectedPersonUID)
 
     useEffect(() => {
-        const blockContainer1 = document.getElementById("block-container-1");
+        const blockContainer1 = document.getElementById("block-container-1")
 
         if (blockContainer1) {
             // Unmount previous blocks if they exist
@@ -110,15 +110,15 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                 .then(() => {
                     if (selectedPerson || selectedEvent) {
                         // Render new block
-                        const uid = selectedPerson ? selectedPerson.uid : selectedEvent.ref;
+                        const uid = selectedPerson ? selectedPerson.uid : selectedEvent.ref
                         window.roamAlphaAPI.ui.components.renderBlock({
                             uid,
                             el: blockContainer1,
-                        });
+                        })
                     }
-                });
+                })
         }
-    }, [selectedPerson, selectedEvent]);
+    }, [selectedPerson, selectedEvent])
 
     const PeopleList = () => (
         <Menu className="main-section" style={{ flex: "1", overflowY: "auto", padding: "10px" }}>
@@ -131,28 +131,28 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                 />
             ))}
         </Menu>
-    );
+    )
 
     const EventList = () => (
         <Menu className="main-section" style={{ flex: "1", overflowY: "auto", padding: "10px" }}>
             {filteredEvents.map((event, index) => {
-                let icon;
+                let icon
                 if (event.type === "birthday") {
-                    icon = "crown";
+                    icon = "crown"
                 } else if (event.string && event.string.toLowerCase().includes("call")) {
-                    icon = "phone";
+                    icon = "phone"
                 } else if (event.string && event.string.toLowerCase().includes("meeting")) {
-                    icon = "team"; //I don't think this is available in roam's versino of blueprint
+                    icon = "team" //I don't think this is available in roam's versino of blueprint
                 } else if (event.string && event.string.toLowerCase().includes("1:1")) {
-                    icon = "people";
-                } 
-                else {
-                    icon = "blank";
+                    icon = "people"
+                } else {
+                    icon = "blank"
                 }
 
-                const eventText = event.type === "birthday"
-                    ? `${event.title || event.string}'s Birthday`
-                    : event.title || event.string;
+                const eventText =
+                    event.type === "birthday"
+                        ? `${event.title || event.string}'s Birthday`
+                        : event.title || event.string
 
                 return (
                     <MenuItem
@@ -161,10 +161,10 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                         text={`${new Date(event.date).toLocaleDateString()} - ${eventText}`}
                         onClick={() => setSelectedPersonUID(event.ref)}
                     />
-                );
+                )
             })}
         </Menu>
-    );
+    )
 
     const SortMenu = () => (
         <Menu>
@@ -175,7 +175,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
             <MenuItem text="Ascending" onClick={() => handleSortOrderChange("asc")} />
             <MenuItem text="Descending" onClick={() => handleSortOrderChange("desc")} />
         </Menu>
-    );
+    )
 
     return (
         <Dialog
@@ -254,7 +254,9 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                                 margin: 0,
                             }}
                         >
-                            {selectedTabId === "people" ? `People (${filteredPeople.length})` : `Events (${filteredEvents.length})`}
+                            {selectedTabId === "people"
+                                ? `People (${filteredPeople.length})`
+                                : `Events (${filteredEvents.length})`}
                         </h4>
                         {selectedTabId === "people" && (
                             <Popover content={<SortMenu />} position={Position.BOTTOM_RIGHT}>
@@ -267,7 +269,6 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                             placeholder="Search..."
                             style={{ width: "200px" }}
                         />
-                        
                     </div>
                     {selectedTabId === "people" ? <PeopleList /> : <EventList />}
                 </div>
@@ -288,8 +289,8 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                                 {selectedPerson
                                     ? getPersonTitle(selectedPerson)
                                     : selectedEvent.type === "birthday"
-                                    ? `${selectedEvent.title || selectedEvent.string}'s Birthday`
-                                    : selectedEvent.title || selectedEvent.string}
+                                      ? `${selectedEvent.title || selectedEvent.string}'s Birthday`
+                                      : selectedEvent.title || selectedEvent.string}
                             </h4>
                             <div id="block-container-1" style={{ marginTop: "10px" }}></div>
                         </>
@@ -299,16 +300,16 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                 </div>
             </div>
         </Dialog>
-    );
-};
+    )
+}
 
 const displayCRMDialog = async (people) => {
     if (document.getElementsByClassName("crm-dialog").length === 0) {
         renderOverlay({
             Overlay: CRMDialog,
             props: { isOpen: true, people },
-        });
+        })
     }
-};
+}
 
-export default displayCRMDialog;
+export default displayCRMDialog
