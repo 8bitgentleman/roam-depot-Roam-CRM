@@ -373,7 +373,6 @@ async function onload({ extensionAPI }) {
             }
         })
     }
-    console.log("runners", runners)
 
     // always set people pages to hide DONE
     // TODO put this behind a flag

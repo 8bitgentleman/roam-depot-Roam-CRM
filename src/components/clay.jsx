@@ -35,10 +35,21 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
 
         const nameList = people.map((obj) => obj.title)
         const peopleRefEvents = getAllPageRefEvents(nameList)
-        const events = [...birthdayEvents, ...peopleRefEvents]
-
+        const data = [...birthdayEvents, ...peopleRefEvents]
+        const uniqueRefs = new Set();
+        const events = data.filter(item => {
+            if (uniqueRefs.has(item.ref)) {
+                return false;
+            } else {
+                uniqueRefs.add(item.ref);
+                return true;
+            }
+        });
         // Sort the combined list by date
         events.sort((a, b) => a.date - b.date)
+        // reverse from most recent to last
+        events.reverse()
+                
 
         setCombinedEvents(events)
     }, [people])
@@ -142,7 +153,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                 } else if (event.string && event.string.toLowerCase().includes("call")) {
                     icon = "phone"
                 } else if (event.string && event.string.toLowerCase().includes("meeting")) {
-                    icon = "team" //I don't think this is available in roam's versino of blueprint
+                    icon = "people" //I don't think this is available in roam's versino of blueprint
                 } else if (event.string && event.string.toLowerCase().includes("1:1")) {
                     icon = "people"
                 } else {
