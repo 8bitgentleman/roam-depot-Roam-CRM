@@ -10,9 +10,10 @@ import {
     createCallTemplates,
 } from "./components/call_templates"
 import IntervalSettings from "./components/list_intervals"
+import displayCRMDialog from "./components/clay"
 
 const testing = false
-const version = "v1.8.1"
+const version = "v1.8.2"
 
 const plugin_title = "Roam CRM"
 
@@ -438,7 +439,7 @@ async function onload({ extensionAPI }) {
             }
         },
     })
-    // Command Palette Sidebar - Close first block
+    // Command Palette Sidebar - Toggle first sidebar window open/close
     extensionAPI.ui.commandPalette.addCommand({
         label: "Sidebar - Toggle first sidebar window open/close",
         "disable-hotkey": false,
@@ -539,7 +540,15 @@ async function onload({ extensionAPI }) {
             displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
         },
     })
-
+    // Command Roam CRM - Open Full Page UI
+    extensionAPI.ui.commandPalette.addCommand({
+        label: "Roam CRM - Open Full Workspace UI", //TODO come up with a better name for this
+        "disable-hotkey": false,
+        callback: async () => {
+            const allPeople = await getAllPeople()
+            displayCRMDialog(allPeople)
+        },
+    })
     //MARK: agenda addr
     if (getExtensionAPISetting(extensionAPI, "agenda-addr-setting", false)) {
         // run the initial agenda addr
