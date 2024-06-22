@@ -178,3 +178,6 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 .bp3-dark .crm-reminders-drawer a {
     color: inherit;
 }
+.bp3-dark .crm-dialog div.list-section>div{
+    background-color: var(--dark-bg-2) !important;
+}
