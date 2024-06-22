@@ -93,7 +93,8 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 .crm-reminders-drawer li {
     font-size: 14px !important;
 }
-.crm-reminders-drawer div.reminder-section {
+.crm-reminders-drawer div.reminder-section,
+.crm-reminders-drawer div.empty-section {
     background-color: hsl(204, 33%, 97%);
     margin-bottom: 0.5rem;
     padding: 4px;
@@ -170,7 +171,8 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 }
 
 .bp3-dark .crm-reminders-drawer div.reminder-section,
-.bp3-dark .crm-reminders-drawer .bp3-drawer-header {
+.bp3-dark .crm-reminders-drawer .bp3-drawer-header,
+.bp3-dark .crm-reminders-drawer div.empty-section  {
     background-color: var(--dark-left-bg);
 }
 .bp3-dark .crm-reminders-drawer a {

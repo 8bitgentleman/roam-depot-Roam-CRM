@@ -437,11 +437,6 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
         toBeContacted: toBeContacted,
     }
 
-    if (isModalEmpty(mergedReminders, "otherBirthdaysToday")) {
-        // there's nothign for the modal to show so let's pop up a toast notify the user
-        showToast("No birthdays or reminders to show", "SUCCESS")
-    }
-
     return mergedReminders
 }
 

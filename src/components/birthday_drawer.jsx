@@ -16,6 +16,8 @@ import { getEventInfo } from "../utils_gcal"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import createBlock from "roamjs-components/writes/createBlock"
 import displayCRMDialog from "./clay"
+import { getExtensionAPISetting } from "../utils"
+
 
 const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI }) => {
     // State to store the reminders data
@@ -91,16 +93,6 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
             })
         }
     }
-    // Check if the relevant reminders arrays are empty
-    const areRelevantRemindersEmpty =
-        reminders.aAndBBirthdaysToday.length === 0 &&
-        reminders.filteredUpcomingBirthdays.length === 0 &&
-        reminders.toBeContacted.length === 0
-
-    // If all relevant reminders are empty, do not render the Drawer
-    if (areRelevantRemindersEmpty) {
-        return null
-    }
 
     return (
         <Drawer
@@ -116,22 +108,21 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                 >
                     <span>Roam CRM</span>
                     <div style={{ justifyContent: "flex-end" }}>
-                        <Tooltip content="WIP" position="bottom">
+                        <Tooltip content="WIP: CRM Workspace UI" position="top">
                             <AnchorButton
                                 icon="fullscreen"
                                 minimal={true}
-                                // disabled={true}
                                 onClick={() => {
                                     onClose() // Close the Drawer
                                     displayCRMDialog(people) // Display the CRM dialog
                                 }}
                             />
                         </Tooltip>
-                        <Tooltip content="Sync Calendar" position="bottom">
+                        <Tooltip content="Sync Calendar" position="top">
                             <AnchorButton
                                 icon="cloud-download"
                                 minimal={true}
-                                disabled={false}
+                                disabled={!getExtensionAPISetting(extensionAPI, "calendar-setting", false)}
                                 onClick={() => getEventInfo(people, extensionAPI, false)}
                                 // TODO add a toast if there are no changes or updates
                             />
@@ -270,6 +261,15 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                             </div>
                                         ),
                                 )}
+                            </ul>
+                        </div>
+                    </>
+                )}
+                {reminders.aAndBBirthdaysToday.length == 0 && reminders.toBeContacted.length == 0 && reminders.filteredUpcomingBirthdays.length == 0 &&(
+                    <>
+                        <div className="empty-section">
+                            <ul>
+                                "Nothing to see today 👀. Come Back Later"
                             </ul>
                         </div>
                     </>
