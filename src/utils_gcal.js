@@ -88,7 +88,8 @@ function convertEventDateFormats(start) {
 // MARK: eventInfo
 export async function getEventInfo(people, extensionAPI, testing, modal = false) {
     const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
-
+    console.log("StoredEvents",storedEvents);
+    
     let prevent_update = new Set()
     let no_update = new Set() //TODO add a toast if there are no updates
 

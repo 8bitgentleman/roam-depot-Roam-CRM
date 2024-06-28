@@ -212,12 +212,6 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                     style={{ width: "200px", borderRight: "1px solid #e1e8ed", padding: "20px" }}
                 >
                     <h4>CRM Workspace</h4>
-                    {/* <InputGroup
-                        onChange={handleSearchChange}
-                        leftIcon="search"
-                        placeholder="Search..."
-                        style={{ marginBottom: "10px" }}
-                    /> */}
                     <Tabs
                         id="tabs"
                         vertical

@@ -13,7 +13,7 @@ import IntervalSettings from "./components/list_intervals"
 import displayCRMDialog from "./components/clay"
 
 const testing = false
-const version = "v1.8.3"
+const version = "v1.8.4"
 
 const plugin_title = "Roam CRM"
 
@@ -250,12 +250,7 @@ async function crmbutton(extensionAPI) {
         }
         divCRM.onclick = async () => {
             const allPeople = await getAllPeople()
-            const lastBirthdayCheckDate = getExtensionAPISetting(
-                extensionAPI,
-                "last-birthday-check-date",
-                "01-19-2024",
-            )
-            displayBirthdays(allPeople, lastBirthdayCheckDate, extensionAPI)
+            displayCRMDialog(allPeople)
         }
     }
 }
