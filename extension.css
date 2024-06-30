@@ -172,12 +172,12 @@ span.rm-page-ref--tag[data-tag=".rollup-table"] {
 
 .bp3-dark .crm-reminders-drawer div.reminder-section,
 .bp3-dark .crm-reminders-drawer .bp3-drawer-header,
-.bp3-dark .crm-reminders-drawer div.empty-section  {
+.bp3-dark .crm-reminders-drawer div.empty-section {
     background-color: var(--dark-left-bg);
 }
 .bp3-dark .crm-reminders-drawer a {
     color: inherit;
 }
-.bp3-dark .crm-dialog div.list-section>div{
+.bp3-dark .crm-dialog div.list-section > div {
     background-color: var(--dark-bg-2) !important;
 }

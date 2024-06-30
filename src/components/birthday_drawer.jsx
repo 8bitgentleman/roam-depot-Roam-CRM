@@ -18,7 +18,6 @@ import createBlock from "roamjs-components/writes/createBlock"
 import displayCRMDialog from "./clay"
 import { getExtensionAPISetting } from "../utils"
 
-
 const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI }) => {
     // State to store the reminders data
     const [reminders, setReminders] = useState({
@@ -122,7 +121,9 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                             <AnchorButton
                                 icon="cloud-download"
                                 minimal={true}
-                                disabled={!getExtensionAPISetting(extensionAPI, "calendar-setting", false)}
+                                disabled={
+                                    !getExtensionAPISetting(extensionAPI, "calendar-setting", false)
+                                }
                                 onClick={() => getEventInfo(people, extensionAPI, false)}
                                 // TODO add a toast if there are no changes or updates
                             />
@@ -265,15 +266,15 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                         </div>
                     </>
                 )}
-                {reminders.aAndBBirthdaysToday.length == 0 && reminders.toBeContacted.length == 0 && reminders.filteredUpcomingBirthdays.length == 0 &&(
-                    <>
-                        <div className="empty-section">
-                            <ul>
-                                "Nothing to see today 👀. Come Back Later"
-                            </ul>
-                        </div>
-                    </>
-                )}
+                {reminders.aAndBBirthdaysToday.length == 0 &&
+                    reminders.toBeContacted.length == 0 &&
+                    reminders.filteredUpcomingBirthdays.length == 0 && (
+                        <>
+                            <div className="empty-section">
+                                <ul>"Nothing to see today 👀. Come Back Later"</ul>
+                            </div>
+                        </>
+                    )}
             </div>
         </Drawer>
     )

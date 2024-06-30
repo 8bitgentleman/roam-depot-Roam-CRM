@@ -105,9 +105,10 @@ function parseStringToDate(dateString) {
 
     return dateObject
 }
+
 export function getAllPageRefEvents(pages) {
     let query = `[:find
-    (pull ?node [:block/string :node/title :block/uid :edit/time])
+    (pull ?node [:block/string :node/title :block/uid :edit/time :block/page {:block/page [:node/title :block/uid]}])
     :in $ [?namespace ...]
   :where
     [?refs :node/title ?namespace]
@@ -115,12 +116,17 @@ export function getAllPageRefEvents(pages) {
   ]`
 
     let result = window.roamAlphaAPI.q(query, pages).flat()
-    const blockRefEvents = result.map((b) => ({
-        type: "blockRef",
-        date: b.time,
-        string: b.string,
-        ref: b.uid,
-    }))
+    const blockRefEvents = result.map((b) => {
+        const dateObject = parseStringToDate(b.page.title);
+        const timestamp = dateObject ? dateObject.getTime() : null;
+        return {
+            type: "blockRef",
+            date: timestamp !== null ? timestamp : b.time,
+            string: b.string,
+            ref: b.uid,
+            page: b.page
+        };
+    });
     return blockRefEvents
 }
 export async function getAllPeople() {
@@ -316,7 +322,7 @@ function fixPersonJSON(person) {
             })
             person["Last Contacted"].push({ string: "Last Contacted::", uid: contactUIDString })
 
-            // Your code here for when the property does not exist
+            //  code here for when the property does not exist
         }
     }
 
