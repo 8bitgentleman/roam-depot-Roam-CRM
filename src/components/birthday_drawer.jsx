@@ -7,6 +7,8 @@ import {
     Button,
     TextArea,
     Checkbox,
+    InputGroup,
+    Icon,
 } from "@blueprintjs/core"
 import React, { useState, useEffect } from "react"
 import renderOverlay from "roamjs-components/util/renderOverlay"
@@ -32,9 +34,15 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
 
     // State to track which accordions are open
     const [openIndexes, setOpenIndexes] = useState([])
+    const [openSearchIndexes, setOpenSearchIndexes] = useState([])
 
     // State to track the messages for each person
     const [messages, setMessages] = useState({})
+
+    // New state variables for search functionality
+    const [isSearchVisible, setIsSearchVisible] = useState(false)
+    const [searchQuery, setSearchQuery] = useState("")
+    const [filteredPeople, setFilteredPeople] = useState(people)
 
     // Fetch the reminders data only once when the component mounts
     useEffect(() => {
@@ -65,7 +73,15 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         setOpenIndexes((prevOpenIndexes) =>
             prevOpenIndexes.includes(index)
                 ? prevOpenIndexes.filter((i) => i !== index)
-                : [...prevOpenIndexes, index],
+                : [...prevOpenIndexes, index]
+        )
+    }
+
+    const toggleSearchAccordion = (index) => {
+        setOpenSearchIndexes((prevOpenIndexes) =>
+            prevOpenIndexes.includes(index)
+                ? prevOpenIndexes.filter((i) => i !== index)
+                : [...prevOpenIndexes, index]
         )
     }
 
@@ -91,6 +107,113 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                 order: "last",
             })
         }
+    }
+
+    // Handler for search icon click
+    const toggleSearch = () => {
+        setIsSearchVisible(!isSearchVisible)
+        if (isSearchVisible) {
+            setSearchQuery("")
+            setFilteredPeople([])
+        }
+    }
+
+    const handleSearchChange = (event) => {
+        const query = event.target.value
+        setSearchQuery(query)
+        if (query.trim() === "") {
+            setFilteredPeople([])
+        } else {
+            const filtered = people.filter(person =>
+                person.name.toLowerCase().includes(query.toLowerCase())
+            )
+            setFilteredPeople(filtered)
+        }
+    }
+
+    const renderSearchResults = () => {
+        if (searchQuery.trim() === "") {
+            return null
+        }
+
+        if (filteredPeople.length === 0) {
+            return (
+                <div className="reminder-section">
+                    <p>No results found for "{searchQuery}"</p>
+                </div>
+            )
+        }
+
+        const displayedPeople = filteredPeople.slice(0, 3)
+        const remainingCount = filteredPeople.length - 3
+
+        return (
+            <div className="reminder-section">
+                <h5>Search Results</h5>
+                <ul className="multi-column-list">
+                    {displayedPeople.map((person, index) => (
+                        <div key={index}>
+                            <li>
+                                <Button
+                                    onClick={() => toggleSearchAccordion(index)}
+                                    icon={
+                                        openSearchIndexes.includes(index)
+                                            ? "chevron-up"
+                                            : "chevron-down"
+                                    }
+                                    minimal
+                                    small
+                                    style={{
+                                        padding: "5px",
+                                        margin: "0 5px ",
+                                    }}
+                                />
+                                <Checkbox
+                                    checked={checkedContacts.includes(person)}
+                                    onChange={() => handleCheckboxChange(person)}
+                                />
+                                <a
+                                    onClick={() =>
+                                        window.roamAlphaAPI.ui.mainWindow.openPage({
+                                            page: { title: person.name },
+                                        })
+                                    }
+                                >
+                                    {person.name}
+                                </a>
+                            </li>
+                            <li style={{ gridColumn: "span 2" }}>
+                                <Collapse isOpen={openSearchIndexes.includes(index)}>
+                                    <TextArea
+                                        placeholder={`Type a message to ${person.name}`}
+                                        growVertically={true}
+                                        fill={true}
+                                        value={messages[index] || ""}
+                                        onChange={(e) =>
+                                            handleMessageChange(
+                                                index,
+                                                e.target.value,
+                                            )
+                                        }
+                                    />
+                                    <Button
+                                        intent="primary"
+                                        text="Send to Person's Page"
+                                        onClick={() => handleSendMessage(index, person)}
+                                        style={{ margin: "10px 0" }}
+                                    />
+                                </Collapse>
+                            </li>
+                        </div>
+                    ))}
+                </ul>
+                {remainingCount > 0 && (
+                    <p style={{ marginTop: '10px', fontStyle: 'italic' }}>
+                        <Icon icon="info-sign" /> {remainingCount} more result{remainingCount > 1 ? 's' : ''} not shown
+                    </p>
+                )}
+            </div>
+        )
     }
 
     return (
@@ -125,7 +248,14 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                     !getExtensionAPISetting(extensionAPI, "calendar-setting", false)
                                 }
                                 onClick={() => getEventInfo(people, extensionAPI, false)}
-                                // TODO add a toast if there are no changes or updates
+                            // TODO add a toast if there are no changes or updates
+                            />
+                        </Tooltip>
+                        <Tooltip content="Search People" position="top">
+                            <AnchorButton
+                                icon="send-message"
+                                minimal={true}
+                                onClick={toggleSearch}
                             />
                         </Tooltip>
                     </div>
@@ -141,6 +271,19 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
             autoFocus={false}
         >
             <div className={`${Classes.DRAWER_BODY} p-5`}>
+                {/* only show if search is visible */}
+                {isSearchVisible && (
+                    <InputGroup
+                        // leftIcon="search"
+                        placeholder={`Search ${people.length} people...`}
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        style={{ marginBottom: '10px' }}
+                    />
+                )}
+                {/* only show results if search is visible and there are people filtered */}
+                {renderSearchResults()}
+
                 {/* only show if there are birthdays today */}
                 {reminders.aAndBBirthdaysToday.length > 0 && (
                     <>
