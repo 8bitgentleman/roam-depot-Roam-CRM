@@ -189,151 +189,159 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
     )
 
     return (
-<Dialog
-    className="crm-dialog"
-    isOpen={isOpen}
-    onClose={onClose}
-    canEscapeKeyClose={true}
-    canOutsideClickClose={true}
-    style={{
-        width: "90vw",
-        height: "80vh",
-        maxWidth: "none",
-        maxHeight: "none",
-        paddingBottom: "0",
-    }}
->
-    <div
-        className={Classes.DIALOG_BODY}
-        style={{ display: "flex", height: "100%", margin: "0" }}
-    >
-        <div
-            className="left-sidebar"
-            style={{ width: "200px", borderRight: "1px solid #e1e8ed", padding: "20px" }}
-        >
-            <h4>CRM Workspace</h4>
-            <Tabs
-                id="tabs"
-                vertical
-                style={{ height: "calc(100% - 100px)" }}
-                selectedTabId={selectedTabId}
-                onChange={(newTabId) => setSelectedTabId(newTabId)}
-            >
-                <Tab id="home" title="Home" disabled/>
-                <Tab id="people" title="People" />
-                <Tab id="events" title="Events" />
-                <Tab
-                    id="new-person"
-                    title="New Person"
-                    panel={<p>Add New Person content</p>}
-                    disabled
-                />
-            </Tabs>
-        </div>
-
-        {/* Center Section for List */}
-        <div
-            className="list-section"
+        <Dialog
+            className="crm-dialog"
+            isOpen={isOpen}
+            onClose={onClose}
+            canEscapeKeyClose={true}
+            canOutsideClickClose={true}
             style={{
-                flex: "1",
-                padding: "0 10px 10px 10px",
-                overflowY: "auto",
-                position: "relative",
+                width: "90vw",
+                height: "80vh",
+                maxWidth: "none",
+                maxHeight: "none",
+                paddingBottom: "0",
             }}
         >
             <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    marginBottom: "10px",
-                    position: "sticky",
-                    top: "0",
-                    borderBottom: "1px solid #e1e8ed",
-                    backgroundColor: "#ebf1f5",
-                    zIndex: "1",
-                    padding: "30px 0 10px 0",
-                }}
+                className={Classes.DIALOG_BODY}
+                style={{ display: "flex", height: "100%", margin: "0" }}
             >
-                <h4 style={{ margin: 0, flexShrink: 0 }}>
+                <div
+                    className="left-sidebar"
+                    style={{ width: "200px", borderRight: "1px solid #e1e8ed", padding: "20px" }}
+                >
+                    <h4>CRM Workspace</h4>
+                    <Tabs
+                        id="tabs"
+                        vertical
+                        style={{ height: "calc(100% - 100px)" }}
+                        selectedTabId={selectedTabId}
+                        onChange={(newTabId) => setSelectedTabId(newTabId)}
+                    >
+                        <Tab id="home" title="Home" disabled />
+                        <Tab id="people" title="People" />
+                        <Tab id="events" title="Events" />
+                        <Tab
+                            id="new-person"
+                            title="New Person"
+                            panel={<p>Add New Person content</p>}
+                            disabled
+                        />
+                    </Tabs>
+                </div>
+
+                {/* Center Section for List */}
+                <div
+                    className="list-section"
+                    style={{
+                        flex: "1",
+                        padding: "0 10px 10px 10px",
+                        overflowY: "auto",
+                        position: "relative",
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            marginBottom: "10px",
+                            position: "sticky",
+                            top: "0",
+                            borderBottom: "1px solid #e1e8ed",
+                            backgroundColor: "#ebf1f5",
+                            zIndex: "1",
+                            padding: "30px 0 10px 0",
+                        }}
+                    >
+                        <h4 style={{ margin: 0, flexShrink: 0 }}>
+                            {(() => {
+                                switch (selectedTabId) {
+                                    case "home":
+                                        return "Home"
+                                    case "people":
+                                        return "People"
+                                    case "events":
+                                        return "Events"
+                                    default:
+                                        return "Unknown Tab"
+                                }
+                            })()}
+                        </h4>
+                        <div
+                            style={{
+                                flex: 2,
+                                display: "flex",
+                                alignItems: "center",
+                                marginLeft: "10px",
+                                marginRight: "10px",
+                            }}
+                        >
+                            <InputGroup
+                                onChange={handleSearchChange}
+                                leftIcon="search"
+                                placeholder={(() => {
+                                    switch (selectedTabId) {
+                                        case "home":
+                                            return "Search..."
+                                        case "people":
+                                            return `Search ${filteredPeople.length} people...`
+                                        case "events":
+                                            return `Search ${filteredEvents.length} events...`
+                                        default:
+                                            return "Search..."
+                                    }
+                                })()}
+                                style={{ width: "1000 px" }}
+                            />
+                        </div>
+                        {selectedTabId === "people" && (
+                            <Popover content={<SortMenu />} position={Position.BOTTOM_RIGHT}>
+                                <Button icon="sort" minimal style={{ flexShrink: 0 }} />
+                            </Popover>
+                        )}
+                    </div>
                     {(() => {
                         switch (selectedTabId) {
                             case "home":
-                                return "Home";
+                                return <HomeContent />
                             case "people":
-                                return "People";
+                                return <PeopleList />
                             case "events":
-                                return "Events";
+                                return <EventList />
                             default:
-                                return "Unknown Tab";
+                                return <div>Unknown tab content</div>
                         }
                     })()}
-                </h4>
-                <div style={{ flex: 2, display: "flex", alignItems: "center", marginLeft: "10px", marginRight: "10px" }}>
-                    <InputGroup
-                        onChange={handleSearchChange}
-                        leftIcon="search"
-                        placeholder={(() => {
-                            switch (selectedTabId) {
-                                case "home":
-                                    return "Search...";
-                                case "people":
-                                    return `Search ${filteredPeople.length} people...`;
-                                case "events":
-                                    return `Search ${filteredEvents.length} events...`;
-                                default:
-                                    return "Search...";
-                            }
-                        })()}
-                        style={{ width: "1000 px" }}
-                    />
                 </div>
-                {selectedTabId === "people" && (
-                    <Popover content={<SortMenu />} position={Position.BOTTOM_RIGHT}>
-                        <Button icon="sort" minimal style={{ flexShrink: 0 }} />
-                    </Popover>
-                )}
+                {/* Right Details Section */}
+                <div
+                    className="details-section"
+                    style={{ width: "300px", padding: "10px", overflowY: "auto", padding: "20px" }}
+                >
+                    {selectedPerson || selectedEvent ? (
+                        <>
+                            <h4
+                                style={{
+                                    marginTop: "10px",
+                                    borderBottom: "1px solid rgb(225, 232, 237)",
+                                    padding: "7px 0 10px 0",
+                                }}
+                            >
+                                {selectedPerson
+                                    ? getPersonTitle(selectedPerson)
+                                    : selectedEvent.type === "birthday"
+                                      ? `${selectedEvent.title || selectedEvent.string}'s Birthday`
+                                      : selectedEvent.title || selectedEvent.page.title}
+                            </h4>
+                            <div id="block-container-1" style={{ marginTop: "10px" }}></div>
+                        </>
+                    ) : (
+                        <div>Select a person or event to view details</div>
+                    )}
+                </div>
             </div>
-            {(() => {
-                switch (selectedTabId) {
-                    case "home":
-                        return <HomeContent />;
-                    case "people":
-                        return <PeopleList />;
-                    case "events":
-                        return <EventList />;
-                    default:
-                        return <div>Unknown tab content</div>;
-                }
-            })()}
-        </div>
-        {/* Right Details Section */}
-        <div
-            className="details-section"
-            style={{ width: "300px", padding: "10px", overflowY: "auto", padding: "20px" }}
-        >
-            {selectedPerson || selectedEvent ? (
-                <>
-                    <h4
-                        style={{
-                            marginTop: "10px",
-                            borderBottom: "1px solid rgb(225, 232, 237)",
-                            padding: "7px 0 10px 0",
-                        }}
-                    >
-                        {selectedPerson
-                            ? getPersonTitle(selectedPerson)
-                            : selectedEvent.type === "birthday"
-                                ? `${selectedEvent.title || selectedEvent.string}'s Birthday`
-                                : selectedEvent.title || selectedEvent.page.title}
-                    </h4>
-                    <div id="block-container-1" style={{ marginTop: "10px" }}></div>
-                </>
-            ) : (
-                <div>Select a person or event to view details</div>
-            )}
-        </div>
-    </div>
-</Dialog>
+        </Dialog>
     )
 }
 

@@ -117,16 +117,16 @@ export function getAllPageRefEvents(pages) {
 
     let result = window.roamAlphaAPI.q(query, pages).flat()
     const blockRefEvents = result.map((b) => {
-        const dateObject = parseStringToDate(b.page.title);
-        const timestamp = dateObject ? dateObject.getTime() : null;
+        const dateObject = parseStringToDate(b.page.title)
+        const timestamp = dateObject ? dateObject.getTime() : null
         return {
             type: "blockRef",
             date: timestamp !== null ? timestamp : b.time,
             string: b.string,
             ref: b.uid,
-            page: b.page
-        };
-    });
+            page: b.page,
+        }
+    })
     return blockRefEvents
 }
 export async function getAllPeople() {
