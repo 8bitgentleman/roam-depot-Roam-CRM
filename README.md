@@ -16,7 +16,7 @@ Roam CRM is built on top of several Roam extensions. Please install them on Roam
 -   [Google](https://github.com/dvargas92495/roamjs-google) by David Vargas
 
     1. Install Google extension from Roam Depot
-    2. Add your google accounts by following the extension's README
+    2. Add your google accounts and calendar by following that extension's README
     3. You can now automatically pull events into Daily Note
 
 -   [Workbench](https://github.com/dvargas92495/roamjs-workbench) by David Vargas
@@ -39,23 +39,25 @@ Roam CRM is built on top of several Roam extensions. Please install them on Roam
 
 ## Features
 
+### Metadata
+
+-   Roam CRM creates metadata for each `Tags::#people` page inspired by [Matt Mochary](https://docs.google.com/spreadsheets/d/1Ti_xaV9IVvj-bklxOjNY-IeGsC-YqcgvB03qvfFQrnI/). This metadata and its structure is important, **without this structure Roam CRM will not work.**
+-   Each person page must have metadata structure which looks like this. You can use the **Person Metadata Template** button in the Roam CRM settings to import a quick Roam template for this metadata structure
+    <img src="https://github.com/8bitgentleman/roam-depot-CRM-testing/raw/main/images/metadata.png" width="300"></img>
+      <!-- FIXME UPDATE IMAGE PATH ONCE MERGED-->
+-   At the bare minimum a person page must have this metadata for it to be recoginzed by Roam CRM
+    <img src="https://github.com/8bitgentleman/roam-depot-CRM-testing/raw/main/images/metadataMinimum.png" width="300"></img>
+
 ### Agenda Addr
 
 Inefficient leaders waste a lot of time reaching out about or responding to one-off issues in real time. A much more efficient method is to batch your issues and discuss them all at once.
 
--   Make a block anywhere that has as persons name `[[Bill Gates]]` and a hashtag `#Agenda`
+-   Make a block anywhere that has as persons name (`[[Bill Gates]]` for example) and a hashtag `#Agenda`
 -   Roam CRM will automatically nest a block ref on Bill's page under an agenda attribute
 -   Use a hashtag to have the extension hide the name in the Agenda, e.g. `#[[Bill Gates]]`
 -   Next time you talk, you'll remember everything you wanted to tell Bill
 
-### Metadata
-
--   Roam CRM creates metadata for each `Tags::#people` page inspired by [Matt Mochary](https://docs.google.com/spreadsheets/d/1Ti_xaV9IVvj-bklxOjNY-IeGsC-YqcgvB03qvfFQrnI/). This metadata and its structure is important, **without this structure Roam CRM will not work.**
--   Each person page must have metadata that looks like this. You can use the **Person Metadata Template** button in the Roam CRM settings to import a quick Roam template for this metadata structure
-    <img src="https://github.com/8bitgentleman/roam-depot-CRM-testing/raw/main/images/metadata.png" width="300"></img>
-      <!-- FIXME UPDATE IMAGE PATH -->
--   At the bare minimum a person must have this metadata for it to be recoginzed by Roam CRM
-    <img src="https://github.com/8bitgentleman/roam-depot-CRM-testing/raw/main/images/metadataMinimum.png" width="300"></img>
+-   <img src="https://github.com/8bitgentleman/roam-depot-CRM-testing/raw/main/images/agendaAddr.gif" width="300"></img>
 
 ### Contact Reminders
 
@@ -73,12 +75,37 @@ Within the modal you can type a quick message to each person to stay in flow. Th
 
 ### Birthday Reminders
 
--   Birthday reminders happen 14 days before, and on day of. They remind you that 'Bill Gates turned 46 today.' A and B listers birthday reminders show up in the modal 14 & 7 days before as well as on the day of.
+-   Birthday reminders happen 14 days before, and on the day of. They remind you that 'Bill Gates turned 46 today.' A and B listers birthday reminders show up in the modal 14 & 7 days before as well as on the day of.
     -   <img src="https://github.com/8bitgentleman/roam-depot-CRM-testing/raw/main/images/modal%20birthdays.png" width="300"></img>
 -   C and B lister birthdays only show up on the day-of as a block ref on the DNP
     -   <img src="https://github.com/8bitgentleman/roam-depot-CRM-testing/raw/main/images/birthdayRef.png" width="300"></img>
+-   D and F listers do now show up at all
+
+### Full Page CRM UI
+
+Easially accessable through the (optional) left sidebar button or via the modal toolbar the CRM Workspace is the central hub for all your contacts and your timeline of events.
+
+-   People
+    -   A sortable list of all contacts together in one place
+-   Events
+    -   Birthdays, calls, meetings, and any mentions are all shown in chronological order (sorted by either the DNP they show up on or the block's creation date)
+-   Home
+    -   Coming soon, this will be a homepage for quick access to all CRM functionality. If you have ideas or wants for this space do reach out!
+
+<img src="https://github.com/8bitgentleman/roam-depot-CRM-testing/raw/main/images/workplace.gif" width="300"></img>
+
+
+### Google Calendar Sync
+
+Via the Google extension RoamCRM, has the ability (toggable in settings) to connect to a google calendar and sync upcoming events to your graph. When enabled events in the next 7 days with more than 1 guest/attendee will be synced to your graph on the Daily Notes Page coresponding with the event date. If the event attendees, date, or details change Roam CRM will update the graph block accordingly.
+
+<img src="https://github.com/8bitgentleman/roam-depot-CRM-testing/raw/main/images/event.png" width="300"></img>
 
 ### Hotkeys
 
--   Roam CRM adds quality of life hotkeys for interacting with the right sidebar
--   Configure hotkeys in settings
+Roam CRM adds quality of life hotkeys for a variety of tasks including:
+
+-   Interacting with the right sidebar
+-   Showing the Reminder Modal as well as the Full Page CRM Workplace
+
+All hotkeys are configurable in settings

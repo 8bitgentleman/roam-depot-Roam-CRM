@@ -12,6 +12,7 @@ import {
     Popover,
     Position,
     Icon,
+    Tooltip,
 } from "@blueprintjs/core"
 import { getAllPageRefEvents } from "../utils_reminders"
 
@@ -219,15 +220,17 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                         selectedTabId={selectedTabId}
                         onChange={(newTabId) => setSelectedTabId(newTabId)}
                     >
-                        <Tab id="home" title="Home" disabled />
-                        <Tab id="people" title="People" />
-                        <Tab id="events" title="Events" />
                         <Tab
-                            id="new-person"
-                            title="New Person"
-                            panel={<p>Add New Person content</p>}
+                            id="home"
+                            title={
+                                <Tooltip content="Coming soon...">
+                                    <span>Home</span>
+                                </Tooltip>
+                            }
                             disabled
                         />
+                        <Tab id="people" title="People" />
+                        <Tab id="events" title="Events" />
                     </Tabs>
                 </div>
 
