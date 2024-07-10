@@ -33,8 +33,16 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                 title: b.title,
                 ref: b.uid,
             }))
+        console.log("people", people);
+        
+        // const nameList = people.map((obj) => obj.title)
+        const missingTitle = people.filter((obj) => obj.title === undefined);
+        const nameList = people
+        .filter((obj) => obj.title !== undefined) // Filter out objects without a title
+        .map((obj) => obj.title); // Extract the titles
 
-        const nameList = people.map((obj) => obj.title)
+        console.log(nameList); // Logs the list of titles
+        console.log('Objects without title:', missingTitle); // Logs objects without a title
         const peopleRefEvents = getAllPageRefEvents(nameList)
         const data = [...birthdayEvents, ...peopleRefEvents]
         // sometimes there are multiple people referenced in a block. Strip out duplicates
