@@ -92,7 +92,6 @@ Easially accessable through the (optional) left sidebar button or via the modal 
 
 <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/workplace.gif" width="300"></img>
 
-
 ### Google Calendar Sync
 
 Via the Google extension RoamCRM, has the ability (toggable in settings) to connect to a google calendar and sync upcoming events to your graph. When enabled events in the next 7 days with more than 1 guest/attendee will be synced to your graph on the Daily Notes Page coresponding with the event date. If the event attendees, date, or details change Roam CRM will update the graph block accordingly.

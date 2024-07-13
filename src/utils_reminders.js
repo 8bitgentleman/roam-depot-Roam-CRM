@@ -117,16 +117,21 @@ export function getAllPageRefEvents(pages) {
 
     let result = window.roamAlphaAPI.q(query, pages).flat()
     const blockRefEvents = result.map((b) => {
-        const dateObject = parseStringToDate(b.page.title)
+        // sometimes page: doesn't exist. this happens when a page title references person like [[@[[page]]]]
+        // this is a common syntax used for makeshift 'notifications' within a multiplayer graph
+        const title = b.page ? b.page.title : b.title
+        const dateObject = parseStringToDate(title)
         const timestamp = dateObject ? dateObject.getTime() : null
+
         return {
             type: "blockRef",
             date: timestamp !== null ? timestamp : b.time,
-            string: b.string,
+            string: b.string || b.title,
             ref: b.uid,
-            page: b.page,
+            page: b.page || { title: b.title, uid: b.uid },
         }
     })
+
     return blockRefEvents
 }
 export async function getAllPeople() {
