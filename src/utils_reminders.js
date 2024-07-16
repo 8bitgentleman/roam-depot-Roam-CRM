@@ -119,7 +119,7 @@ export function getAllPageRefEvents(pages) {
     const blockRefEvents = result.map((b) => {
         // sometimes page: doesn't exist. this happens when a page title references person like [[@[[page]]]]
         // this is a common syntax used for makeshift 'notifications' within a multiplayer graph
-        const title = b.page ? b.page.title : b.title
+        const title = b.page ? b.page.title : (b.title || b.string)
         const dateObject = parseStringToDate(title)
         const timestamp = dateObject ? dateObject.getTime() : null
 
@@ -128,10 +128,9 @@ export function getAllPageRefEvents(pages) {
             date: timestamp !== null ? timestamp : b.time,
             string: b.string || b.title,
             ref: b.uid,
-            page: b.page || { title: b.title, uid: b.uid },
+            page: b.page || { title: b.title || b.string, uid: b.uid },
         }
     })
-
     return blockRefEvents
 }
 export async function getAllPeople() {

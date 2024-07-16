@@ -23,7 +23,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
     const [sortOrder, setSortOrder] = useState("asc")
     const [selectedTabId, setSelectedTabId] = useState("people") // Default to "people" tab
     const [combinedEvents, setCombinedEvents] = useState([])
-
+    
     useEffect(() => {
         const birthdayEvents = people
             .filter((b) => b.birthday) // Omit entries with null birthdays
@@ -41,7 +41,6 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
             .map((obj) => obj.title) // Extract the titles
 
         const peopleRefEvents = getAllPageRefEvents(nameList)
-
         const data = [...birthdayEvents, ...peopleRefEvents]
         // sometimes there are multiple people referenced in a block. Strip out duplicates
         const uniqueRefs = new Set()
@@ -226,15 +225,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                         selectedTabId={selectedTabId}
                         onChange={(newTabId) => setSelectedTabId(newTabId)}
                     >
-                        <Tab
-                            id="home"
-                            title={
-                                <Tooltip content="Coming soon...">
-                                    <span>Home</span>
-                                </Tooltip>
-                            }
-                            disabled
-                        />
+                        <Tab id="home" title="Home" disabled />
                         <Tab id="people" title="People" />
                         <Tab id="events" title="Events" />
                     </Tabs>
