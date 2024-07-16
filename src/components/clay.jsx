@@ -14,7 +14,7 @@ import {
     Icon,
     Tooltip,
 } from "@blueprintjs/core"
-import { getAllPageRefEvents } from "../utils_reminders"
+import { getAllPageRefEvents, calculateAge, getOrdinalSuffix } from "../utils_reminders"
 
 const CRMDialog = ({ onClose, isOpen, people }) => {
     const [selectedPersonUID, setSelectedPersonUID] = useState(null)
@@ -23,7 +23,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
     const [sortOrder, setSortOrder] = useState("asc")
     const [selectedTabId, setSelectedTabId] = useState("people") // Default to "people" tab
     const [combinedEvents, setCombinedEvents] = useState([])
-    
+
     useEffect(() => {
         const birthdayEvents = people
             .filter((b) => b.birthday) // Omit entries with null birthdays
@@ -32,9 +32,9 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                 date: new Date(b.birthday).getTime(),
                 title: b.title,
                 ref: b.uid,
+                contact_list: b.contact_list,
             }))
 
-        // const nameList = people.map((obj) => obj.title)
         const missingTitle = people.filter((obj) => obj.title === undefined)
         const nameList = people
             .filter((obj) => obj.title !== undefined) // Filter out objects without a title
@@ -182,6 +182,77 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
             })}
         </Menu>
     )
+    const getOpacity = (listLetter) => {
+        const opacityMap = {
+            A: 1,
+            B: 0.95,
+            C: 0.8,
+            D: 0.6,
+            F: 0.55,
+        }
+        return opacityMap[listLetter] || 1 // Default to 0.7 for unknown letters
+    }
+    const getBirthdayThisYear = (birthDate) => {
+        const today = new Date()
+        today.setDate(today.getDate() - 7); // Subtract 1 week (7 days) from today
+        const birth = new Date(birthDate)
+        const birthdayThisYear = new Date(today.getFullYear(), birth.getMonth(), birth.getDate())
+        if (birthdayThisYear < today) {
+            birthdayThisYear.setFullYear(birthdayThisYear.getFullYear() + 1)
+        }
+        return birthdayThisYear
+    }
+
+    const BirthdayList = () => {
+        const today = new Date()
+        // Filter the events to only include birthdays
+        const filteredBirthdayEvents = filteredEvents
+            .filter((event) => event.type === "birthday")
+            .map((event) => ({
+                ...event,
+                birthdayThisYear: getBirthdayThisYear(event.date),
+                age: calculateAge(event.date),
+            }))
+            .sort((a, b) => a.birthdayThisYear - b.birthdayThisYear)
+        return (
+            <Menu
+                className="main-section"
+                style={{ flex: "1", overflowY: "auto", padding: "10px" }}
+            >
+                {filteredBirthdayEvents.map((event, index) => {
+                    const listLetter = event.contact_list.charAt(0).toUpperCase() || "?" // Default to ? for unknown letters
+                    const opacity = getOpacity(listLetter)
+
+                    const ageWithSuffix = getOrdinalSuffix(event.age)
+
+                    const eventText = `${event.title || event.string}'s ${ageWithSuffix} Birthday`
+
+                    const daysDiff = Math.ceil((event.birthdayThisYear - today) / (1000 * 60 * 60 * 24));
+                    let upcomingStyle = {}
+
+                    if (daysDiff <= 14 && daysDiff > 0) {
+                        upcomingStyle = { backgroundColor: 'lightyellow' };
+                      } else if (daysDiff === 0) {
+                        upcomingStyle = { backgroundColor: 'lightgreen' };
+                      }
+
+                    return (
+                        <MenuItem
+                            key={index}
+                            icon={
+                                <span style={{ fontSize: "16px", fontWeight: "bold" }}>
+                                    {listLetter}
+                                </span>
+                            }
+                            text={`${event.birthdayThisYear.toLocaleDateString()} - ${eventText}`}
+                            onClick={() => setSelectedPersonUID(event.ref)}
+                            style={{ ...upcomingStyle, opacity }}
+                        />
+                    )
+                })}
+            </Menu>
+        )
+    }
 
     const SortMenu = () => (
         <Menu>
@@ -228,6 +299,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                         <Tab id="home" title="Home" disabled />
                         <Tab id="people" title="People" />
                         <Tab id="events" title="Events" />
+                        <Tab id="birthdays" title="Birthdays" />
                     </Tabs>
                 </div>
 
@@ -263,6 +335,8 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                                         return "People"
                                     case "events":
                                         return "Events"
+                                    case "birthdays":
+                                        return "Upcoming Birthdays"
                                     default:
                                         return "Unknown Tab"
                                 }
@@ -309,6 +383,8 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                                 return <PeopleList />
                             case "events":
                                 return <EventList />
+                            case "birthdays":
+                                return <BirthdayList />
                             default:
                                 return <div>Unknown tab content</div>
                         }

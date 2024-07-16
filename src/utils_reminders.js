@@ -119,7 +119,7 @@ export function getAllPageRefEvents(pages) {
     const blockRefEvents = result.map((b) => {
         // sometimes page: doesn't exist. this happens when a page title references person like [[@[[page]]]]
         // this is a common syntax used for makeshift 'notifications' within a multiplayer graph
-        const title = b.page ? b.page.title : (b.title || b.string)
+        const title = b.page ? b.page.title : b.title || b.string
         const dateObject = parseStringToDate(title)
         const timestamp = dateObject ? dateObject.getTime() : null
 
@@ -383,6 +383,21 @@ export function calculateAge(birthdate) {
     }
 
     return age
+}
+
+export function getOrdinalSuffix(number) {
+    const j = number % 10
+    const k = number % 100
+    if (j === 1 && k !== 11) {
+        return number + "st"
+    }
+    if (j === 2 && k !== 12) {
+        return number + "nd"
+    }
+    if (j === 3 && k !== 13) {
+        return number + "rd"
+    }
+    return number + "th"
 }
 
 function isModalEmpty(obj, excludeKey) {
