@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import renderOverlay from "roamjs-components/util/renderOverlay"
 import {
     Dialog,
@@ -23,6 +23,57 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
     const [sortOrder, setSortOrder] = useState("asc")
     const [selectedTabId, setSelectedTabId] = useState("people") // Default to "people" tab
     const [combinedEvents, setCombinedEvents] = useState([])
+
+    const [isDragging, setIsDragging] = useState(false)
+    const [startX, setStartX] = useState(0)
+    const [centerWidth, setCenterWidth] = useState("calc(65% - 101px)") // Adjusted initial width
+    const [rightWidth, setRightWidth] = useState("calc(35% - 101px)") // Adjusted initial width
+
+    const LEFT_SIDEBAR_WIDTH = 200
+    const DIVIDER_WIDTH = 2
+
+    const handleMouseDown = useCallback((e) => {
+        setIsDragging(true)
+        setStartX(e.clientX)
+    }, [])
+
+    const handleMouseMove = useCallback(
+        (e) => {
+            if (isDragging) {
+                const dialogWidth = document.querySelector(".crm-dialog").clientWidth
+                const availableWidth = dialogWidth - LEFT_SIDEBAR_WIDTH - DIVIDER_WIDTH
+                const mouseX = e.clientX - LEFT_SIDEBAR_WIDTH
+
+                const newCenterWidth = Math.max(
+                    0.2 * availableWidth,
+                    Math.min(0.8 * availableWidth, mouseX),
+                )
+                const newRightWidth = availableWidth - newCenterWidth
+
+                setCenterWidth(`${newCenterWidth}px`)
+                setRightWidth(`${newRightWidth}px`)
+            }
+        },
+        [isDragging],
+    )
+
+    const handleMouseUp = useCallback(() => {
+        setIsDragging(false)
+    }, [])
+
+    useEffect(() => {
+        if (isDragging) {
+            window.addEventListener("mousemove", handleMouseMove)
+            window.addEventListener("mouseup", handleMouseUp)
+        } else {
+            window.removeEventListener("mousemove", handleMouseMove)
+            window.removeEventListener("mouseup", handleMouseUp)
+        }
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove)
+            window.removeEventListener("mouseup", handleMouseUp)
+        }
+    }, [isDragging, handleMouseMove, handleMouseUp])
 
     useEffect(() => {
         const birthdayEvents = people
@@ -194,7 +245,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
     }
     const getBirthdayThisYear = (birthDate) => {
         const today = new Date()
-        today.setDate(today.getDate() - 7); // Subtract 1 week (7 days) from today
+        today.setDate(today.getDate() - 7) // Subtract 1 week (7 days) from today
         const birth = new Date(birthDate)
         const birthdayThisYear = new Date(today.getFullYear(), birth.getMonth(), birth.getDate())
         if (birthdayThisYear < today) {
@@ -227,14 +278,16 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
 
                     const eventText = `${event.title || event.string}'s ${ageWithSuffix} Birthday`
 
-                    const daysDiff = Math.ceil((event.birthdayThisYear - today) / (1000 * 60 * 60 * 24));
+                    const daysDiff = Math.ceil(
+                        (event.birthdayThisYear - today) / (1000 * 60 * 60 * 24),
+                    )
                     let upcomingStyle = {}
 
                     if (daysDiff <= 14 && daysDiff > 0) {
-                        upcomingStyle = { backgroundColor: 'lightyellow' };
-                      } else if (daysDiff === 0) {
-                        upcomingStyle = { backgroundColor: 'lightgreen' };
-                      }
+                        upcomingStyle = { backgroundColor: "lightyellow" }
+                    } else if (daysDiff === 0) {
+                        upcomingStyle = { backgroundColor: "lightgreen" }
+                    }
 
                     return (
                         <MenuItem
@@ -282,11 +335,20 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
         >
             <div
                 className={Classes.DIALOG_BODY}
-                style={{ display: "flex", height: "100%", margin: "0" }}
+                style={{
+                    display: "flex",
+                    height: "100%",
+                    margin: "0",
+                }}
             >
+                {/* Left Sidebar */}
                 <div
                     className="left-sidebar"
-                    style={{ width: "200px", borderRight: "1px solid #e1e8ed", padding: "20px" }}
+                    style={{
+                        width: `${LEFT_SIDEBAR_WIDTH}px`,
+                        borderRight: "1px solid #e1e8ed",
+                        padding: "20px",
+                    }}
                 >
                     <h4>CRM Workspace</h4>
                     <Tabs
@@ -307,7 +369,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                 <div
                     className="list-section"
                     style={{
-                        flex: "1",
+                        width: centerWidth,
                         padding: "0 10px 10px 10px",
                         overflowY: "auto",
                         position: "relative",
@@ -390,10 +452,23 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                         }
                     })()}
                 </div>
+                {/* Resizable divider */}
+                <div
+                    style={{
+                        width: `${DIVIDER_WIDTH}px`,
+                        cursor: "col-resize",
+                        background: "#e1e8ed",
+                    }}
+                    onMouseDown={handleMouseDown}
+                ></div>
                 {/* Right Details Section */}
                 <div
                     className="details-section"
-                    style={{ width: "300px", padding: "10px", overflowY: "auto", padding: "20px" }}
+                    style={{
+                        width: rightWidth,
+                        padding: "20px",
+                        overflowY: "auto",
+                    }}
                 >
                     {selectedPerson || selectedEvent ? (
                         <>
