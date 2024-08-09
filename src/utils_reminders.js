@@ -8,6 +8,7 @@ import {
     isSecondDateAfter,
     getExtensionAPISetting,
 } from "./utils"
+import { parse, isValid } from 'date-fns';
 
 function checkBatchContactSetting(extensionAPI) {
     const userSetting = extensionAPI.settings.get("batch-contact-notification") || "No Batch"
@@ -43,67 +44,48 @@ function getIntervalsFromSettings(extensionAPI) {
 }
 
 function parseStringToDate(dateString) {
-    const defaultYear = new Date().getFullYear() // Use the current year as default
+    // Normalize the date string by removing ordinal suffixes
 
-    // Array of month names for parsing
-    const monthNames = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-    ]
+    const normalizedDateString = dateString.replace(/\b(\d+)(st|nd|rd|th)\b/g, '$1');
+    // Define possible date formats
+    const dateFormats = [
+        'MMMM d, yyyy',         // "July 12, 2024"
+        'MMMM d yyyy',          // "July 12 2024"
+        'd MMMM yyyy',          // "12 July 2024"
+        'MMMM d',               // "July 12"
+        'd MMMM',               // "12 July"
+        'yyyy-MM-dd',           // "2024-07-12"
+        'MM/dd/yyyy',           // "07/12/2024"
+        'dd/MM/yyyy',           // "12/07/2024"
+        'yyyy/MM/dd',           // "2022/07/31"
+        'M/d/yyyy',             // "7/12/2024"
+        'MM/dd',                // "07/12"
+        'M/d',                  // "7/12"
+    ];
 
-    // Remove any st, nd, rd, th suffixes from day
-    dateString = dateString.replace(/(\d+)(st|nd|rd|th)/, "$1")
-
-    // Split the dateString into parts
-    const parts = dateString.split(" ")
-
-    let month, day, year
-
-    // Check the length of parts to determine the format
-    if (parts.length === 2) {
-        // Format: Month Day
-        month = monthNames.indexOf(parts[0])
-        day = parseInt(parts[1], 10)
-        year = defaultYear
-    } else if (parts.length === 3) {
-        // Try to parse the year first, as it's unambiguous
-        year = parseInt(parts[2], 10)
-        if (isNaN(year)) {
-            // If the year isn't a number, assume it's a part of the day and use the default year
-            day = parseInt(parts[1], 10)
-            month = monthNames.indexOf(parts[0])
-            year = defaultYear
-        } else {
-            // If the year is a number, parse the month and day
-            month = monthNames.indexOf(parts[0])
-            day = parseInt(parts[1], 10)
+    // Try to parse the date string with each format
+    for (const formatString of dateFormats) {
+        const date = parse(normalizedDateString, formatString, new Date());
+        if (isValid(date)) {
+            // console.log(`%c${date}`, 'color: green; font-weight: bold;');
+            return date;
         }
-    } else {
-        // Invalid format
-        console.error("Invalid date format")
-        return null
     }
 
-    // Check for invalid month or day
-    if (month === -1 || isNaN(day) || isNaN(year)) {
-        console.error("Invalid date components")
-        return null
+    // If the date string does not include a year, append the current year
+    const currentYear = new Date().getFullYear();
+    for (const formatString of dateFormats) {
+        const dateWithYear = `${normalizedDateString}, ${currentYear}`;
+        const date = parse(dateWithYear, formatString, new Date());
+        if (isValid(date)) {
+            // console.log(`%c${date}`, 'color: green; font-weight: bold;');
+            return date;
+        }
     }
 
-    // Create a Date object
-    const dateObject = new Date(year, month, day)
-
-    return dateObject
+    // If all else fails, log an error and return null
+    console.error("Invalid date format",dateString);
+    return null;
 }
 
 export function getAllPageRefEvents(pages) {
@@ -381,7 +363,9 @@ export function calculateAge(birthdate) {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--
     }
-
+    if (age==0) {
+        return "?"
+    }
     return age
 }
 
