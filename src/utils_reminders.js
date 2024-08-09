@@ -8,7 +8,7 @@ import {
     isSecondDateAfter,
     getExtensionAPISetting,
 } from "./utils"
-import { parse, isValid } from 'date-fns';
+import { parse, isValid } from "date-fns"
 
 function checkBatchContactSetting(extensionAPI) {
     const userSetting = extensionAPI.settings.get("batch-contact-notification") || "No Batch"
@@ -46,46 +46,44 @@ function getIntervalsFromSettings(extensionAPI) {
 function parseStringToDate(dateString) {
     // Normalize the date string by removing ordinal suffixes
 
-    const normalizedDateString = dateString.replace(/\b(\d+)(st|nd|rd|th)\b/g, '$1');
+    const normalizedDateString = dateString.replace(/\b(\d+)(st|nd|rd|th)\b/g, "$1")
     // Define possible date formats
     const dateFormats = [
-        'MMMM d, yyyy',         // "July 12, 2024"
-        'MMMM d yyyy',          // "July 12 2024"
-        'd MMMM yyyy',          // "12 July 2024"
-        'MMMM d',               // "July 12"
-        'd MMMM',               // "12 July"
-        'yyyy-MM-dd',           // "2024-07-12"
-        'MM/dd/yyyy',           // "07/12/2024"
-        'dd/MM/yyyy',           // "12/07/2024"
-        'yyyy/MM/dd',           // "2022/07/31"
-        'M/d/yyyy',             // "7/12/2024"
-        'MM/dd',                // "07/12"
-        'M/d',                  // "7/12"
-    ];
+        "MMMM d, yyyy", // "July 12, 2024"
+        "MMMM d yyyy", // "July 12 2024"
+        "d MMMM yyyy", // "12 July 2024"
+        "MMMM d", // "July 12"
+        "d MMMM", // "12 July"
+        "yyyy-MM-dd", // "2024-07-12"
+        "MM/dd/yyyy", // "07/12/2024"
+        "dd/MM/yyyy", // "12/07/2024"
+        "yyyy/MM/dd", // "2022/07/31"
+        "M/d/yyyy", // "7/12/2024"
+        "MM/dd", // "07/12"
+        "M/d", // "7/12"
+    ]
 
     // Try to parse the date string with each format
     for (const formatString of dateFormats) {
-        const date = parse(normalizedDateString, formatString, new Date());
+        const date = parse(normalizedDateString, formatString, new Date())
         if (isValid(date)) {
-            // console.log(`%c${date}`, 'color: green; font-weight: bold;');
-            return date;
+            return date
         }
     }
 
     // If the date string does not include a year, append the current year
-    const currentYear = new Date().getFullYear();
+    const currentYear = new Date().getFullYear()
     for (const formatString of dateFormats) {
-        const dateWithYear = `${normalizedDateString}, ${currentYear}`;
-        const date = parse(dateWithYear, formatString, new Date());
+        const dateWithYear = `${normalizedDateString}, ${currentYear}`
+        const date = parse(dateWithYear, formatString, new Date())
         if (isValid(date)) {
-            // console.log(`%c${date}`, 'color: green; font-weight: bold;');
-            return date;
+            return date
         }
     }
 
     // If all else fails, log an error and return null
-    console.error("Invalid date format",dateString);
-    return null;
+    console.error("Invalid date format", dateString)
+    return null
 }
 
 export function getAllPageRefEvents(pages) {
@@ -363,7 +361,7 @@ export function calculateAge(birthdate) {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--
     }
-    if (age==0) {
+    if (age == 0) {
         return "?"
     }
     return age

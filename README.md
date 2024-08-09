@@ -41,10 +41,10 @@ Roam CRM is built on top of several Roam extensions. Please install them on Roam
 
 -   Roam CRM creates metadata for each `Tags::#people` page inspired by [Matt Mochary](https://docs.google.com/spreadsheets/d/1Ti_xaV9IVvj-bklxOjNY-IeGsC-YqcgvB03qvfFQrnI/). This metadata and its structure is important, **without this structure Roam CRM will not work.**
 -   Each person page must have metadata structure which looks like this. You can use the **Person Metadata Template** button in the Roam CRM settings to import a quick Roam template for this metadata structure
-    - <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/metadata.png" width="300"></img>
-      <!-- FIXME UPDATE IMAGE PATH ONCE MERGED-->
+    -   <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/metadata.png" width="300"></img>
+        <!-- FIXME UPDATE IMAGE PATH ONCE MERGED-->
 -   At the bare minimum a person page must have this metadata for it to be recoginzed by Roam CRM
-    - <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/metadataMinimum.png" width="300"></img>
+    -   <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/metadataMinimum.png" width="300"></img>
 
 ### Agenda Addr
 
