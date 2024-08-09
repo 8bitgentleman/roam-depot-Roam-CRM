@@ -41,10 +41,10 @@ Roam CRM is built on top of several Roam extensions. Please install them on Roam
 
 -   Roam CRM creates metadata for each `Tags::#people` page inspired by [Matt Mochary](https://docs.google.com/spreadsheets/d/1Ti_xaV9IVvj-bklxOjNY-IeGsC-YqcgvB03qvfFQrnI/). This metadata and its structure is important, **without this structure Roam CRM will not work.**
 -   Each person page must have metadata structure which looks like this. You can use the **Person Metadata Template** button in the Roam CRM settings to import a quick Roam template for this metadata structure
-    <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/metadata.png" width="300"></img>
+    - <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/metadata.png" width="300"></img>
       <!-- FIXME UPDATE IMAGE PATH ONCE MERGED-->
 -   At the bare minimum a person page must have this metadata for it to be recoginzed by Roam CRM
-    <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/metadataMinimum.png" width="300"></img>
+    - <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/metadataMinimum.png" width="300"></img>
 
 ### Agenda Addr
 
@@ -55,7 +55,7 @@ Inefficient leaders waste a lot of time reaching out about or responding to one-
 -   Use a hashtag to have the extension hide the name in the Agenda, e.g. `#[[Bill Gates]]`
 -   Next time you talk, you'll remember everything you wanted to tell Bill
 
--   <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/agendaAddr.gif" width="300"></img>
+-   <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/agendaAddr.gif" width="600"></img>
 
 ### Contact Reminders
 
@@ -90,7 +90,7 @@ Easially accessable through the (optional) left sidebar button or via the modal 
 -   Home
     -   Coming soon, this will be a homepage for quick access to all CRM functionality. If you have ideas or wants for this space do reach out!
 
-<img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/workplace.gif" width="300"></img>
+<img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/workplace.gif" width="600"></img>
 
 ### Google Calendar Sync
 
