@@ -33,7 +33,7 @@ Roam CRM is built on top of several Roam extensions. Please install them on Roam
 -   [Query Builder](https://github.com/dvargas92495/roamjs-query-builder) by David Vargas
 
     1. Install Query Builder extension
-    2. Import Call Rollup Queries from
+    2. Import Call Rollup Queries from Roam CRM's settings page.
 
 ## Features
 
@@ -94,7 +94,7 @@ Easially accessable through the (optional) left sidebar button or via the modal 
 
 ### Google Calendar Sync
 
-Via the Google extension RoamCRM, has the ability (toggable in settings) to connect to a google calendar and sync upcoming events to your graph. When enabled events in the next 7 days with more than 1 guest/attendee will be synced to your graph on the Daily Notes Page coresponding with the event date. If the event attendees, date, or details change Roam CRM will update the graph block accordingly.
+Via the Google extension Roam CRM has the ability (togglable in settings) to connect to a google calendar and sync upcoming events to your graph. When enabled events in the next 7 days with more than 1 guest/attendee will be synced to your graph on the Daily Notes Page corresponding with the event date. If the event attendees, date, or details change Roam CRM will update the graph block accordingly.
 
 <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/event.png" width="300"></img>
 
