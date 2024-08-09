@@ -577,7 +577,7 @@ function createPersonTemplates(parentUid) {
                     text: `Metadata::`,
                     children: [
                         { text: `Phone Number::` },
-                        { text: `Email:: {{Email Setup:42SmartBlock:email button}}` },
+                        { text: `Email::` },
                         { text: `Location::` },
                         { text: `Company::` },
                         { text: `Role::` },
