@@ -183,7 +183,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 id: "person-template",
                 name: "Imports Person Metadata Template",
                 description:
-                    "Imports the persom metadata template into your roam/templates page. This template structure is important for Roam CRM to work.",
+                    "Imports the person metadata template into your roam/templates page. This template structure is important for Roam CRM to work.",
                 action: {
                     type: "button",
                     onClick: async () => {
@@ -215,7 +215,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 id: "call-template",
                 name: "Import Call Template",
                 description:
-                    "Imports the call template into your roam/templates page. This template structure is important for the rolloup queries to work.",
+                    "Imports the call template into your roam/templates page. This template structure is important for the rollup queries to work.",
                 action: {
                     type: "button",
                     onClick: async () => {
