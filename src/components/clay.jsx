@@ -253,6 +253,10 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
         }
         return birthdayThisYear
     }
+    const utcToLocal = (utcTimestamp) => {
+        const date = new Date(utcTimestamp);
+        return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    };
 
     const BirthdayList = () => {
         const today = new Date()
@@ -261,8 +265,8 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
             .filter((event) => event.type === "birthday")
             .map((event) => ({
                 ...event,
-                birthdayThisYear: getBirthdayThisYear(event.date),
-                age: calculateAge(event.date),
+                birthdayThisYear: getBirthdayThisYear(utcToLocal(event.date)),
+                age: calculateAge(utcToLocal(event.date)),
             }))
             .sort((a, b) => a.birthdayThisYear - b.birthdayThisYear)
         return (

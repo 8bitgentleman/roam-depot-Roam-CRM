@@ -8,7 +8,8 @@ import {
     isSecondDateAfter,
     getExtensionAPISetting,
 } from "./utils"
-import { parse, isValid } from "date-fns"
+import { differenceInYears, parse, isValid, setYear, addYears, startOfDay, differenceInDays } from 'date-fns';
+import { utcToZonedTime, format } from 'date-fns-tz';
 
 function checkBatchContactSetting(extensionAPI) {
     const userSetting = extensionAPI.settings.get("batch-contact-notification") || "No Batch"
@@ -44,46 +45,41 @@ function getIntervalsFromSettings(extensionAPI) {
 }
 
 function parseStringToDate(dateString) {
-    // Normalize the date string by removing ordinal suffixes
-
-    const normalizedDateString = dateString.replace(/\b(\d+)(st|nd|rd|th)\b/g, "$1")
-    // Define possible date formats
+    const normalizedDateString = dateString.replace(/\b(\d+)(st|nd|rd|th)\b/g, "$1");
     const dateFormats = [
-        "MMMM d, yyyy", // "July 12, 2024"
-        "MMMM d yyyy", // "July 12 2024"
-        "d MMMM yyyy", // "12 July 2024"
-        "MMMM d", // "July 12"
-        "d MMMM", // "12 July"
-        "yyyy-MM-dd", // "2024-07-12"
-        "MM/dd/yyyy", // "07/12/2024"
-        "dd/MM/yyyy", // "12/07/2024"
-        "yyyy/MM/dd", // "2022/07/31"
-        "M/d/yyyy", // "7/12/2024"
-        "MM/dd", // "07/12"
-        "M/d", // "7/12"
-    ]
+        "MMMM d, yyyy",
+        "MMMM d yyyy",
+        "d MMMM yyyy",
+        "MMMM d",
+        "d MMMM",
+        "yyyy-MM-dd",
+        "MM/dd/yyyy",
+        "dd/MM/yyyy",
+        "yyyy/MM/dd",
+        "M/d/yyyy",
+        "MM/dd",
+        "M/d",
+    ];
 
-    // Try to parse the date string with each format
-    for (const formatString of dateFormats) {
-        const date = parse(normalizedDateString, formatString, new Date())
-        if (isValid(date)) {
-            return date
-        }
-    }
+    const currentYear = new Date().getFullYear();
 
-    // If the date string does not include a year, append the current year
-    const currentYear = new Date().getFullYear()
     for (const formatString of dateFormats) {
-        const dateWithYear = `${normalizedDateString}, ${currentYear}`
-        const date = parse(dateWithYear, formatString, new Date())
+        const date = parse(normalizedDateString, formatString, new Date());
         if (isValid(date)) {
-            return date
+            // Convert the parsed date to UTC
+            const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            
+            // If the parsed date doesn't have a year, set it to the current year
+            if (!formatString.includes('yyyy')) {
+                return setYear(utcDate, new Date().getUTCFullYear());
+            }            
+            return utcDate;
         }
     }
 
     // If all else fails, log an error and return null
-    console.error("Invalid date format", dateString)
-    return null
+    console.error("Invalid date format", dateString);
+    return null;
 }
 
 export function getAllPageRefEvents(pages) {
@@ -204,37 +200,44 @@ function shouldContact(person, intervals) {
 }
 
 function checkBirthdays(person) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0) // Normalize today's date to start of day for comparison
+    const today = startOfDay(new Date());
+    const utcToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
 
-    let aAndBBirthdaysToday
-    let otherBirthdaysToday
-    let filteredUpcomingBirthdays
+    let aAndBBirthdaysToday = null;
+    let otherBirthdaysToday = null;
+    let filteredUpcomingBirthdays = null;
 
-    const personBirthday = new Date(person.birthday)
-    const currentYear = today.getFullYear()
+    if (!person.birthday) {
+        console.error("Person has no birthday set:", person);
+        return { aAndBBirthdaysToday, otherBirthdaysToday, filteredUpcomingBirthdays };
+    }
 
-    personBirthday.setFullYear(currentYear) // Set birthday year to current year for comparison
-    personBirthday.setHours(0, 0, 0, 0) // Normalize birthday to start of day for comparison
+    const personBirthday = new Date(person.birthday);
+    const utcPersonBirthday = new Date(Date.UTC(personBirthday.getUTCFullYear(), personBirthday.getUTCMonth(), personBirthday.getUTCDate()));
 
-    const timeDiff = personBirthday - today
-    const daysDiff = timeDiff / (1000 * 60 * 60 * 24)
+    const currentYear = utcToday.getUTCFullYear();
+    let utcBirthdayThisYear = new Date(Date.UTC(currentYear, utcPersonBirthday.getUTCMonth(), utcPersonBirthday.getUTCDate()));
+
+    // If the birthday has already passed this year, look at next year's birthday
+    if (utcBirthdayThisYear < utcToday) {
+        utcBirthdayThisYear = addYears(utcBirthdayThisYear, 1);
+    }
+
+    const daysDiff = differenceInDays(utcBirthdayThisYear, utcToday);
 
     if (daysDiff === 0) {
-        // Separate today's birthdays into two categories
-        // A & Bs will be in the notification
-        // C & Ds will be block ref'd to the DNP
+        // Birthday is today
         if (person.contact_list === "A List" || person.contact_list === "B List") {
-            aAndBBirthdaysToday = person
+            aAndBBirthdaysToday = person;
         } else if (person.contact_list !== "F List") {
-            otherBirthdaysToday = person
+            otherBirthdaysToday = person;
         }
     } else if (daysDiff > 0 && daysDiff <= 14) {
-        person["daysUntilBirthday"] = Math.ceil(daysDiff)
-        const specificDays = [1, 7, 14]
+        person.daysUntilBirthday = daysDiff;
+        const specificDays = [1, 7, 14];
         if (specificDays.includes(person.daysUntilBirthday)) {
             if (person.contact_list === "A List" || person.contact_list === "B List") {
-                filteredUpcomingBirthdays = person
+                filteredUpcomingBirthdays = person;
             }
         }
     }
@@ -243,7 +246,7 @@ function checkBirthdays(person) {
         aAndBBirthdaysToday,
         otherBirthdaysToday,
         filteredUpcomingBirthdays,
-    }
+    };
 }
 
 function fixPersonJSON(person) {
@@ -253,6 +256,8 @@ function fixPersonJSON(person) {
             ? person["Birthday"][0].string.split("::", 2)[1].replace(/\[|\]/g, "") || ""
             : ""
     const birthday = parseStringToDate(birthdayDateString.trim()) || null
+    // console.log(person.title, birthdayDateString,birthday);
+    
     let contactDateString
     let last_contact
     let contactUIDString
@@ -352,19 +357,33 @@ function fixPersonJSON(person) {
     return person
 }
 
-export function calculateAge(birthdate) {
-    const today = new Date()
-    const birthDate = new Date(birthdate)
-    let age = today.getFullYear() - birthDate.getFullYear()
-    const monthDiff = today.getMonth() - birthDate.getMonth()
+export function calculateAge(birthdateInput) {    
+    const today = new Date();
+    const utcToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    
+    let parsedBirthDate;
 
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--
+    if (typeof birthdateInput === 'string') {
+        parsedBirthDate = parseStringToDate(birthdateInput.trim());
+    } else if (birthdateInput instanceof Date) {
+        // Ensure the birthdate is also in UTC
+        parsedBirthDate = new Date(Date.UTC(birthdateInput.getUTCFullYear(), birthdateInput.getUTCMonth(), birthdateInput.getUTCDate()));
+    } else if (typeof birthdateInput === 'number') {
+        // Handle timestamp input
+        parsedBirthDate = new Date(birthdateInput);
+        parsedBirthDate = new Date(Date.UTC(parsedBirthDate.getUTCFullYear(), parsedBirthDate.getUTCMonth(), parsedBirthDate.getUTCDate()));
+    } else {
+        console.error("Invalid birthdate format");
+        return "?";
     }
-    if (age == 0) {
-        return "?"
+
+    if (!parsedBirthDate || isNaN(parsedBirthDate.getTime())) {
+        return "?";
     }
-    return age
+
+    const age = differenceInYears(utcToday, parsedBirthDate);
+    
+    return age === 0 ? "?" : age;
 }
 
 export function getOrdinalSuffix(number) {
@@ -427,6 +446,8 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
         (birthdays.otherBirthdaysToday.length > 0)
     ) {
         // block ref other today birthdays to the DNP
+        console.log("inside reminders", p.birthday, p);
+        
         createBlock({
             parentUid: todaysDNPUID,
             order: "last",
