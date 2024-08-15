@@ -9,7 +9,6 @@ import {
     getExtensionAPISetting,
 } from "./utils"
 import { differenceInYears, parse, isValid, setYear, addYears, startOfDay, differenceInDays } from 'date-fns';
-import { utcToZonedTime, format } from 'date-fns-tz';
 
 function checkBatchContactSetting(extensionAPI) {
     const userSetting = extensionAPI.settings.get("batch-contact-notification") || "No Batch"
@@ -199,54 +198,47 @@ function shouldContact(person, intervals) {
     return currentDate >= nextContactDate
 }
 
+const A_AND_B_LISTS = new Set(['A List', 'B List']);
+const SPECIFIC_DAYS = new Set([1, 7, 14]);
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 function checkBirthdays(person) {
-    const today = startOfDay(new Date());
-    const utcToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-
-    let aAndBBirthdaysToday = null;
-    let otherBirthdaysToday = null;
-    let filteredUpcomingBirthdays = null;
-
     if (!person.birthday) {
         console.error("Person has no birthday set:", person);
-        return { aAndBBirthdaysToday, otherBirthdaysToday, filteredUpcomingBirthdays };
+        return { aAndBBirthdaysToday: null, otherBirthdaysToday: null, filteredUpcomingBirthdays: null };
     }
 
-    const personBirthday = new Date(person.birthday);
-    const utcPersonBirthday = new Date(Date.UTC(personBirthday.getUTCFullYear(), personBirthday.getUTCMonth(), personBirthday.getUTCDate()));
+    const now = new Date();
+    const utcToday = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
-    const currentYear = utcToday.getUTCFullYear();
-    let utcBirthdayThisYear = new Date(Date.UTC(currentYear, utcPersonBirthday.getUTCMonth(), utcPersonBirthday.getUTCDate()));
+    const personBirthday = new Date(person.birthday);
+    const utcPersonBirthday = Date.UTC(personBirthday.getUTCFullYear(), personBirthday.getUTCMonth(), personBirthday.getUTCDate());
+
+    const currentYear = new Date(utcToday).getUTCFullYear();
+    let utcBirthdayThisYear = Date.UTC(currentYear, personBirthday.getUTCMonth(), personBirthday.getUTCDate());
 
     // If the birthday has already passed this year, look at next year's birthday
     if (utcBirthdayThisYear < utcToday) {
-        utcBirthdayThisYear = addYears(utcBirthdayThisYear, 1);
+        utcBirthdayThisYear = Date.UTC(currentYear + 1, personBirthday.getUTCMonth(), personBirthday.getUTCDate());
     }
 
-    const daysDiff = differenceInDays(utcBirthdayThisYear, utcToday);
+    const daysDiff = Math.floor((utcBirthdayThisYear - utcToday) / MS_PER_DAY);
 
     if (daysDiff === 0) {
         // Birthday is today
-        if (person.contact_list === "A List" || person.contact_list === "B List") {
-            aAndBBirthdaysToday = person;
+        if (A_AND_B_LISTS.has(person.contact_list)) {
+            return { aAndBBirthdaysToday: person, otherBirthdaysToday: null, filteredUpcomingBirthdays: null };
         } else if (person.contact_list !== "F List") {
-            otherBirthdaysToday = person;
+            return { aAndBBirthdaysToday: null, otherBirthdaysToday: person, filteredUpcomingBirthdays: null };
         }
     } else if (daysDiff > 0 && daysDiff <= 14) {
-        person.daysUntilBirthday = daysDiff;
-        const specificDays = [1, 7, 14];
-        if (specificDays.includes(person.daysUntilBirthday)) {
-            if (person.contact_list === "A List" || person.contact_list === "B List") {
-                filteredUpcomingBirthdays = person;
-            }
+        if (A_AND_B_LISTS.has(person.contact_list) && SPECIFIC_DAYS.has(daysDiff)) {
+            person.daysUntilBirthday = daysDiff;
+            return { aAndBBirthdaysToday: null, otherBirthdaysToday: null, filteredUpcomingBirthdays: person };
         }
     }
 
-    return {
-        aAndBBirthdaysToday,
-        otherBirthdaysToday,
-        filteredUpcomingBirthdays,
-    };
+    return { aAndBBirthdaysToday: null, otherBirthdaysToday: null, filteredUpcomingBirthdays: null };
 }
 
 function fixPersonJSON(person) {
