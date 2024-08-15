@@ -439,12 +439,13 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     ) {
         // block ref other today birthdays to the DNP
         console.log("inside reminders", p.birthday, p);
-        
+        // TODO 
         createBlock({
             parentUid: todaysDNPUID,
             order: "last",
             node: {
-                text: `((${getBlockUidByContainsTextOnPage("Birthdays Today", "roam/templates")}))`,
+                // text: `((${getBlockUidByContainsTextOnPage("Birthdays Today", "roam/templates")}))`,
+                text: `Birthdays Today`,
                 children: birthdays.otherBirthdaysToday.map((p) => ({
                     text: `[${p.name} is ${calculateAge(p.birthday)} years old](((${p.birthday_UID})))`,
                 })),
