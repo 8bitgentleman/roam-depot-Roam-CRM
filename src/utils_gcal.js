@@ -128,7 +128,6 @@ export async function getEventInfo(people, extensionAPI, testing, modal = false)
                         if (attendees.length > 1) {
                             const eventId = result.event.id
                             const storedEvent = storedEvents[eventId]
-
                             // check if the event exists in the saved roam history
                             if (storedEvent) {
                                 // the event exists
@@ -169,6 +168,12 @@ export async function getEventInfo(people, extensionAPI, testing, modal = false)
                                         let startDate = convertEventDateFormats(result.event.start)
                                         let newParentBlockUID =
                                             window.roamAlphaAPI.util.dateToPageUid(startDate)
+                                        let parentBlockTitle =
+                                            window.roamAlphaAPI.util.dateToPageTitle(startDate) //events to specific DNP
+                                        // create the DNP page if it doesn't exist
+                                        // This avoids creating bad pages
+                                        window.roamAlphaAPI.createPage({"page":{"title": parentBlockTitle}})
+
                                         window.roamAlphaAPI.moveBlock({
                                             location: { "parent-uid": newParentBlockUID, order: 0 },
                                             block: { uid: storedEvent.blockUID },
@@ -196,8 +201,16 @@ export async function getEventInfo(people, extensionAPI, testing, modal = false)
                                 let blockUID = window.roamAlphaAPI.util.generateUID()
                                 // let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date()) //all one todays DNP
                                 let startDate = convertEventDateFormats(result.event.start)
+                                let parentBlockTitle =
+                                    window.roamAlphaAPI.util.dateToPageTitle(startDate) //events to specific DNP
+                                
+                                // create the DNP page if it doesn't exist
+                                // This avoids creating bad pages
+                                window.roamAlphaAPI.createPage({"page":{"title": parentBlockTitle}})
+
                                 let parentBlockUID =
                                     window.roamAlphaAPI.util.dateToPageUid(startDate) //events to specific DNP
+
                                 createBlock({
                                     parentUid: parentBlockUID,
                                     node: {

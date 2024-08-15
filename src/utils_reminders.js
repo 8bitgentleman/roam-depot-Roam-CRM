@@ -204,7 +204,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function checkBirthdays(person) {
     if (!person.birthday) {
-        console.error("Person has no birthday set:", person);
+        // console.error("Person has no birthday set:", person);
         return { aAndBBirthdaysToday: null, otherBirthdaysToday: null, filteredUpcomingBirthdays: null };
     }
 
@@ -438,7 +438,6 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
         (birthdays.otherBirthdaysToday.length > 0)
     ) {
         // block ref other today birthdays to the DNP
-        console.log("inside reminders", p.birthday, p);
         // TODO 
         createBlock({
             parentUid: todaysDNPUID,
