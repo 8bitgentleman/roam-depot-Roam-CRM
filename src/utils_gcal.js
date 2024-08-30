@@ -1,7 +1,7 @@
 import createBlock from "roamjs-components/writes/createBlock"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import { showToast } from "./components/toast"
-import { getExtensionAPISetting } from "./utils"
+import { getExtensionAPISetting, getPageUID } from "./utils"
 
 function extractEmailFromString(text) {
     // Regular expression for matching an email address
@@ -166,16 +166,16 @@ export async function getEventInfo(people, extensionAPI, testing, modal = false)
                                         // event date has changed - move block to new page
                                         // FIXME why does the block string still change when only moving it?
                                         let startDate = convertEventDateFormats(result.event.start)
-                                        let newParentBlockUID =
-                                            window.roamAlphaAPI.util.dateToPageUid(startDate)
                                         let parentBlockTitle =
                                             window.roamAlphaAPI.util.dateToPageTitle(startDate) //events to specific DNP
+                                        // check if page exists
                                         // create the DNP page if it doesn't exist
                                         // This avoids creating bad pages
-                                        window.roamAlphaAPI.createPage({"page":{"title": parentBlockTitle}})
+                                        let pageUID = await getPageUID(parentBlockTitle)
+                                        
 
-                                        window.roamAlphaAPI.moveBlock({
-                                            location: { "parent-uid": newParentBlockUID, order: 0 },
+                                        await window.roamAlphaAPI.moveBlock({
+                                            location: { "parent-uid": pageUID, order: 0 },
                                             block: { uid: storedEvent.blockUID },
                                         })
 
@@ -199,20 +199,16 @@ export async function getEventInfo(people, extensionAPI, testing, modal = false)
                                     extensionAPI,
                                 )
                                 let blockUID = window.roamAlphaAPI.util.generateUID()
-                                // let parentBlockUID = window.roamAlphaAPI.util.dateToPageUid(new Date()) //all one todays DNP
                                 let startDate = convertEventDateFormats(result.event.start)
                                 let parentBlockTitle =
                                     window.roamAlphaAPI.util.dateToPageTitle(startDate) //events to specific DNP
                                 
                                 // create the DNP page if it doesn't exist
                                 // This avoids creating bad pages
-                                window.roamAlphaAPI.createPage({"page":{"title": parentBlockTitle}})
+                                let pageUID = await getPageUID(parentBlockTitle)
 
-                                let parentBlockUID =
-                                    window.roamAlphaAPI.util.dateToPageUid(startDate) //events to specific DNP
-
-                                createBlock({
-                                    parentUid: parentBlockUID,
+                                await createBlock({
+                                    parentUid: pageUID,
                                     node: {
                                         text: headerString,
                                         open: false,

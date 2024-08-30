@@ -1,3 +1,5 @@
+import createPage from "roamjs-components/writes/createPage"
+
 export async function getPageUID(page) {
     // Perform Roam Research datalog pull
     const result = window.roamAlphaAPI.data.pull(
@@ -9,11 +11,13 @@ export async function getPageUID(page) {
         // If data exists, return the existing block UID
         return result[":block/uid"]
     } else {
-        const newPageUid = window.roamAlphaAPI.util.generateUID()
-        createPage({ title: page, uid: newPageUid })
-        return newPageUid
+        // const newPageUid = window.roamAlphaAPI.util.generateUID()
+        // roam-js-components createPage returns a UID as a promise which resolves to a UID
+        
+        return createPage({ title: page})
     }
 }
+
 export function getExtensionAPISetting(extensionAPI, key, defaultValue) {
     const value = extensionAPI?.settings?.get(key)
     return value !== null ? value : defaultValue

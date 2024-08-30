@@ -13,7 +13,7 @@ import IntervalSettings from "./components/list_intervals"
 import displayCRMDialog from "./components/clay"
 
 const testing = false
-const version = "v2.5.8"
+const version = "v2.6"
 
 const plugin_title = "Roam CRM"
 

@@ -7,6 +7,7 @@ import {
     getBlockUidByContainsTextOnPage,
     isSecondDateAfter,
     getExtensionAPISetting,
+    getPageUID
 } from "./utils"
 import { differenceInYears, parse, isValid, setYear, addYears, startOfDay, differenceInDays } from 'date-fns';
 
@@ -399,7 +400,7 @@ function isModalEmpty(obj, excludeKey) {
         .every((key) => Array.isArray(obj[key]) && obj[key].length === 0)
 }
 
-function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
+async function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     let birthdays = {
         aAndBBirthdaysToday: [],
         otherBirthdaysToday: [],
@@ -432,15 +433,20 @@ function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
 
     // check if there are lower priority birthdays and create on DNP
     const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
-
+    let todaysDNPTitle = window.roamAlphaAPI.util.dateToPageTitle(new Date()) 
+    // check if page exists
+    // create the DNP page if it doesn't exist
+    // This avoids creating bad pages
+    let pageUID = await getPageUID(todaysDNPTitle)
+    
     if (
         isSecondDateAfter(lastBirthdayCheck, todaysDNPUID) &
         (birthdays.otherBirthdaysToday.length > 0)
     ) {
         // block ref other today birthdays to the DNP
-        // TODO 
-        createBlock({
-            parentUid: todaysDNPUID,
+        // TODO         
+        await createBlock({
+            parentUid: pageUID,
             order: "last",
             node: {
                 // text: `((${getBlockUidByContainsTextOnPage("Birthdays Today", "roam/templates")}))`,

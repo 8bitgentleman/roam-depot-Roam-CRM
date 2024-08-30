@@ -38,9 +38,18 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
 
     // Fetch the reminders data only once when the component mounts
     useEffect(() => {
-        const data = remindersSystem(people, lastBirthdayCheck, extensionAPI)
-        setReminders(data)
-    }, [lastBirthdayCheck])
+        const fetchReminders = async () => {
+            try {
+                const data = await remindersSystem(people, lastBirthdayCheck, extensionAPI);
+                setReminders(data);
+            } catch (error) {
+                console.error("Error fetching reminders:", error);
+                // You might want to set some error state here or handle the error in some way
+            }
+        };
+
+        fetchReminders();
+    }, [people, lastBirthdayCheck, extensionAPI]);
 
     // Handler for checkbox change
     const handleCheckboxChange = (contactName) => {
@@ -125,7 +134,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                     !getExtensionAPISetting(extensionAPI, "calendar-setting", false)
                                 }
                                 onClick={() => getEventInfo(people, extensionAPI, false)}
-                                // TODO add a toast if there are no changes or updates
+                            // TODO add a toast if there are no changes or updates
                             />
                         </Tooltip>
                     </div>
