@@ -130,7 +130,8 @@ export async function getAllPeople() {
                 ]`
 
     let results = await window.roamAlphaAPI.q(query).flat()
-
+    console.log("results", results);
+    
     function extractElementsWithKeywords(data, keywords) {
         return data.map((item) => {
             // Initialize an object to hold the categorized items with empty arrays
@@ -163,6 +164,38 @@ export async function getAllPeople() {
         })
     }
 
+    function extractAttributes(data) {
+        return data.map((item) => {
+            const attributes = {};
+    
+            // Check if lookup exists and is an array
+            if (Array.isArray(item.lookup)) {
+                item.lookup.forEach((lookupItem) => {
+                    if (lookupItem.string) {
+                        const match = lookupItem.string.match(/^([^:]+)::(.*)$/);
+                        if (match) {
+                            const [, key, value] = match;
+                            const trimmedKey = key.trim();
+                            if (!attributes[trimmedKey]) {
+                                attributes[trimmedKey] = [];
+                            }
+                            attributes[trimmedKey].push({
+                                ...lookupItem,
+                                value: value.trim()
+                            });
+                        }
+                    }
+                });
+            }
+    
+            // Return the original item with the extracted attributes added
+            return {
+                ...item,
+                ...attributes
+            };
+        });
+    }
+
     // Define the attributes to extract for
     const keywords = [
         "Birthday::",
@@ -171,8 +204,13 @@ export async function getAllPeople() {
         "Email::",
         "Relationship Metadata::",
     ]
-    let peopleList = extractElementsWithKeywords(results, keywords)
+    // let peopleList = extractElementsWithKeywords(results, keywords)
+    let peopleList = extractAttributes(results);
+    console.log("peopleList2",peopleList);
+    
     const fixedPeopleList = peopleList.map(fixPersonJSON)
+    console.log("fixedPeopleList",fixedPeopleList);
+    
     return fixedPeopleList
 }
 
