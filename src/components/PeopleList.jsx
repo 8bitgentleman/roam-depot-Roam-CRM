@@ -10,6 +10,8 @@ import {
 } from "@blueprintjs/core";
 
 const PeopleList = ({ filteredPeople = [], setSelectedPersonUID, selectedPersonUID }) => {
+    console.log(filteredPeople);
+    
     const [columns, setColumns] = useState(["name"]);
     const [availableColumns, setAvailableColumns] = useState([]);
     const [sortColumn, setSortColumn] = useState("name");
