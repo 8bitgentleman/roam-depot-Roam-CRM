@@ -15,6 +15,8 @@ import {
     Tooltip,
 } from "@blueprintjs/core"
 import { getAllPageRefEvents, calculateAge, getOrdinalSuffix } from "../utils_reminders"
+import PeopleList from './PeopleList';
+console.log('PeopleList:', PeopleList);
 
 const CRMDialog = ({ onClose, isOpen, people }) => {
     const [selectedPersonUID, setSelectedPersonUID] = useState(null)
@@ -187,19 +189,6 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                 })
         }
     }, [selectedPerson, selectedEvent])
-
-    const PeopleList = () => (
-        <Menu className="main-section" style={{ flex: "1", overflowY: "auto", padding: "10px" }}>
-            {filteredPeople.map((person) => (
-                <MenuItem
-                    key={person.uid}
-                    text={getPersonTitle(person)}
-                    active={person.uid === selectedPersonUID}
-                    onClick={() => setSelectedPersonUID(person.uid)}
-                />
-            ))}
-        </Menu>
-    )
 
     const EventList = () => (
         <Menu className="main-section" style={{ flex: "1", overflowY: "auto", padding: "10px" }}>
@@ -446,7 +435,11 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                             case "home":
                                 return <HomeContent />
                             case "people":
-                                return <PeopleList />
+                                return <PeopleList
+                                    filteredPeople={filteredPeople}
+                                    setSelectedPersonUID={setSelectedPersonUID}
+                                    selectedPersonUID={selectedPersonUID}
+                                />;
                             case "events":
                                 return <EventList />
                             case "birthdays":
@@ -486,8 +479,8 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                                 {selectedPerson
                                     ? getPersonTitle(selectedPerson)
                                     : selectedEvent.type === "birthday"
-                                      ? `${selectedEvent.title || selectedEvent.string}'s Birthday`
-                                      : selectedEvent.title || selectedEvent.page.title}
+                                        ? `${selectedEvent.title || selectedEvent.string}'s Birthday`
+                                        : selectedEvent.title || selectedEvent.page.title}
                             </h4>
                             <div id="block-container-1" style={{ marginTop: "10px" }}></div>
                         </>
