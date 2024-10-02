@@ -164,9 +164,14 @@ export async function getAllPeople() {
         })
     }
 
-    function extractAttributes(data) {
+    function extractAttributes(data, keywords) {
         return data.map((item) => {
-            const attributes = {};
+            // Initialize an object with empty arrays for each keyword
+            const attributes = keywords.reduce((acc, keyword) => {
+                const key = keyword.replace(/::/g, "").trim();
+                acc[key] = [];
+                return acc;
+            }, {});
     
             // Check if lookup exists and is an array
             if (Array.isArray(item.lookup)) {
@@ -176,9 +181,13 @@ export async function getAllPeople() {
                         if (match) {
                             const [, key, value] = match;
                             const trimmedKey = key.trim();
-                            if (!attributes[trimmedKey]) {
+                            
+                            // If the key doesn't exist in attributes, create it
+                            if (!attributes.hasOwnProperty(trimmedKey)) {
                                 attributes[trimmedKey] = [];
                             }
+                            
+                            // Add the lookup item to the appropriate key
                             attributes[trimmedKey].push({
                                 ...lookupItem,
                                 value: value.trim()
@@ -197,15 +206,15 @@ export async function getAllPeople() {
     }
 
     // Define the attributes to extract for
-    const keywords = [
+    const important_keywords = [
         "Birthday::",
         "Contact Frequency::",
         "Last Contacted::",
         "Email::",
         "Relationship Metadata::",
     ]
-    // let peopleList = extractElementsWithKeywords(results, keywords)
-    let peopleList = extractAttributes(results);
+    // let peopleList = extractElementsWithKeywords(results, important_keywords)
+    let peopleList = extractAttributes(results, important_keywords);
     console.log("peopleList2",peopleList);
     
     const fixedPeopleList = peopleList.map(fixPersonJSON)
@@ -282,12 +291,14 @@ function checkBirthdays(person) {
 
 function fixPersonJSON(person) {
     // parse through raw strings and extract important info
+    console.log(person.title, person);
+    
     const birthdayDateString =
         person["Birthday"].length > 0
             ? person["Birthday"][0].string.split("::", 2)[1].replace(/\[|\]/g, "") || ""
             : ""
     const birthday = parseStringToDate(birthdayDateString.trim()) || null
-    // console.log(person.title, birthdayDateString,birthday);
+    console.log(person.title, birthdayDateString,birthday);
     
     let contactDateString
     let last_contact
