@@ -98,9 +98,21 @@ function createPanelConfig(extensionAPI, pullFunction) {
             },
             {
                 id: "trigger-modal",
-                name: "Trigger Modal at start of Day",
+                name: "Trigger modal at start of day",
                 description:
                     "In addition to triggering on load this will also trigger the modal at the start of each day. This will be most useful for people who leave Roam open for extended periods.",
+                action: {
+                    type: "switch",
+                    onChange: async (evt) => {
+                        // TODO is this ever removed?
+                    },
+                },
+            },
+            {
+                id: "trigger-modal-on-load",
+                name: "Prevent modal triggering on load",
+                description:
+                    "This prevents the CRM Modal opening when Roam is first opened.",
                 action: {
                     type: "switch",
                     onChange: async (evt) => {
@@ -310,11 +322,14 @@ async function onload({ extensionAPI }) {
         displayCRMDialog(people)
         // displayBirthdays(people, "01-19-2024", extensionAPI)
     } else {
-        displayBirthdays(
-            people,
-            getExtensionAPISetting(extensionAPI, "last-birthday-check-date", "01-19-2024"),
-            extensionAPI,
-        )
+        if (!getExtensionAPISetting(extensionAPI, "trigger-modal-on-load", false)) {
+            displayBirthdays(
+                people,
+                getExtensionAPISetting(extensionAPI, "last-birthday-check-date", "01-19-2024"),
+                extensionAPI,
+            )
+        }
+        
     }
 
     // update last birthday check since it's already happened
