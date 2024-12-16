@@ -529,13 +529,24 @@ function removeTagFromBlock(blockString, tag) {
 }
 
 export async function parseAgendaPull(after, extensionAPI) {
-    // Function to clean up the original block
+    // Function to clean up the original block while preserving newlines
     function cleanUpBlock(blockUID, blockString) {
-        const cleanedString = blockString.replace(agendaRegex, "").trim()
+        // Split the string by newlines to preserve them
+        const lines = blockString.split('\n')
+        
+        // Process each line to remove agenda tags
+        const cleanedLines = lines.map(line => 
+            line.replace(agendaRegex, "").trim()
+        )
+        
+        // Rejoin the lines, keeping empty lines for spacing
+        const cleanedString = cleanedLines.join('\n')
+        
         window.roamAlphaAPI.updateBlock({
             block: { uid: blockUID, string: cleanedString },
         })
     }
+
     // Precompile the regex
     const agendaRegex = /\[\[Agenda\]\]|\#Agenda|\#\[\[Agenda\]\]/g
 
@@ -549,6 +560,16 @@ export async function parseAgendaPull(after, extensionAPI) {
         })
     }
 
+    // Helper function to remove tags while preserving newlines
+    function removeTagFromBlock(blockString, tagName) {
+        const lines = blockString.split('\n')
+        const processedLines = lines.map(line => {
+            // Only remove #tagName, not [[tagName]]
+            return line.replace(new RegExp(`#${tagName}\\b`, 'g'), '').trim()
+        })
+        return processedLines.join('\n')
+    }
+
     if (":block/_refs" in after) {
         const agendaBlocks = after[":block/_refs"]
         const filteredBlocks = agendaBlocks.filter((block) => {
@@ -560,34 +581,36 @@ export async function parseAgendaPull(after, extensionAPI) {
             // Return true if both conditions are met
             return hasRefs && doesNotStartWithAgenda
         })
+
         if (filteredBlocks.length > 0) {
             const people = await getAllPeople()
 
-            filteredBlocks.forEach(async (block) => {
+            for (const block of filteredBlocks) {
                 // pull out the block string to create a source of truth through the changes
                 let blockString = block[":block/string"]
 
                 const relevantRefs = block[":block/refs"].filter(
-                    (ref) => ref[":node/title"] !== "Agenda",
+                    (ref) => ref[":node/title"] !== "Agenda"
                 )
-                relevantRefs.forEach(async (ref) => {
+
+                for (const ref of relevantRefs) {
                     const matchingPerson = getDictionaryWithKeyValue(
                         people,
                         "title",
-                        ref[":node/title"],
+                        ref[":node/title"]
                     )
 
                     if (matchingPerson) {
                         const personAgendaBlock = getBlockUidByContainsTextOnPage(
                             "Agenda::",
-                            matchingPerson.title,
+                            matchingPerson.title
                         )
                         createTodoBlock(block[":block/uid"], personAgendaBlock)
 
                         if (
                             getExtensionAPISetting(extensionAPI, "agenda-addr-remove-names", false)
                         ) {
-                            // remove people tags #john but not [[john]]
+                            // remove people tags while preserving newlines
                             blockString = removeTagFromBlock(blockString, matchingPerson.title)
                             await window.roamAlphaAPI.updateBlock({
                                 block: {
@@ -596,11 +619,12 @@ export async function parseAgendaPull(after, extensionAPI) {
                                 },
                             })
                         }
-                        // remove the #Agenda block
+                        
+                        // remove the #Agenda block while preserving newlines
                         cleanUpBlock(block[":block/uid"], blockString)
                     }
-                })
-            })
+                }
+            }
         }
     }
 }

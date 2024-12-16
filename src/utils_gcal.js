@@ -199,7 +199,9 @@ export async function getEventInfo(people, extensionAPI, testing, modal = false)
                                     extensionAPI,
                                 )
                                 let blockUID = window.roamAlphaAPI.util.generateUID()
+                                // Get the date of an event
                                 let startDate = convertEventDateFormats(result.event.start)
+                                // convert that date into a DNP page title
                                 let parentBlockTitle =
                                     window.roamAlphaAPI.util.dateToPageTitle(startDate) //events to specific DNP
                                 
