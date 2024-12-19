@@ -75,7 +75,7 @@ Within the modal you can type a quick message to each person to stay in flow. Th
 
 -   Birthday reminders happen 14 days before, and on the day of. They remind you that 'Bill Gates turned 46 today.' A and B listers birthday reminders show up in the modal 14 & 7 days before as well as on the day of.
     -   <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/modal%20birthdays.png" width="300"></img>
--   C and B lister birthdays only show up on the day-of as a block ref on the DNP
+-   C and D lister birthdays only show up on the day-of as a block ref on the DNP (configurable in extension settings)
     -   <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/birthdayRef.png" width="300"></img>
 -   D and F listers do now show up at all
 

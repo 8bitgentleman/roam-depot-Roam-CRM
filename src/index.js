@@ -13,7 +13,7 @@ import IntervalSettings from "./components/list_intervals"
 import displayCRMDialog from "./components/clay"
 
 const testing = false
-const version = "v2.7"
+const version = "v2.8"
 
 const plugin_title = "Roam CRM"
 
@@ -118,6 +118,14 @@ function createPanelConfig(extensionAPI, pullFunction) {
                     onChange: async (evt) => {
                         // TODO is this ever removed?
                     },
+                },
+            },
+            {
+                id: "dnp-all-birthdays",
+                name: "Include A/B List birthdays on Daily Notes",
+                description: "When enabled, birthdays for A/B List contacts will appear on Daily Notes pages alongside other birthdays. By default, A/B List birthdays only appear in the CRM drawer. F List birthdays are always excluded.",
+                action: {
+                    type: "switch",
                 },
             },
             {

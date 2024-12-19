@@ -68,17 +68,17 @@ function parseStringToDate(dateString) {
         if (isValid(date)) {
             // Convert the parsed date to UTC
             const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-            
+
             // If the parsed date doesn't have a year, set it to the current year
             if (!formatString.includes('yyyy')) {
                 return setYear(utcDate, new Date().getUTCFullYear());
-            }            
+            }
             return utcDate;
         }
     }
 
     // If all else fails, log an error and return null
-    console.error("Invalid date format", dateString);
+    // console.error("Invalid date format", dateString);
     return null;
 }
 
@@ -130,8 +130,7 @@ export async function getAllPeople() {
                 ]`
 
     let results = await window.roamAlphaAPI.q(query).flat()
-    console.log("results", results);
-    
+
     function extractElementsWithKeywords(data, keywords) {
         return data.map((item) => {
             // Initialize an object to hold the categorized items with empty arrays
@@ -172,7 +171,7 @@ export async function getAllPeople() {
                 acc[key] = [];
                 return acc;
             }, {});
-    
+
             // Check if lookup exists and is an array
             if (Array.isArray(item.lookup)) {
                 item.lookup.forEach((lookupItem) => {
@@ -181,12 +180,12 @@ export async function getAllPeople() {
                         if (match) {
                             const [, key, value] = match;
                             const trimmedKey = key.trim();
-                            
+
                             // If the key doesn't exist in attributes, create it
                             if (!attributes.hasOwnProperty(trimmedKey)) {
                                 attributes[trimmedKey] = [];
                             }
-                            
+
                             // Add the lookup item to the appropriate key
                             attributes[trimmedKey].push({
                                 ...lookupItem,
@@ -196,7 +195,7 @@ export async function getAllPeople() {
                     }
                 });
             }
-    
+
             // Return the original item with the extracted attributes added
             return {
                 ...item,
@@ -215,11 +214,9 @@ export async function getAllPeople() {
     ]
     // let peopleList = extractElementsWithKeywords(results, important_keywords)
     let peopleList = extractAttributes(results, important_keywords);
-    console.log("peopleList2",peopleList);
-    
+
     const fixedPeopleList = peopleList.map(fixPersonJSON)
-    console.log("fixedPeopleList",fixedPeopleList);
-    
+
     return fixedPeopleList
 }
 
@@ -291,15 +288,14 @@ function checkBirthdays(person) {
 
 function fixPersonJSON(person) {
     // parse through raw strings and extract important info
-    console.log(person.title, person);
-    
+
     const birthdayDateString =
         person["Birthday"].length > 0
             ? person["Birthday"][0].string.split("::", 2)[1].replace(/\[|\]/g, "") || ""
             : ""
     const birthday = parseStringToDate(birthdayDateString.trim()) || null
-    console.log(person.title, birthdayDateString,birthday);
-    
+    // console.log(person.title, birthdayDateString,birthday);
+
     let contactDateString
     let last_contact
     let contactUIDString
@@ -399,10 +395,10 @@ function fixPersonJSON(person) {
     return person
 }
 
-export function calculateAge(birthdateInput) {    
+export function calculateAge(birthdateInput) {
     const today = new Date();
     const utcToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    
+
     let parsedBirthDate;
 
     if (typeof birthdateInput === 'string') {
@@ -424,7 +420,7 @@ export function calculateAge(birthdateInput) {
     }
 
     const age = differenceInYears(utcToday, parsedBirthDate);
-    
+
     return age === 0 ? "?" : age;
 }
 
@@ -482,29 +478,34 @@ async function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
 
     // check if there are lower priority birthdays and create on DNP
     const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
-    let todaysDNPTitle = window.roamAlphaAPI.util.dateToPageTitle(new Date()) 
+    let todaysDNPTitle = window.roamAlphaAPI.util.dateToPageTitle(new Date())
     // check if page exists
     // create the DNP page if it doesn't exist
     // This avoids creating bad pages
     let pageUID = await getPageUID(todaysDNPTitle)
-    
-    if (
-        isSecondDateAfter(lastBirthdayCheck, todaysDNPUID) &
-        (birthdays.otherBirthdaysToday.length > 0)
-    ) {
-        // block ref other today birthdays to the DNP
-        // TODO         
-        await createBlock({
-            parentUid: pageUID,
-            order: "last",
-            node: {
-                // text: `((${getBlockUidByContainsTextOnPage("Birthdays Today", "roam/templates")}))`,
-                text: `Birthdays Today`,
-                children: birthdays.otherBirthdaysToday.map((p) => ({
-                    text: `[${p.name} is ${calculateAge(p.birthday)} years old](((${p.birthday_UID})))`,
-                })),
-            },
-        })
+
+    if (isSecondDateAfter(lastBirthdayCheck, todaysDNPUID)) {
+        // Check if we should include A&B list birthdays on DNP
+        const showAllBirthdays = getExtensionAPISetting(extensionAPI, "dnp-all-birthdays", false);
+
+        // Combine birthday lists based on setting
+        const birthdaysToShow = showAllBirthdays
+            ? [...birthdays.otherBirthdaysToday, ...birthdays.aAndBBirthdaysToday]
+            : birthdays.otherBirthdaysToday;
+
+        // Only create block if there are birthdays to show
+        if (birthdaysToShow.length > 0) {
+            await createBlock({
+                parentUid: pageUID,
+                order: "last",
+                node: {
+                    text: `Birthdays Today`,
+                    children: birthdaysToShow.map((p) => ({
+                        text: `[${p.name} is ${calculateAge(p.birthday)} years old](((${p.birthday_UID})))`,
+                    })),
+                },
+            });
+        }
     }
 
     const mergedReminders = {
@@ -533,15 +534,15 @@ export async function parseAgendaPull(after, extensionAPI) {
     function cleanUpBlock(blockUID, blockString) {
         // Split the string by newlines to preserve them
         const lines = blockString.split('\n')
-        
+
         // Process each line to remove agenda tags
-        const cleanedLines = lines.map(line => 
+        const cleanedLines = lines.map(line =>
             line.replace(agendaRegex, "").trim()
         )
-        
+
         // Rejoin the lines, keeping empty lines for spacing
         const cleanedString = cleanedLines.join('\n')
-        
+
         window.roamAlphaAPI.updateBlock({
             block: { uid: blockUID, string: cleanedString },
         })
@@ -619,7 +620,7 @@ export async function parseAgendaPull(after, extensionAPI) {
                                 },
                             })
                         }
-                        
+
                         // remove the #Agenda block while preserving newlines
                         cleanUpBlock(block[":block/uid"], blockString)
                     }

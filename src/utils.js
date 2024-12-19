@@ -106,7 +106,6 @@ export function filterLastContactedWithin3Months(people) {
 
     return people.filter((person) => {
         const lastContactedDate = parseLastContactedDate(person)
-        console.log("lastContacted", lastContactedDate)
 
         return lastContactedDate && lastContactedDate >= threeMonthsAgo
     })
