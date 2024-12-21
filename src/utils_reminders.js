@@ -483,7 +483,8 @@ async function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     // create the DNP page if it doesn't exist
     // This avoids creating bad pages
     let pageUID = await getPageUID(todaysDNPTitle)
-
+    console.log("birthdays", birthdays);
+    
     if (isSecondDateAfter(lastBirthdayCheck, todaysDNPUID)) {
         // Check if we should include A&B list birthdays on DNP
         const showAllBirthdays = getExtensionAPISetting(extensionAPI, "dnp-all-birthdays", false);
@@ -562,13 +563,19 @@ export async function parseAgendaPull(after, extensionAPI) {
     }
 
     // Helper function to remove tags while preserving newlines
-    function removeTagFromBlock(blockString, tagName) {
-        const lines = blockString.split('\n')
-        const processedLines = lines.map(line => {
-            // Only remove #tagName, not [[tagName]]
-            return line.replace(new RegExp(`#${tagName}\\b`, 'g'), '').trim()
-        })
-        return processedLines.join('\n')
+    function removeTagFromBlock(blockString, pageName) {
+        if (!blockString || !pageName) return blockString;
+        
+        const varRegex = new RegExp(`#${pageName}|#\\[\\[${pageName}\\]\\]`, "g")
+    
+        return blockString
+            .split('\n')
+            .map(line => 
+                line
+                    .replace(varRegex, '')   // Then remove simple tags
+                    .trim()
+            )
+            .join('\n');
     }
 
     if (":block/_refs" in after) {
