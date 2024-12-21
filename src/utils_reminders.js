@@ -483,7 +483,6 @@ async function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     // create the DNP page if it doesn't exist
     // This avoids creating bad pages
     let pageUID = await getPageUID(todaysDNPTitle)
-    console.log("birthdays", birthdays);
     
     if (isSecondDateAfter(lastBirthdayCheck, todaysDNPUID)) {
         // Check if we should include A&B list birthdays on DNP
@@ -518,18 +517,6 @@ async function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
 }
 
 //MARK:Agenda Addr
-function removeTagFromBlock(blockString, tag) {
-    // Create the regex pattern
-    const varRegex = new RegExp(`#${tag}|#\\[\\[${tag}\\]\\]`, "g")
-
-    // Replace all occurrences
-    let replacedStr = blockString.replace(varRegex, "")
-    // cleanup excess spaces
-    replacedStr = replacedStr.replace(/\s+/g, " ").trim()
-
-    return replacedStr
-}
-
 export async function parseAgendaPull(after, extensionAPI) {
     // Function to clean up the original block while preserving newlines
     function cleanUpBlock(blockUID, blockString) {
