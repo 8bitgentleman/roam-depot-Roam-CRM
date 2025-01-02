@@ -86,155 +86,276 @@ function convertEventDateFormats(start) {
 }
 
 // MARK: eventInfo
+// Main function to sync Google Calendar events with Roam
+// Fetches events for the next 7 days and creates/updates corresponding blocks in Roam
 export async function getEventInfo(people, extensionAPI, testing, modal = false) {
+    // Get previously stored calendar events from extension settings
     const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
-    console.log("StoredEvents", storedEvents)
+    console.group('Calendar Sync Start:', new Date().toISOString())
+    console.log('Current stored events:', storedEvents)
 
+    // Track emails with auth issues and events that don't need updates
     let prevent_update = new Set()
     let no_update = new Set() //TODO add a toast if there are no updates
+    let processed_events = new Set()
 
+    // Calculate date range for calendar fetch (today + 7 days)
     const today = new Date()
     const endDate = new Date()
     endDate.setDate(today.getDate() + 7)
 
+    // Convert dates to Roam page title format (e.g., "January 1st, 2024")
     const startDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(today)
     const endDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(endDate)
 
-    await window.roamjs.extension.google
-        .fetchGoogleCalendar({
+    try {
+        // Fetch calendar events from Google Calendar
+        const results = await window.roamjs.extension.google.fetchGoogleCalendar({
             startDatePageTitle: startDatePageTitle,
             endDatePageTitle: endDatePageTitle,
         })
-        .then(async (results) => {
-            console.log("Events: ", results)
-            // reverse results so they come in the correct order
-            results.reverse()
-            if (results[0].text !== "No Events Scheduled for Selected Date(s)!") {
-                results.forEach(async (result) => {
-                    // check if there are logged in errors
-                    if (
-                        result.text.includes("Error: Must log in") ||
-                        result.text.includes("Error for calendar")
-                    ) {
-                        const errorEmail = extractEmailFromString(result.text)
-                        prevent_update.add(errorEmail)
 
-                        if (!testing) {
-                            showToast(result.text, "DANGER")
-                        }
-                    } else {
-                        let attendees = result.event.attendees || []
+        console.log(`Fetched ${results.length} events from Google Calendar`)
 
-                        if (attendees.length > 1) {
-                            const eventId = result.event.id
-                            const storedEvent = storedEvents[eventId]
-                            // check if the event exists in the saved roam history
-                            if (storedEvent) {
-                                // the event exists
-                                if (storedEvent.event_updated !== result.event.updated) {
-                                    // The event exists and needs to be updated
-                                    // things that could have been changed
-                                    // date the event is on
-                                    // summary of the event or attendees
+        // Exit if no events or error message received
+        if (!results || results[0]?.text === "No Events Scheduled for Selected Date(s)!") {
+            console.log('No events to process')
+            console.groupEnd()
+            return
+        }
 
-                                    if (
-                                        storedEvent.summary !== result.event.summary ||
-                                        !compareLists(storedEvent.attendees, attendees)
-                                    ) {
-                                        // the event summary or attendees has changed
-                                        // just update the event text
-                                        let { headerString, childrenBlocks } = createEventBlocks(
-                                            result.event,
-                                            attendees,
-                                            people,
-                                            extensionAPI,
-                                        )
-                                        updateBlock({
-                                            uid: storedEvent.blockUID,
-                                            text: headerString,
-                                        })
-                                        // update the local record
-                                        storedEvents[eventId] = {
-                                            blockUID: storedEvent.blockUID,
-                                            summary: result.event.summary,
-                                            event_updated: result.event.updated,
-                                            event_start: storedEvent.event_start,
-                                            attendees: attendees,
-                                        }
-                                    }
-                                    if (storedEvent.event_start !== result.event.start.dateTime) {
-                                        // event date has changed - move block to new page
-                                        // FIXME why does the block string still change when only moving it?
-                                        let startDate = convertEventDateFormats(result.event.start)
-                                        let parentBlockTitle =
-                                            window.roamAlphaAPI.util.dateToPageTitle(startDate) //events to specific DNP
-                                        // check if page exists
-                                        // create the DNP page if it doesn't exist
-                                        // This avoids creating bad pages
-                                        let pageUID = await getPageUID(parentBlockTitle)
-                                        
+        // Process events in reverse chronological order
+        // Using for...of ensures sequential processing to avoid race conditions
+        for (const result of results.reverse()) {
+            try {
+                const eventId = result.event?.id
 
-                                        await window.roamAlphaAPI.moveBlock({
-                                            location: { "parent-uid": pageUID, order: 0 },
-                                            block: { uid: storedEvent.blockUID },
-                                        })
+                // Log duplicate processing attempts
+                if (processed_events.has(eventId)) {
+                    console.warn('⚠️ Attempting to process same event twice in one sync:', {
+                        eventId,
+                        summary: result.event?.summary,
+                        start: result.event?.start
+                    })
+                    continue
+                }
+                processed_events.add(eventId)
 
-                                        // update the local record
-                                        storedEvents[eventId] = {
-                                            blockUID: storedEvent.blockUID,
-                                            summary: storedEvent.summary,
-                                            event_updated: result.event.updated,
-                                            event_start: result.event.start.dateTime,
-                                            attendees: storedEvent.attendees,
-                                        }
-                                    }
-                                }
-                            } else {
-                                // if it does not exist create the new block
-
-                                let { headerString, childrenBlocks } = createEventBlocks(
-                                    result.event,
-                                    attendees,
-                                    people,
-                                    extensionAPI,
-                                )
-                                let blockUID = window.roamAlphaAPI.util.generateUID()
-                                // Get the date of an event
-                                let startDate = convertEventDateFormats(result.event.start)
-                                // convert that date into a DNP page title
-                                let parentBlockTitle =
-                                    window.roamAlphaAPI.util.dateToPageTitle(startDate) //events to specific DNP
-                                
-                                // create the DNP page if it doesn't exist
-                                // This avoids creating bad pages
-                                let pageUID = await getPageUID(parentBlockTitle)
-
-                                await createBlock({
-                                    parentUid: pageUID,
-                                    node: {
-                                        text: headerString,
-                                        open: false,
-                                        children: childrenBlocks,
-                                        uid: blockUID,
-                                    },
-                                })
-
-                                storedEvents[eventId] = {
-                                    blockUID: blockUID,
-                                    summary: result.event.summary,
-                                    event_updated: result.event.updated,
-                                    event_start: result.event.start.dateTime,
-                                    attendees: attendees,
-                                }
-                            }
-                        }
+                // Log authentication errors
+                if (result.text.includes("Error: Must log in") || result.text.includes("Error for calendar")) {
+                    const errorEmail = extractEmailFromString(result.text)
+                    prevent_update.add(errorEmail)
+                    console.error('🚫 Calendar auth error:', {
+                        email: errorEmail,
+                        error: result.text
+                    })
+                    if (!testing) {
+                        showToast(result.text, "DANGER")
                     }
+                    continue
+                }
+
+
+                // Skip events with no or single attendee (likely personal events)
+                let attendees = result.event.attendees || []
+                if (attendees.length <= 1) {
+                    console.log('Skipping single-attendee event:', {
+                        eventId,
+                        summary: result.event.summary
+                    })
+                    continue
+                }
+
+                const storedEvent = storedEvents[eventId]
+
+                // Log potential duplicate detection
+                if (storedEvent) {
+                    console.log('Found existing event:', {
+                        eventId,
+                        summary: result.event.summary,
+                        storedUpdate: storedEvent.event_updated,
+                        newUpdate: result.event.updated,
+                        needsUpdate: storedEvent.event_updated !== result.event.updated
+                    })
+                }
+
+                // Skip if event exists and hasn't been updated since last sync
+                // This prevents unnecessary processing and potential duplicates
+                if (storedEvent && storedEvent.event_updated === result.event.updated) {
+                    no_update.add(eventId)
+                    console.log('Skipping unchanged event:', {
+                        eventId,
+                        summary: result.event.summary
+                    })
+                    continue
+                }
+
+                // Process event updates or create new event blocks
+                await updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents)
+            } catch (err) {
+                // Handle individual event processing errors without failing entire sync
+                console.error('❌ Error processing event:', {
+                    eventId: result.event?.id,
+                    summary: result.event?.summary,
+                    error: err.message,
+                    stackTrace: err.stack
                 })
-                extensionAPI.settings.set("synced-cal-events", storedEvents)
-                // extensionAPI.settings.set("synced-cal-events", {}) //TODO clear storage for testing purposes
+                if (!testing) {
+                    showToast(`Error processing event: ${err.message}`, "DANGER")
+                }
+            }
+        }
+
+        console.log('Sync Statistics:', {
+            totalEvents: results.length,
+            processed: processed_events.size,
+            prevented: prevent_update.size,
+            skipped: no_update.size
+        })
+
+        // Save all updates to extension settings after successful processing
+        // This ensures atomic updates and prevents partial saves
+        await extensionAPI.settings.set("synced-cal-events", storedEvents)
+
+    } catch (err) {
+        // Handle overall sync process errors
+        console.error('❌ Fatal sync error:', {
+            error: err.message,
+            stackTrace: err.stack
+        })
+        if (!testing) {
+            showToast(`Error syncing calendar: ${err.message}`, "DANGER")
+        }
+    }
+
+    console.groupEnd()
+}
+
+// Helper function to handle creation and updates of event blocks in Roam
+// Separated from main function for better organization and readability
+async function updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents) {
+    const eventId = result.event.id
+
+    console.group(`Processing event: ${eventId}`)
+    console.log('Event details:', {
+        summary: result.event.summary,
+        start: result.event.start,
+        attendees: attendees.length
+    })
+
+    if (storedEvent) {
+        console.log('Updating existing event block:', {
+            blockUid: storedEvent.blockUID,
+            oldSummary: storedEvent.summary,
+            newSummary: result.event.summary,
+            oldStart: storedEvent.event_start,
+            newStart: result.event.start.dateTime
+        })
+
+        let needsUpdate = false
+
+        // Check if event summary or attendees have changed
+        if (storedEvent.summary !== result.event.summary ||
+            !compareLists(storedEvent.attendees, attendees)) {
+            console.log('Content change detected:', {
+                summaryChanged: storedEvent.summary !== result.event.summary,
+                attendeesChanged: !compareLists(storedEvent.attendees, attendees)
+            })
+            needsUpdate = true
+            // Generate new block content with updated information
+            let { headerString, childrenBlocks } = createEventBlocks(
+                result.event,
+                attendees,
+                people,
+                extensionAPI
+            )
+            // Update the existing block text
+            await updateBlock({
+                uid: storedEvent.blockUID,
+                text: headerString
+            })
+        }
+
+        // Check if event date/time has changed
+        if (storedEvent.event_start !== result.event.start.dateTime) {
+            console.log('Date change detected:', {
+                oldDate: storedEvent.event_start,
+                newDate: result.event.start.dateTime
+            })
+            needsUpdate = true
+            // Calculate new date and get corresponding Roam page
+            let startDate = convertEventDateFormats(result.event.start)
+            let parentBlockTitle = window.roamAlphaAPI.util.dateToPageTitle(startDate)
+            let pageUID = await getPageUID(parentBlockTitle)
+
+            // Ensure page exists before moving block
+            if (!pageUID) {
+                throw new Error(`Failed to get/create page: ${parentBlockTitle}`)
+            }
+
+            // Move block to new date page
+            await window.roamAlphaAPI.moveBlock({
+                location: { "parent-uid": pageUID, order: 0 },
+                block: { uid: storedEvent.blockUID }
+            })
+        }
+
+        // Update stored event data if changes were made
+        if (needsUpdate) {
+            console.log('Updating stored event data')
+            storedEvents[eventId] = {
+                blockUID: storedEvent.blockUID,
+                summary: result.event.summary,
+                event_updated: result.event.updated,
+                event_start: result.event.start.dateTime,
+                attendees: attendees
+            }
+        }
+    } else {
+        // Creation logic for new events
+        // Generate block content for new event
+        console.log('Creating new event block')
+        let { headerString, childrenBlocks } = createEventBlocks(
+            result.event,
+            attendees,
+            people,
+            extensionAPI
+        )
+        // Generate unique ID for new block
+        let blockUID = window.roamAlphaAPI.util.generateUID()
+        // Calculate event date and get corresponding Roam page
+        let startDate = convertEventDateFormats(result.event.start)
+        let parentBlockTitle = window.roamAlphaAPI.util.dateToPageTitle(startDate)
+        let pageUID = await getPageUID(parentBlockTitle)
+
+        // Ensure page exists before creating block
+        if (!pageUID) {
+            throw new Error(`Failed to get/create page: ${parentBlockTitle}`)
+        }
+
+        // Create new block with event information
+        await createBlock({
+            parentUid: pageUID,
+            node: {
+                text: headerString,
+                open: false,
+                children: childrenBlocks,
+                uid: blockUID
             }
         })
+
+        // Store new event data
+        storedEvents[eventId] = {
+            blockUID: blockUID,
+            summary: result.event.summary,
+            event_updated: result.event.updated,
+            event_start: result.event.start.dateTime,
+            attendees: attendees
+        }
+    }
+    console.groupEnd()
 }
+
 // MARK: create event block
 function createEventBlocks(event, attendees, people, extensionAPI) {
     let calendar = event.calendar || null
