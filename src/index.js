@@ -13,7 +13,7 @@ import IntervalSettings from "./components/list_intervals"
 import displayCRMDialog from "./components/clay"
 
 const testing = false
-const version = "v2.8"
+const version = "v2.8.2"
 
 const plugin_title = "Roam CRM"
 
@@ -540,6 +540,64 @@ async function onload({ extensionAPI }) {
                         "block-uid": focusedBlock["block-uid"],
                     },
                 })
+            }
+        },
+    })
+    // Command Palette Sidebar - Super Pin (pin to top) focused block or page
+    extensionAPI.ui.commandPalette.addCommand({
+        label: "Sidebar - Pin focused block or page to top",
+        "disable-hotkey": false,
+        callback: async () => {
+            const focusedBlock = roamAlphaAPI.ui.getFocusedBlock()
+
+            if (focusedBlock && focusedBlock["window-id"].startsWith("sidebar-")) {
+                const sidebarWindows = window.roamAlphaAPI.ui.rightSidebar.getWindows()
+
+                // Find the window in the sidebar that matches the window-id of the focused block
+                const matchingWindow = sidebarWindows.find(
+                    (window) => window["window-id"] === focusedBlock["window-id"],
+                )
+
+                if (matchingWindow) {
+                    // toggle pin/unpin accordingly
+                    if (matchingWindow["pinned?"]) {
+                        // If the window is pinned, unpin it
+                        window.roamAlphaAPI.ui.rightSidebar.unpinWindow({
+                            window: {
+                                type: matchingWindow.type,
+                                "block-uid":
+                                    matchingWindow["block-uid"] ||
+                                    matchingWindow["page-uid"] ||
+                                    matchingWindow["mentions-uid"],
+                            },
+                        })
+                    } else {
+                        // If the window is not pinned, pin it
+                        window.roamAlphaAPI.ui.rightSidebar.pinWindow({
+                            window: {
+                                type: matchingWindow.type,
+                                "pin-to-top?": true,
+                                "block-uid":
+                                    matchingWindow["block-uid"] ||
+                                    matchingWindow["page-uid"] ||
+                                    matchingWindow["mentions-uid"],
+                            },
+                        })
+                    }
+                }
+            } else {
+                // block is not in the sidebar
+                await window.roamAlphaAPI.ui.rightSidebar.addWindow({
+                    window: { type: "block", "block-uid": focusedBlock["block-uid"] },
+                })
+                await window.roamAlphaAPI.ui.rightSidebar.pinWindow({
+                    window: {
+                        type: "block",
+                        "block-uid": focusedBlock["block-uid"],
+                    },
+                    "pin-to-top?": true,
+                })
+ 
             }
         },
     })
