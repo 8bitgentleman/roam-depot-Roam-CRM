@@ -13,7 +13,7 @@ import IntervalSettings from "./components/list_intervals"
 import displayCRMDialog from "./components/clay"
 
 const testing = false
-const version = "v2.8.2"
+const version = "v2.8.3"
 
 const plugin_title = "Roam CRM"
 
@@ -140,7 +140,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
                     "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot to be installed and a reload of the Roam tab to start. See the README",
                 action: {
                     type: "switch",
-                    onChange: async (evt) => {},
+                    onChange: async (evt) => { },
                 },
             },
 
@@ -151,7 +151,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
                     "When events import, include the events title in the call template header text",
                 action: {
                     type: "switch",
-                    onChange: (evt) => {},
+                    onChange: (evt) => { },
                 },
             },
             {
@@ -262,8 +262,8 @@ async function crmbutton(extensionAPI) {
         spanCRM.classList.add("bp3-icon", "bp3-icon-people", "icon")
         divCRM.prepend(spanCRM)
         var sidebarcontent = document.querySelector(
-                "#app > div.roam-body > div.roam-app > div.roam-sidebar-container.noselect > div",
-            ),
+            "#app > div.roam-body > div.roam-app > div.roam-sidebar-container.noselect > div",
+        ),
             sidebartoprow = sidebarcontent.childNodes[1]
         if (sidebarcontent && sidebartoprow) {
             sidebartoprow.parentNode.insertBefore(divCRM, sidebartoprow.nextSibling)
@@ -337,7 +337,7 @@ async function onload({ extensionAPI }) {
                 extensionAPI,
             )
         }
-        
+
     }
 
     // update last birthday check since it's already happened
@@ -597,7 +597,7 @@ async function onload({ extensionAPI }) {
                     },
                     "pin-to-top?": true,
                 })
- 
+
             }
         },
     })
@@ -625,6 +625,52 @@ async function onload({ extensionAPI }) {
             displayCRMDialog(allPeople)
         },
     })
+    // Command Palette Quick Capture - Create a new DNP block and focus it in the sidebar
+    extensionAPI.ui.commandPalette.addCommand({
+        label: "Sidebar - Create new DNP block and focus it in the sidebar",
+        callback: async () => {
+            const todayDate = new Date();
+            const dailyNoteUid = window.roamAlphaAPI.util.dateToPageUid(todayDate);
+            const blockUid = window.roamAlphaAPI.util.generateUID();
+
+            // Create the new block
+            await window.roamAlphaAPI.data.block.create({
+                location: {
+                    "parent-uid": dailyNoteUid,
+                    order: "last"
+                },
+                block: {
+                    uid: blockUid,
+                    string: ""
+                }
+            });
+
+            // Open in sidebar and get window info
+            await window.roamAlphaAPI.ui.rightSidebar.addWindow({
+                window: {
+                    type: "block",
+                    "block-uid": blockUid
+                }
+            });
+
+            // Find the window ID
+            const windows = window.roamAlphaAPI.ui.rightSidebar.getWindows();
+            const newWindow = windows.find(win =>
+                win.type === "block" && win["block-uid"] === blockUid
+            );
+
+            if (newWindow) {
+                // Set focus to the new block
+                window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+                    location: {
+                        "block-uid": blockUid,
+                        "window-id": newWindow["window-id"]
+                    }
+                });
+            }
+        },
+        "default-hotkey": "ctrl-shift-n"
+    });
     //MARK: agenda addr
     if (getExtensionAPISetting(extensionAPI, "agenda-addr-setting", false)) {
         // run the initial agenda addr
