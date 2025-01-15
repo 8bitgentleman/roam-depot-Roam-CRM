@@ -11,6 +11,7 @@ import {
 } from "./components/call_templates"
 import IntervalSettings from "./components/list_intervals"
 import displayCRMDialog from "./components/clay"
+import { moveFocus } from './utils';
 
 const testing = false
 const version = "v2.8.3"
@@ -601,6 +602,19 @@ async function onload({ extensionAPI }) {
             }
         },
     })
+    // Command Palette Sidebar - Nav Up/Down open sidebar windows
+    extensionAPI.ui.commandPalette.addCommand({
+        label: 'Sidebar - Navigate Up',
+        callback: () => moveFocus('up'),
+        "disable-hotkey": false,
+    });
+
+    extensionAPI.ui.commandPalette.addCommand({
+        label: 'Sidebar - Navigate Down',
+        callback: () => moveFocus('down'),
+        "disable-hotkey": false,
+    });
+
     // Command Roam CRM - Open Modal
     extensionAPI.ui.commandPalette.addCommand({
         label: "Roam CRM - Open Modal",

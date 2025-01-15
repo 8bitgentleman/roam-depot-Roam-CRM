@@ -13,8 +13,8 @@ export async function getPageUID(page) {
     } else {
         // const newPageUid = window.roamAlphaAPI.util.generateUID()
         // roam-js-components createPage returns a UID as a promise which resolves to a UID
-        
-        return createPage({ title: page})
+
+        return createPage({ title: page })
     }
 }
 
@@ -118,3 +118,71 @@ export function sortByLastContacted(people) {
         return dateB - dateA // Sort in descending order (most recent first)
     })
 }
+
+const isNavigableWindow = (window) => {
+    return window.type === 'block' || window.type === 'outline';
+};
+
+const getNavigableWindows = () => {
+    return window.roamAlphaAPI.ui.rightSidebar.getWindows()
+        .filter(isNavigableWindow)
+        .sort((a, b) => a.order - b.order);
+};
+
+const getCurrentWindowIndex = () => {
+    const focusedBlock = window.roamAlphaAPI.ui.getFocusedBlock();
+    if (!focusedBlock) return -1;
+
+    const windows = getNavigableWindows();
+    return windows.findIndex(w => w['window-id'] === focusedBlock['window-id']);
+};
+
+export const moveFocus = (direction) => {
+    const windows = getNavigableWindows();
+    if (windows.length === 0) return;
+
+    const currentIndex = getCurrentWindowIndex();
+    let newIndex;
+
+    if (direction === 'up') {
+        newIndex = currentIndex <= 0 ? windows.length - 1 : currentIndex - 1;
+    } else {
+        newIndex = currentIndex === windows.length - 1 ? 0 : currentIndex + 1;
+    }
+
+    const targetWindow = windows[newIndex];
+    const mainUid = targetWindow['block-uid'] || targetWindow['page-uid'];
+
+    // If window is collapsed, expand it first
+    if (targetWindow['collapsed?']) {
+        window.roamAlphaAPI.ui.rightSidebar.expandWindow({
+            window: {
+                type: targetWindow.type,
+                'block-uid': mainUid
+            }
+        });
+    }
+
+    // For outline/page windows, get the first block
+    let focusUid = mainUid;
+    if (targetWindow.type === 'outline') {
+        const result = window.roamAlphaAPI.q(
+            `[:find ?c .
+          :where 
+          [?e :block/uid "${mainUid}"]
+          [?e :block/children ?child]
+          [?child :block/order 0]
+          [?child :block/uid ?c]]`
+        );
+        if (result) {
+            focusUid = result;
+        }
+    }
+
+    window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+        location: {
+            'window-id': targetWindow['window-id'],
+            'block-uid': focusUid
+        }
+    });
+};
