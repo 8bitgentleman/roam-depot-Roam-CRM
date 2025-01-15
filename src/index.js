@@ -14,7 +14,7 @@ import displayCRMDialog from "./components/clay"
 import { moveFocus } from './utils';
 
 const testing = false
-const version = "v2.8.3"
+const version = "v2.8.5"
 
 const plugin_title = "Roam CRM"
 
