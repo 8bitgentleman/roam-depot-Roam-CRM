@@ -11,10 +11,10 @@ import {
 } from "./components/call_templates"
 import IntervalSettings from "./components/list_intervals"
 import displayCRMDialog from "./components/clay"
-import { moveFocus } from './utils';
+import { moveFocus, getLastBlockAndFocus } from './utils';
 
 const testing = false
-const version = "v2.8.5"
+const version = "v2.8.6"
 
 const plugin_title = "Roam CRM"
 
@@ -602,13 +602,13 @@ async function onload({ extensionAPI }) {
             }
         },
     })
-    // Command Palette Sidebar - Nav Up/Down open sidebar windows
+    // Command Palette Sidebar - Nav Up open sidebar windows
     extensionAPI.ui.commandPalette.addCommand({
         label: 'Sidebar - Navigate Up',
         callback: () => moveFocus('up'),
         "disable-hotkey": false,
     });
-
+    // Command Palette Sidebar - Nav Down open sidebar windows
     extensionAPI.ui.commandPalette.addCommand({
         label: 'Sidebar - Navigate Down',
         callback: () => moveFocus('down'),
@@ -684,6 +684,12 @@ async function onload({ extensionAPI }) {
             }
         },
         "default-hotkey": "ctrl-shift-n"
+    });
+    // Command Palette Roam Navigation - Go to last block on page
+    extensionAPI.ui.commandPalette.addCommand({
+        label: "Navigation - Go to last block on page", 
+        callback: getLastBlockAndFocus,
+        "disable-hotkey": false,
     });
     //MARK: agenda addr
     if (getExtensionAPISetting(extensionAPI, "agenda-addr-setting", false)) {
