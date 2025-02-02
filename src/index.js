@@ -415,7 +415,27 @@ async function onload({ extensionAPI }) {
                 })
             }
 
-            let sidebarWindows = window.roamAlphaAPI.ui.rightSidebar.getWindows()
+            const focusedBlock = window.roamAlphaAPI.ui.getFocusedBlock()
+            const sidebarWindows = window.roamAlphaAPI.ui.rightSidebar.getWindows()
+
+            // Check if cursor is in sidebar
+            const isInSidebar = focusedBlock && focusedBlock["window-id"].startsWith('sidebar-')
+            console.log(focusedBlock, sidebarWindows, isInSidebar);
+            
+            if (isInSidebar) {
+                // Find the window that matches the focused block
+                const focusedWindow = sidebarWindows.find(
+                    window => window["window-id"] === focusedBlock["window-id"]
+                )
+
+                // If cursor is in a pinned or superpinned block, close it
+                if (focusedWindow && (focusedWindow["pinned?"] || focusedWindow["pinned-to-top?"])) {
+                    await removeWindow(focusedWindow)
+                    return
+                }
+            }
+
+            // Default behavior: close first non-pinned block
             const filteredBlocks = sidebarWindows.filter((obj) => !obj["pinned?"])
             if (filteredBlocks.length > 0) {
                 filteredBlocks.sort((a, b) => a.order - b.order)
