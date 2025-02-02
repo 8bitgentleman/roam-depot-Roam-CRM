@@ -532,15 +532,37 @@ async function onload({ extensionAPI }) {
                 }
             } else {
                 // block is not in the sidebar
+                // Let's first add it to the sidebar
                 await window.roamAlphaAPI.ui.rightSidebar.addWindow({
                     window: { type: "block", "block-uid": focusedBlock["block-uid"] },
                 })
-                await window.roamAlphaAPI.ui.rightSidebar.pinWindow({
-                    window: {
-                        type: "block",
-                        "block-uid": focusedBlock["block-uid"],
-                    },
-                })
+                
+                // Get updated sidebar windows to find our newly added window
+                const updatedSidebarWindows = window.roamAlphaAPI.ui.rightSidebar.getWindows()
+                const newWindow = updatedSidebarWindows.find(
+                    window => window.type === "block" && 
+                             window["block-uid"] === focusedBlock["block-uid"]
+                )
+
+                if (newWindow) {
+                    if (newWindow["pinned?"]) {
+                        // If already pinned, unpin it
+                        window.roamAlphaAPI.ui.rightSidebar.unpinWindow({
+                            window: {
+                                type: "block",
+                                "block-uid": focusedBlock["block-uid"],
+                            },
+                        })
+                    } else {
+                        // If not pinned, pin it
+                        window.roamAlphaAPI.ui.rightSidebar.pinWindow({
+                            window: {
+                                type: "block",
+                                "block-uid": focusedBlock["block-uid"],
+                            },
+                        })
+                    }
+                }
             }
         },
     })
