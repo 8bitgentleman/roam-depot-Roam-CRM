@@ -14,7 +14,7 @@ import displayCRMDialog from "./components/clay"
 import { moveFocus, getLastBlockAndFocus } from './utils';
 
 const testing = false
-const version = "v2.8.7"
+const version = "v2.8.8"
 
 const plugin_title = "Roam CRM"
 
@@ -297,7 +297,7 @@ function createGoogleLoadedHandler(people, extensionAPI) {
     // handler for loading events once the google extension has finished loading
     return async function handleGoogleLoaded() {
         if (window.roamjs?.extension.smartblocks) {
-            await getEventInfo(people, extensionAPI, testing)
+            await getEventInfo(people, extensionAPI, testing, false)
         }
     }
 }
@@ -358,7 +358,7 @@ async function onload({ extensionAPI }) {
         }
         // Set an interval to fetch google events every hour
         const intervalId = setInterval(
-            () => getEventInfo(people, extensionAPI, testing),
+            () => getEventInfo(people, extensionAPI, testing, false),
             60 * 60 * 1000,
         )
         runners.intervals.push(intervalId)
@@ -367,7 +367,7 @@ async function onload({ extensionAPI }) {
         // This is so the check runs right when your laptop is openend
         addEventListener(document, "visibilitychange", () => {
             if (document.visibilityState === "visible") {
-                getEventInfo(people, extensionAPI, testing)
+                getEventInfo(people, extensionAPI, testing, false)
             }
         })
     }

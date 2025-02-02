@@ -88,27 +88,47 @@ function convertEventDateFormats(start) {
 // MARK: eventInfo
 // Main function to sync Google Calendar events with Roam
 // Fetches events for the next 7 days and creates/updates corresponding blocks in Roam
-export async function getEventInfo(people, extensionAPI, testing, modal = false) {
+export async function getEventInfo(people, extensionAPI, testing, isManualSync = false) {
     // Get previously stored calendar events from extension settings
     const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
-    console.group('Calendar Sync Start:', new Date().toISOString())
-    console.log('Current stored events:', storedEvents)
 
-    // Track emails with auth issues and events that don't need updates
-    let prevent_update = new Set()
-    let no_update = new Set() //TODO add a toast if there are no updates
-    let processed_events = new Set()
+    // Check if sync is in progress
+    if (extensionAPI.settings.get("sync-in-progress")) {
+        console.log('Sync already in progress')
+        if (!testing) {
+            showToast("Calendar sync already in progress", "DANGER")
+        }
+        return
+    }
 
-    // Calculate date range for calendar fetch (today + 7 days)
-    const today = new Date()
-    const endDate = new Date()
-    endDate.setDate(today.getDate() + 7)
-
-    // Convert dates to Roam page title format (e.g., "January 1st, 2024")
-    const startDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(today)
-    const endDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(endDate)
+    // Check cooldown only for automatic syncs
+    if (!isManualSync) {
+        const lastSyncTime = extensionAPI.settings.get("last-sync-time")
+        const SYNC_COOLDOWN = 5 * 60 * 1000 // 5 minutes
+        if (lastSyncTime && (Date.now() - lastSyncTime < SYNC_COOLDOWN)) {
+            console.log('Automatic sync attempted too soon after last sync')
+            return
+        }
+    }
 
     try {
+        extensionAPI.settings.set("sync-in-progress", true)
+        console.group('Calendar Sync Start:', new Date().toISOString())
+        console.log('Current stored events:', storedEvents)
+
+        // Track emails with auth issues and events that don't need updates
+        let prevent_update = new Set()
+        let no_update = new Set() //TODO add a toast if there are no updates
+        let processed_events = new Set()
+
+        // Calculate date range for calendar fetch (today + 7 days)
+        const today = new Date()
+        const endDate = new Date()
+        endDate.setDate(today.getDate() + 7)
+
+        // Convert dates to Roam page title format (e.g., "January 1st, 2024")
+        const startDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(today)
+        const endDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(endDate)
         // Fetch calendar events from Google Calendar
         const results = await window.roamjs.extension.google.fetchGoogleCalendar({
             startDatePageTitle: startDatePageTitle,
@@ -226,9 +246,11 @@ export async function getEventInfo(people, extensionAPI, testing, modal = false)
         if (!testing) {
             showToast(`Error syncing calendar: ${err.message}`, "DANGER")
         }
+    } finally {
+        extensionAPI.settings.set("sync-in-progress", false)
+        extensionAPI.settings.set("last-sync-time", Date.now())
+        console.groupEnd()
     }
-
-    console.groupEnd()
 }
 
 // Helper function to handle creation and updates of event blocks in Roam
