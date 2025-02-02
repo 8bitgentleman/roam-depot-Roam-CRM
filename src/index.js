@@ -14,7 +14,7 @@ import displayCRMDialog from "./components/clay"
 import { moveFocus, getLastBlockAndFocus } from './utils';
 
 const testing = false
-const version = "v2.8.6"
+const version = "v2.8.7"
 
 const plugin_title = "Roam CRM"
 
@@ -420,7 +420,6 @@ async function onload({ extensionAPI }) {
 
             // Check if cursor is in sidebar
             const isInSidebar = focusedBlock && focusedBlock["window-id"].startsWith('sidebar-')
-            console.log(focusedBlock, sidebarWindows, isInSidebar);
             
             if (isInSidebar) {
                 // Find the window that matches the focused block
@@ -515,8 +514,10 @@ async function onload({ extensionAPI }) {
         "disable-hotkey": false,
         callback: async () => {
             const focusedBlock = roamAlphaAPI.ui.getFocusedBlock()
+            // If no block is focused, do nothing
+            if (!focusedBlock) return
 
-            if (focusedBlock && focusedBlock["window-id"].startsWith("sidebar-")) {
+            if (focusedBlock["window-id"].startsWith("sidebar-")) {
                 const sidebarWindows = window.roamAlphaAPI.ui.rightSidebar.getWindows()
 
                 // Find the window in the sidebar that matches the window-id of the focused block
@@ -592,8 +593,10 @@ async function onload({ extensionAPI }) {
         "disable-hotkey": false,
         callback: async () => {
             const focusedBlock = roamAlphaAPI.ui.getFocusedBlock()
+            // If no block is focused, do nothing
+            if (!focusedBlock) return
 
-            if (focusedBlock && focusedBlock["window-id"].startsWith("sidebar-")) {
+            if (focusedBlock["window-id"].startsWith("sidebar-")) {
                 const sidebarWindows = window.roamAlphaAPI.ui.rightSidebar.getWindows()
 
                 // Find the window in the sidebar that matches the window-id of the focused block
