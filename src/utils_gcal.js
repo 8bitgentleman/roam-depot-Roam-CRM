@@ -100,7 +100,8 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
         }
         return
     }
-
+    console.log("Sync sources", isManualSync, triggerSource, testing);
+    
     // Check cooldown only for automatic syncs
     if (!isManualSync) {
         const lastSyncTime = extensionAPI.settings.get("last-sync-time")
@@ -185,6 +186,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                 let attendees = result.event.attendees || []
                 if (attendees.length <= 1) {
                     // Skip logging for single-attendee events
+                    no_update.add(eventId)
                     continue
                 }
 

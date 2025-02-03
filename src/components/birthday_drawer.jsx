@@ -133,10 +133,14 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                 disabled={
                                     !getExtensionAPISetting(extensionAPI, "calendar-setting", false)
                                 }
-                                onClick={() => getEventInfo(people, extensionAPI, false)}
-                            // TODO add a toast if there are no changes or updates
+                                onClick={() => {
+                                    getEventInfo(people, extensionAPI, false, true, 'Modal Button');
+
+                                    // TODO: add a toast if there are no changes or updates
+                                }}
                             />
                         </Tooltip>
+
                     </div>
                 </div>
             }

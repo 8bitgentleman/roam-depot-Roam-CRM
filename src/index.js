@@ -14,7 +14,7 @@ import displayCRMDialog from "./components/clay"
 import { moveFocus, getLastBlockAndFocus } from './utils';
 
 const testing = false
-const version = "v2.8.9"
+const version = "v2.8.11"
 
 const plugin_title = "Roam CRM"
 
@@ -351,7 +351,7 @@ async function onload({ extensionAPI }) {
         // bring in the events
         // listen for the google extension to be loaded
         if (window.roamjs?.extension?.google) {
-            await getEventInfo(people, extensionAPI, testing)
+            await getEventInfo(people, extensionAPI, testing, false, 'initial-load')
         } else {
             googleLoadedHandler = createGoogleLoadedHandler(people, extensionAPI)
             document.body.addEventListener("roamjs:google:loaded", googleLoadedHandler)
