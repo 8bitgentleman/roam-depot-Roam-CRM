@@ -88,7 +88,7 @@ function convertEventDateFormats(start) {
 // MARK: eventInfo
 // Main function to sync Google Calendar events with Roam
 // Fetches events for the next 7 days and creates/updates corresponding blocks in Roam
-export async function getEventInfo(people, extensionAPI, testing, isManualSync = false) {
+export async function getEventInfo(people, extensionAPI, testing, isManualSync = false, triggerSource = 'unknown') {
     // Get previously stored calendar events from extension settings
     const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
 
@@ -104,17 +104,22 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
     // Check cooldown only for automatic syncs
     if (!isManualSync) {
         const lastSyncTime = extensionAPI.settings.get("last-sync-time")
-        const SYNC_COOLDOWN = 5 * 60 * 1000 // 5 minutes
-        if (lastSyncTime && (Date.now() - lastSyncTime < SYNC_COOLDOWN)) {
-            console.log('Automatic sync attempted too soon after last sync')
+        const SYNC_COOLDOWN = 60 * 60 * 1000 // 1 hour
+        const now = Date.now()
+        if (lastSyncTime && (now - lastSyncTime < SYNC_COOLDOWN)) {
+            const hoursAgo = Math.round((now - lastSyncTime) / 3600000 * 10) / 10 // Round to 1 decimal
+            console.log(`Automatic sync skipped - last sync was ${hoursAgo} hours ago. Will sync after ${Math.round((SYNC_COOLDOWN - (now - lastSyncTime)) / 3600000 * 10) / 10} more hours.`)
             return
         }
+        console.log(`Starting automatic sync - ${lastSyncTime ? `last sync was ${Math.round((now - lastSyncTime) / 3600000 * 10) / 10} hours ago` : 'first sync'}`)
+    } else {
+        console.log('Starting manual sync')
     }
 
     try {
         extensionAPI.settings.set("sync-in-progress", true)
-        console.group('Calendar Sync Start:', new Date().toISOString())
-        console.log('Current stored events:', storedEvents)
+        console.group(`Calendar Sync Start [${triggerSource}]:`, new Date().toISOString())
+        console.log('Current stored events:', JSON.parse(JSON.stringify(storedEvents)))
 
         // Track emails with auth issues and events that don't need updates
         let prevent_update = new Set()
@@ -179,10 +184,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                 // Skip events with no or single attendee (likely personal events)
                 let attendees = result.event.attendees || []
                 if (attendees.length <= 1) {
-                    console.log('Skipping single-attendee event:', {
-                        eventId,
-                        summary: result.event.summary
-                    })
+                    // Skip logging for single-attendee events
                     continue
                 }
 
@@ -190,23 +192,23 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 
                 // Log potential duplicate detection
                 if (storedEvent) {
-                    console.log('Found existing event:', {
-                        eventId,
-                        summary: result.event.summary,
-                        storedUpdate: storedEvent.event_updated,
-                        newUpdate: result.event.updated,
-                        needsUpdate: storedEvent.event_updated !== result.event.updated
-                    })
+                    // Only log if the event needs updating
+                    if (storedEvent.event_updated !== result.event.updated) {
+                        console.log('Event needs updating:', JSON.stringify({
+                            eventId,
+                            summary: result.event.summary,
+                            storedUpdate: storedEvent.event_updated,
+                            newUpdate: result.event.updated,
+                            currentBlock: storedEvent.blockUID
+                        }, null, 2))
+                    }
                 }
 
                 // Skip if event exists and hasn't been updated since last sync
                 // This prevents unnecessary processing and potential duplicates
                 if (storedEvent && storedEvent.event_updated === result.event.updated) {
                     no_update.add(eventId)
-                    console.log('Skipping unchanged event:', {
-                        eventId,
-                        summary: result.event.summary
-                    })
+                    // Skip logging for unchanged events
                     continue
                 }
 
@@ -258,32 +260,53 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 async function updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents) {
     const eventId = result.event.id
 
-    console.group(`Processing event: ${eventId}`)
-    console.log('Event details:', {
-        summary: result.event.summary,
-        start: result.event.start,
-        attendees: attendees.length
-    })
+    // Only log if we're creating a new event
+    if (!storedEvent) {
+        console.log('Creating new event block:', JSON.stringify({
+            eventId,
+            summary: result.event.summary,
+            start: result.event.start,
+            attendees: attendees.map(a => a.email)
+        }, null, 2))
+    }
 
     if (storedEvent) {
-        console.log('Updating existing event block:', {
-            blockUid: storedEvent.blockUID,
-            oldSummary: storedEvent.summary,
-            newSummary: result.event.summary,
-            oldStart: storedEvent.event_start,
-            newStart: result.event.start.dateTime
-        })
+        let needsUpdate = false;
+        let changes = {};
+        
+        // Check for changes and build change log
+        if (storedEvent.summary !== result.event.summary) {
+            changes.summary = {
+                old: storedEvent.summary,
+                new: result.event.summary
+            };
+            needsUpdate = true;
+        }
+        if (storedEvent.event_start !== result.event.start.dateTime) {
+            changes.date = {
+                old: storedEvent.event_start,
+                new: result.event.start.dateTime
+            };
+            needsUpdate = true;
+        }
+        if (!compareLists(storedEvent.attendees, attendees)) {
+            changes.attendees = {
+                old: storedEvent.attendees,
+                new: attendees.map(a => a.email)
+            };
+            needsUpdate = true;
+        }
 
-        let needsUpdate = false
+        if (needsUpdate) {
+            console.log('Updating event block:', JSON.stringify({
+                eventId,
+                blockUid: storedEvent.blockUID,
+                changes
+            }, null, 2));
+        }
 
-        // Check if event summary or attendees have changed
-        if (storedEvent.summary !== result.event.summary ||
-            !compareLists(storedEvent.attendees, attendees)) {
-            console.log('Content change detected:', {
-                summaryChanged: storedEvent.summary !== result.event.summary,
-                attendeesChanged: !compareLists(storedEvent.attendees, attendees)
-            })
-            needsUpdate = true
+        // Update block if changes were detected
+        if (needsUpdate) {
             // Generate new block content with updated information
             let { headerString, childrenBlocks } = createEventBlocks(
                 result.event,
@@ -296,35 +319,32 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                 uid: storedEvent.blockUID,
                 text: headerString
             })
-        }
 
-        // Check if event date/time has changed
-        if (storedEvent.event_start !== result.event.start.dateTime) {
-            console.log('Date change detected:', {
-                oldDate: storedEvent.event_start,
-                newDate: result.event.start.dateTime
-            })
-            needsUpdate = true
-            // Calculate new date and get corresponding Roam page
-            let startDate = convertEventDateFormats(result.event.start)
-            let parentBlockTitle = window.roamAlphaAPI.util.dateToPageTitle(startDate)
-            let pageUID = await getPageUID(parentBlockTitle)
+            // Handle date changes
+            if (changes.date) {
+                // Calculate new date and get corresponding Roam page
+                let startDate = convertEventDateFormats(result.event.start)
+                let parentBlockTitle = window.roamAlphaAPI.util.dateToPageTitle(startDate)
+                let pageUID = await getPageUID(parentBlockTitle)
 
-            // Ensure page exists before moving block
-            if (!pageUID) {
-                throw new Error(`Failed to get/create page: ${parentBlockTitle}`)
+                // Ensure page exists before moving block
+                if (!pageUID) {
+                    throw new Error(`Failed to get/create page: ${parentBlockTitle}`)
+                }
+
+                // Move block to new date page
+                await window.roamAlphaAPI.moveBlock({
+                    location: { "parent-uid": pageUID, order: 0 },
+                    block: { uid: storedEvent.blockUID }
+                })
+
+                console.log('Moved block to new date page:', JSON.stringify({
+                    blockUid: storedEvent.blockUID,
+                    newPage: parentBlockTitle
+                }, null, 2))
             }
 
-            // Move block to new date page
-            await window.roamAlphaAPI.moveBlock({
-                location: { "parent-uid": pageUID, order: 0 },
-                block: { uid: storedEvent.blockUID }
-            })
-        }
-
-        // Update stored event data if changes were made
-        if (needsUpdate) {
-            console.log('Updating stored event data')
+            // Update stored event data
             storedEvents[eventId] = {
                 blockUID: storedEvent.blockUID,
                 summary: result.event.summary,
@@ -332,6 +352,12 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                 event_start: result.event.start.dateTime,
                 attendees: attendees
             }
+
+            console.log('Updated stored event data:', JSON.stringify({
+                eventId,
+                blockUid: storedEvent.blockUID,
+                newData: storedEvents[eventId]
+            }, null, 2))
         }
     } else {
         // Creation logic for new events
