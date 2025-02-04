@@ -95,9 +95,9 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
     // Check if sync is in progress
     if (extensionAPI.settings.get("sync-in-progress")) {
         console.log('Sync already in progress')
-        if (!testing) {
-            showToast("Calendar sync already in progress", "DANGER")
-        }
+        // if (!testing) {
+        //     showToast("Calendar sync already in progress", "ALERT")
+        // }
         return
     }
     console.log("Sync sources", isManualSync, triggerSource, testing);
