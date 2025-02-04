@@ -101,7 +101,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
         return
     }
     console.log("Sync sources", isManualSync, triggerSource, testing);
-    
+
     // Check cooldown only for automatic syncs
     if (!isManualSync) {
         const lastSyncTime = extensionAPI.settings.get("last-sync-time")
@@ -190,10 +190,38 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     continue
                 }
 
-                const storedEvent = storedEvents[eventId]
+                // Process event updates or create new event blocks
+                await updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents)
 
-                // Log potential duplicate detection
-                if (storedEvent) {
+            } catch (err) {
+                // Handle individual event processing errors without failing entire sync
+                console.error('❌ Error processing event:', {
+                    eventId: result.event?.id,
+                    summary: result.event?.summary,
+                    error: err.message,
+                    stackTrace: err.stack
+                })
+                if (!testing) {
+                    showToast(`Error processing event: ${err.message}`, "DANGER")
+                }
+            }
+
+            // Log potential duplicate detection
+            if (storedEvent) {
+                // Check if the stored block still exists
+                const blockExists = await window.roamAlphaAPI.q(`[:find ?e . :where [?e :block/uid "${storedEvent.blockUID}"]]`);
+
+                if (!blockExists) {
+                    console.log('Stored block no longer exists:', JSON.stringify({
+                        eventId,
+                        blockUid: storedEvent.blockUID,
+                        summary: result.event.summary
+                    }, null, 2));
+
+                    // Clear the stored event so it will be recreated
+                    delete storedEvents[eventId];
+                    storedEvent = null;
+                } else {
                     // Only log if the event needs updating
                     if (storedEvent.event_updated !== result.event.updated) {
                         console.log('Event needs updating:', JSON.stringify({
@@ -262,6 +290,26 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 async function updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents) {
     const eventId = result.event.id
 
+    if (storedEvent) {
+        // Check if the stored block still exists
+        const blockExists = await window.roamAlphaAPI.q(`[:find ?e . :where [?e :block/uid "${storedEvent.blockUID}"]]`)
+
+        if (!blockExists) {
+            console.log('Cleaning up reference to deleted block:', JSON.stringify({
+                eventId,
+                blockUid: storedEvent.blockUID,
+                summary: storedEvent.summary,
+                action: "Block will be recreated"
+            }, null, 2))
+
+            // Remove just this one event from storage
+            delete storedEvents[eventId]
+            // Clear just this stored event reference
+            storedEvent = null
+            // No error thrown - we'll recreate the block
+        }
+    }
+
     // Only log if we're creating a new event
     if (!storedEvent) {
         console.log('Creating new event block:', JSON.stringify({
@@ -275,7 +323,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
     if (storedEvent) {
         let needsUpdate = false;
         let changes = {};
-        
+
         // Check for changes and build change log
         if (storedEvent.summary !== result.event.summary) {
             changes.summary = {
