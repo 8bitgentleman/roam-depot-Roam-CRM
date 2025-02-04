@@ -155,7 +155,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
         for (const result of results.reverse()) {
             try {
                 const eventId = result.event?.id
-
+        
                 // Log duplicate processing attempts
                 if (processed_events.has(eventId)) {
                     console.warn('⚠️ Attempting to process same event twice in one sync:', {
@@ -166,7 +166,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     continue
                 }
                 processed_events.add(eventId)
-
+        
                 // Log authentication errors
                 if (result.text.includes("Error: Must log in") || result.text.includes("Error for calendar")) {
                     const errorEmail = extractEmailFromString(result.text)
@@ -180,8 +180,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     }
                     continue
                 }
-
-
+        
                 // Skip events with no or single attendee (likely personal events)
                 let attendees = result.event.attendees || []
                 if (attendees.length <= 1) {
@@ -189,61 +188,10 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     no_update.add(eventId)
                     continue
                 }
-
+        
                 // Process event updates or create new event blocks
-                await updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents)
-
-            } catch (err) {
-                // Handle individual event processing errors without failing entire sync
-                console.error('❌ Error processing event:', {
-                    eventId: result.event?.id,
-                    summary: result.event?.summary,
-                    error: err.message,
-                    stackTrace: err.stack
-                })
-                if (!testing) {
-                    showToast(`Error processing event: ${err.message}`, "DANGER")
-                }
-            }
-
-            // Log potential duplicate detection
-            if (storedEvent) {
-                // Check if the stored block still exists
-                const blockExists = await window.roamAlphaAPI.q(`[:find ?e . :where [?e :block/uid "${storedEvent.blockUID}"]]`);
-
-                if (!blockExists) {
-                    console.log('Stored block no longer exists:', JSON.stringify({
-                        eventId,
-                        blockUid: storedEvent.blockUID,
-                        summary: result.event.summary
-                    }, null, 2));
-
-                    // Clear the stored event so it will be recreated
-                    delete storedEvents[eventId];
-                    storedEvent = null;
-                } else {
-                    // Only log if the event needs updating
-                    if (storedEvent.event_updated !== result.event.updated) {
-                        console.log('Event needs updating:', JSON.stringify({
-                            eventId,
-                            summary: result.event.summary,
-                            storedUpdate: storedEvent.event_updated,
-                            newUpdate: result.event.updated,
-                            currentBlock: storedEvent.blockUID
-                        }, null, 2))
-                    }
-                }
-
-                // Skip if event exists and hasn't been updated since last sync
-                // This prevents unnecessary processing and potential duplicates
-                if (storedEvent && storedEvent.event_updated === result.event.updated) {
-                    no_update.add(eventId)
-                    // Skip logging for unchanged events
-                    continue
-                }
-
-                // Process event updates or create new event blocks
-                await updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents)
+                await updateEventBlocks(storedEvents[eventId], result, attendees, people, extensionAPI, storedEvents)
+        
             } catch (err) {
                 // Handle individual event processing errors without failing entire sync
                 console.error('❌ Error processing event:', {
