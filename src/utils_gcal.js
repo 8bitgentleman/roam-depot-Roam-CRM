@@ -127,14 +127,16 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
         let no_update = new Set() //TODO add a toast if there are no updates
         let processed_events = new Set()
 
-        // Calculate date range for calendar fetch (today + 7 days)
+        // Calculate wider date range for calendar fetch (7 days ago to 7 days ahead)
         const today = new Date()
-        const endDate = new Date()
-        endDate.setDate(today.getDate() + 7)
+        const pastStartDate = new Date()
+        pastStartDate.setDate(today.getDate() - 7)
+        const futureEndDate = new Date()
+        futureEndDate.setDate(today.getDate() + 7)
 
         // Convert dates to Roam page title format (e.g., "January 1st, 2024")
-        const startDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(today)
-        const endDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(endDate)
+        const startDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(pastStartDate)
+        const endDatePageTitle = window.roamAlphaAPI.util.dateToPageTitle(futureEndDate)
         // Fetch calendar events from Google Calendar
         const results = await window.roamjs.extension.google.fetchGoogleCalendar({
             startDatePageTitle: startDatePageTitle,
@@ -142,19 +144,172 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
         })
 
         console.log(`Fetched ${results.length} events from Google Calendar`)
-
+        console.log('Fetched events:', results);
+       
+        
         // Exit if no events or error message received
         if (!results || results[0]?.text === "No Events Scheduled for Selected Date(s)!") {
             console.log('No events to process')
             console.groupEnd()
             return
         }
+        
+        // Build sets of current event IDs from the fetched events
+        const allCurrentEventIds = new Set()
+        const createUpdateEventIds = new Set()
+        
+        // First pass: categorize events and collect IDs
+        for (const result of results) {
+            const eventId = result.event?.id
+            
+            if (eventId) {
+                allCurrentEventIds.add(eventId)
+                
+                // Check if event is in create/update window (today or future)
+                if (result.event?.start) {
+                    const eventStart = convertEventDateFormats(result.event.start)
+                    const isCreateUpdateCandidate = eventStart >= today
+                    
+                    if (isCreateUpdateCandidate) {
+                        createUpdateEventIds.add(eventId)
+                    }
+                }
+            }
+        }
+        
+        // Initialize variables for deletion detection
+        let deletedEventIds = [];
+        
+        // Only run deletion detection if enabled in settings
+        if (getExtensionAPISetting(extensionAPI, "detect-deleted-events", false)) {
+            console.group('Deletion Detection Debugging')
+            console.log('Current date window:', {
+                today: today.toISOString(),
+                pastStartDate: pastStartDate.toISOString(),
+                futureEndDate: futureEndDate.toISOString()
+            })
+            console.log('All current event IDs from Google:', Array.from(allCurrentEventIds))
+            console.log('All stored events:', storedEvents)
+            
+            // Process each stored event with detailed logging
+            console.group('Examining each stored event:')
+            Object.keys(storedEvents).forEach(eventId => {
+                console.group(`Event ID: ${eventId}`)
+                
+                // Log the event data
+                console.log('Stored data:', {
+                    blockUID: storedEvents[eventId].blockUID,
+                    summary: storedEvents[eventId].summary,
+                    event_start: storedEvents[eventId].event_start,
+                    hasEventStart: Boolean(storedEvents[eventId].event_start),
+                    isAllDay: storedEvents[eventId].event_start && !storedEvents[eventId].event_start.includes('T')
+                })
+                
+                // Check if in current calendar events
+                const isInCurrentEvents = allCurrentEventIds.has(eventId)
+                console.log('Is in current Google Calendar events?', isInCurrentEvents)
+                
+                // Show the detailed checks we'll perform
+                if (!storedEvents[eventId].event_start) {
+                    console.log('⚠️ Missing event_start data - will be skipped in detection')
+                    console.groupEnd()
+                    // Don't use 'return' here as we're in a forEach function
+                    return; // This only exits the current iteration of forEach
+                }
+                
+                // Check date window
+                const eventStartDate = new Date(storedEvents[eventId].event_start)
+                const isAllDay = storedEvents[eventId].event_start && !storedEvents[eventId].event_start.includes('T')
+                
+                console.log('Event start date details:', { 
+                    raw: storedEvents[eventId].event_start,
+                    parsed: eventStartDate.toISOString(),
+                    isAllDay: isAllDay,
+                    isValidDate: !isNaN(eventStartDate.getTime())
+                })
+                
+                const isAfterStartWindow = eventStartDate >= pastStartDate
+                const isBeforeEndWindow = eventStartDate <= futureEndDate
+                console.log('Date window check:', { 
+                    isAfterStartWindow, 
+                    isBeforeEndWindow,
+                    inWindow: isAfterStartWindow && isBeforeEndWindow
+                })
+                
+                console.log('Final detection result:', {
+                    shouldDetectAsDeleted: (isAfterStartWindow && isBeforeEndWindow && !isInCurrentEvents)
+                })
+                
+                console.groupEnd()
+            })
+            console.groupEnd()
+            
+            // Now actually perform the detection
+            deletedEventIds = Object.keys(storedEvents).filter(eventId => {
+                const storedEvent = storedEvents[eventId];
+                
+                // Skip events without any start time info
+                if (!storedEvent.event_start) {
+                    console.log(`Event ${eventId} missing event_start - can't check for deletion`);
+                    return false;
+                }
+                
+                try {
+                    // Parse the start date regardless of format
+                    const eventStartDate = new Date(storedEvent.event_start);
+                    
+                    // Ensure we got a valid date
+                    if (isNaN(eventStartDate.getTime())) {
+                        console.log(`Event ${eventId} has invalid date format: ${storedEvent.event_start}`);
+                        return false;
+                    }
+                    
+                    // Check if it's in our deletion window
+                    const isInDeletionWindow = eventStartDate >= pastStartDate && 
+                                               eventStartDate <= futureEndDate;
+                    
+                    // Is it in our window and not in the current calendar?
+                    return isInDeletionWindow && !allCurrentEventIds.has(eventId);
+                } catch (err) {
+                    console.error(`Error processing date for event ${eventId}:`, err);
+                    return false;
+                }
+            })
+            
+            console.log(`Detected ${deletedEventIds.length} deleted events:`, deletedEventIds);
+            
+            // Log deleted events details
+            if (deletedEventIds.length > 0) {
+                console.group('Detected Deleted Events Details:')
+                deletedEventIds.forEach(eventId => {
+                    console.log({
+                        eventId,
+                        blockUid: storedEvents[eventId].blockUID,
+                        summary: storedEvents[eventId].summary,
+                        startDate: storedEvents[eventId].event_start
+                    })
+                })
+                console.groupEnd()
+            }
+            console.groupEnd()
+        }
 
         // Process events in reverse chronological order
         // Using for...of ensures sequential processing to avoid race conditions
         for (const result of results.reverse()) {
             try {
-                const eventId = result.event?.id
+                // Make sure event and id exist before proceeding
+                if (!result.event || !result.event.id) {
+                    console.warn('⚠️ Skipping event with missing ID:', result)
+                    continue;
+                }
+                
+                const eventId = result.event.id
+                
+                // Skip processing past events (not in create/update window)
+                if (eventId && !createUpdateEventIds.has(eventId)) {
+                    continue;
+                }
         
                 // Log duplicate processing attempts
                 if (processed_events.has(eventId)) {
@@ -210,7 +365,8 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
             totalEvents: results.length,
             processed: processed_events.size,
             prevented: prevent_update.size,
-            skipped: no_update.size
+            skipped: no_update.size,
+            deleted: deletedEventIds.length
         })
 
         // Save all updates to extension settings after successful processing
@@ -236,6 +392,12 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 // Helper function to handle creation and updates of event blocks in Roam
 // Separated from main function for better organization and readability
 async function updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents) {
+    // Ensure the event exists and has an ID
+    if (!result.event || !result.event.id) {
+        console.error('Missing event data in updateEventBlocks:', result)
+        return
+    }
+    
     const eventId = result.event.id
 
     if (storedEvent) {
@@ -272,6 +434,16 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
         let needsUpdate = false;
         let changes = {};
 
+        // Extract the proper date value for checking
+        let eventStartValue = null;
+        if (result.event.start) {
+            if (result.event.start.dateTime) {
+                eventStartValue = result.event.start.dateTime;
+            } else if (result.event.start.date) {
+                eventStartValue = result.event.start.date;
+            }
+        }
+
         // Check for changes and build change log
         if (storedEvent.summary !== result.event.summary) {
             changes.summary = {
@@ -280,10 +452,10 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
             };
             needsUpdate = true;
         }
-        if (storedEvent.event_start !== result.event.start.dateTime) {
+        if (storedEvent.event_start !== eventStartValue) {
             changes.date = {
                 old: storedEvent.event_start,
-                new: result.event.start.dateTime
+                new: eventStartValue
             };
             needsUpdate = true;
         }
@@ -343,11 +515,23 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
             }
 
             // Update stored event data
+            let eventStartValue = null;
+            if (result.event.start) {
+                // Extract the proper date value depending on event type
+                if (result.event.start.dateTime) {
+                    // For events with specific times
+                    eventStartValue = result.event.start.dateTime;
+                } else if (result.event.start.date) {
+                    // For all-day events
+                    eventStartValue = result.event.start.date;
+                }
+            }
+            
             storedEvents[eventId] = {
                 blockUID: storedEvent.blockUID,
                 summary: result.event.summary,
                 event_updated: result.event.updated,
-                event_start: result.event.start.dateTime,
+                event_start: eventStartValue,
                 attendees: attendees
             }
 
@@ -391,11 +575,23 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
         })
 
         // Store new event data
+        let eventStartValue = null;
+        if (result.event.start) {
+            // Extract the proper date value depending on event type
+            if (result.event.start.dateTime) {
+                // For events with specific times
+                eventStartValue = result.event.start.dateTime;
+            } else if (result.event.start.date) {
+                // For all-day events
+                eventStartValue = result.event.start.date;
+            }
+        }
+        
         storedEvents[eventId] = {
             blockUID: blockUID,
             summary: result.event.summary,
             event_updated: result.event.updated,
-            event_start: result.event.start.dateTime,
+            event_start: eventStartValue,
             attendees: attendees
         }
     }

@@ -156,6 +156,16 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 },
             },
             {
+                id: "detect-deleted-events",
+                name: "Detect deleted calendar events",
+                description:
+                    "Check for events that have been deleted from Google Calendar in the last 7 days and next 7 days. Currently only logs deletions to console.",
+                action: {
+                    type: "switch",
+                    onChange: (evt) => { },
+                },
+            },
+            {
                 id: "agenda-header",
                 name: "Agenda Addr Settings",
                 action: { type: "reactComponent", component: headerTextComponent },
