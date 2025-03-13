@@ -1,0 +1,30 @@
+TODO LIST - CUSTOMIZABLE EVENT KEYWORDS FEATURE
+
+PHASE 1:
+[X] Define default keyword settings constant
+[X] Create getEventKeywords helper function
+[X] Update createEventBlocks function to use custom keywords
+[X] Add logging to verify proper functioning
+[X] Fix string comparison issues
+[X] Add testing mode support
+[X] Add command palette entry for testing
+
+PHASE 2:
+[  ] Create EventKeywordSettings component skeleton
+[  ] Implement keyword list display
+[  ] Add new keyword form
+[  ] Add edit functionality
+[  ] Add delete functionality
+[  ] Test component with mock data
+
+PHASE 3:
+[  ] Add component to settings panel
+[  ] Connect component to extension settings
+[  ] Test save/load functionality
+[  ] Verify integration with Google Calendar sync
+
+PHASE 4:
+[  ] Update README documentation
+[  ] Add tooltips and help text
+[  ] Final testing
+[  ] Prepare changelog for release

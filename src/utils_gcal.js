@@ -40,11 +40,71 @@ function findPersonNameByEmail(people, email) {
 }
 
 function checkStringForSubstring(summary, substring) {
-    if (summary.toLowerCase().includes(substring)) {
-        return true
-    } else {
-        return false
+    // Add debug check to ensure we have valid strings
+    console.log('checkStringForSubstring debug:', {
+        summary,
+        substring,
+        summaryType: typeof summary,
+        substringType: typeof substring
+    });
+    
+    if (!summary || !substring) {
+        console.log('Invalid strings for comparison:', { summary, substring });
+        return false;
     }
+    
+    // Convert both to lowercase for case-insensitive comparison
+    const normalizedSummary = String(summary).toLowerCase();
+    const normalizedSubstring = String(substring).toLowerCase();
+    
+    // Check if the summary includes the substring
+    const result = normalizedSummary.includes(normalizedSubstring);
+    console.log('String comparison result:', {
+        normalizedSummary,
+        normalizedSubstring,
+        result
+    });
+    
+    return result;
+}
+
+// Default keyword settings for event templates
+const DEFAULT_EVENT_KEYWORDS = [
+    {
+        term: "1:1",
+        requiresMultipleAttendees: true,
+        template: "[[1:1]] with {attendees}",
+        priority: 1
+    },
+    {
+        term: "dinner",
+        requiresMultipleAttendees: true,
+        template: "[[Dinner]] with {attendees}",
+        priority: 2
+    },
+    {
+        term: "", // Empty term means this is the fallback/default
+        requiresMultipleAttendees: true,
+        template: "[[Call]] with {attendees}",
+        priority: 999,
+        isDefault: true
+    }
+];
+
+// Helper to get keywords with backwards compatibility
+function getEventKeywords(extensionAPI) {
+    return getExtensionAPISetting(extensionAPI, "event-keywords", DEFAULT_EVENT_KEYWORDS);
+}
+
+// Helper to format a template with attendee names and optional title
+function formatTemplate(template, attendeeNames, eventSummary, includeEventTitle) {
+    let result = template.replace("{attendees}", attendeeNames.join(" and "));
+    
+    if (includeEventTitle && eventSummary) {
+        result += ` about ${eventSummary}`;
+    }
+    
+    return result;
 }
 
 const compareLists = (list1, list2) => {
@@ -307,7 +367,8 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                 const eventId = result.event.id
                 
                 // Skip processing past events (not in create/update window)
-                if (eventId && !createUpdateEventIds.has(eventId)) {
+                // But always process events in testing mode
+                if (eventId && !createUpdateEventIds.has(eventId) && !testing) {
                     continue;
                 }
         
@@ -371,7 +432,12 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 
         // Save all updates to extension settings after successful processing
         // This ensures atomic updates and prevents partial saves
-        await extensionAPI.settings.set("synced-cal-events", storedEvents)
+        // Skip saving if in testing mode
+        if (!testing) {
+            await extensionAPI.settings.set("synced-cal-events", storedEvents)
+        } else {
+            console.log('Testing mode: skipping save of event data')
+        }
 
     } catch (err) {
         // Handle overall sync process errors
@@ -399,6 +465,33 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
     }
     
     const eventId = result.event.id
+    const testing = getExtensionAPISetting(extensionAPI, "testing-mode", false)
+
+    // In testing mode, force template generation and logging without actual updates
+    if (testing) {
+        console.log('=== TESTING MODE: Force template generation ===');
+        console.log('Testing event:', {
+            id: eventId,
+            summary: result.event.summary,
+            attendees: attendees.map(a => a.email)
+        });
+        
+        let { headerString, childrenBlocks } = createEventBlocks(
+            result.event,
+            attendees,
+            people,
+            extensionAPI
+        );
+        
+        console.log('=== TESTING RESULT ===');
+        console.log('Generated template:', {
+            eventId,
+            summary: result.event.summary,
+            headerString,
+            childrenCount: childrenBlocks.length
+        });
+        return;
+    }
 
     if (storedEvent) {
         // Check if the stored block still exists
@@ -608,7 +701,7 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     ]
     const includeEventTitle = extensionAPI.settings.get("include-event-title") || false
     let attendeeNames = []
-    let eventDatePage = window.roamAlphaAPI.util.dateToPageTitle(new Date(event.start.dateTime))
+    let eventDatePage = window.roamAlphaAPI.util.dateToPageTitle(new Date(event.start.dateTime || event.start.date))
 
     attendees = attendees.filter((attendee) => attendee.email !== calendar)
     attendees.forEach((a) => {
@@ -644,22 +737,94 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         })
     }
 
-    if (includeEventTitle === true) {
-        if (checkStringForSubstring(event.summary, "1:1")) {
-            headerString = `[[1:1]] with ${attendeeNames.join(" and ")} about ${event.summary}`
-        } else if (checkStringForSubstring(event.summary, "dinner")) {
-            headerString = `[[Dinner]] with ${attendeeNames.join(" and ")} about ${event.summary}`
-        } else {
-            headerString = `[[Call]] with ${attendeeNames.join(" and ")} about ${event.summary}`
-        }
+    // Direct debug for specific keywords
+    console.log('=== DIRECT KEYWORD MATCHING TESTS ===');
+    if (event.summary && typeof event.summary === 'string') {
+        const summary = event.summary.toLowerCase();
+        console.log(`Event summary: "${event.summary}" (lowercase: "${summary}")`);
+        
+        // Test for 1:1
+        const has1on1 = summary.includes('1:1');
+        console.log(`Contains "1:1": ${has1on1}`);
+        
+        // Test for dinner
+        const hasDinner = summary.includes('dinner');
+        console.log(`Contains "dinner": ${hasDinner}`);
+        
     } else {
-        if (checkStringForSubstring(event.summary, "1:1")) {
-            headerString = `[[1:1]] with ${attendeeNames.join(" and ")}`
-        } else if (checkStringForSubstring(event.summary, "dinner")) {
-            headerString = `[[Dinner]] with ${attendeeNames.join(" and ")}`
-        } else {
-            headerString = `[[Call]] with ${attendeeNames.join(" and ")}`
+        console.log('Event summary is not a string:', event.summary);
+    }
+    
+    // Determine template based on direct checks
+    if (event.summary && typeof event.summary === 'string') {
+        const summary = event.summary.toLowerCase();
+        if (summary.includes('1:1')) {
+            headerString = `[[1:1]] with ${attendeeNames.join(" and ")}`;
+            if (includeEventTitle) {
+                headerString += ` about ${event.summary}`;
+            }
+            console.log('DIRECT MATCH: Using 1:1 template');
+            return { headerString, childrenBlocks };
+        } else if (summary.includes('dinner')) {
+            headerString = `[[Dinner]] with ${attendeeNames.join(" and ")}`;
+            if (includeEventTitle) {
+                headerString += ` about ${event.summary}`;
+            }
+            console.log('DIRECT MATCH: Using Dinner template');
+            return { headerString, childrenBlocks };
         }
     }
+        
+    // If we didn't match via direct checks, try the keyword system
+    console.log('No direct match found, trying keyword system...');
+    const keywords = getEventKeywords(extensionAPI);
+    console.log('Loaded event keywords:', keywords);
+    let matchedKeyword = null;
+    
+    // Find matching keyword by priority
+    for (const keyword of keywords.sort((a, b) => a.priority - b.priority)) {
+        // Skip keywords requiring multiple attendees if we don't have them
+        if (keyword.requiresMultipleAttendees && attendees.length <= 1) {
+            continue;
+        }
+        
+        // Handle default template (empty term or isDefault flag)
+        if (keyword.term === "" || keyword.isDefault) {
+            if (!matchedKeyword) {
+                matchedKeyword = keyword;
+            }
+            continue; // Save default but keep looking for better matches
+        }
+        
+        // Add additional debug logging to help diagnose the issue
+        console.log('Checking keyword match:', {
+            keyword: keyword.term,
+            eventSummary: event.summary,
+            isMatch: checkStringForSubstring(event.summary, keyword.term)
+        });
+        
+        // Check if event summary contains this keyword
+        if (checkStringForSubstring(event.summary, keyword.term)) {
+            matchedKeyword = keyword;
+            break; // Found a specific match, stop looking
+        }
+    }
+    
+    // If no match found, use a hardcoded default as fallback
+    if (!matchedKeyword) {
+        // This should rarely happen since we have a default in keywords
+        headerString = formatTemplate("[[Call]] with {attendees}", attendeeNames, event.summary, includeEventTitle);
+    } else {
+        // Format the template with actual values
+        headerString = formatTemplate(matchedKeyword.template, attendeeNames, event.summary, includeEventTitle);
+    }
+    
+    // Log what keyword matched for debugging purposes
+    console.log('Event template match:', {
+        eventSummary: event.summary,
+        matchedKeyword: matchedKeyword ? matchedKeyword.term || '(default)' : 'none',
+        generatedHeader: headerString
+    });
+    
     return { headerString, childrenBlocks }
 }

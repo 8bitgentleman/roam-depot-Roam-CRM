@@ -13,8 +13,8 @@ import IntervalSettings from "./components/list_intervals"
 import displayCRMDialog from "./components/clay"
 import { moveFocus, getLastBlockAndFocus } from './utils';
 
-const testing = false
-const version = "v2.8.11"
+const testing = true
+const version = "v2.8.12"
 
 const plugin_title = "Roam CRM"
 
@@ -338,7 +338,7 @@ async function onload({ extensionAPI }) {
     }
 
     if (testing) {
-        displayCRMDialog(people)
+        // displayCRMDialog(people)
         // displayBirthdays(people, "01-19-2024", extensionAPI)
     } else {
         if (!getExtensionAPISetting(extensionAPI, "trigger-modal-on-load", false)) {
