@@ -40,32 +40,46 @@ function findPersonNameByEmail(people, email) {
 }
 
 function checkStringForSubstring(summary, substring) {
-    // Add debug check to ensure we have valid strings
+    // Improved function to handle edge cases better
     console.log('checkStringForSubstring debug:', {
-        summary,
-        substring,
+        summary: summary,
+        substring: substring,
         summaryType: typeof summary,
         substringType: typeof substring
     });
     
-    if (!summary || !substring) {
-        console.log('Invalid strings for comparison:', { summary, substring });
+    // Empty keyword always returns false (should use isDefault flag instead)
+    if (substring === "") {
+        console.log('Empty substring - will not match any summary');
         return false;
     }
     
-    // Convert both to lowercase for case-insensitive comparison
-    const normalizedSummary = String(summary).toLowerCase();
-    const normalizedSubstring = String(substring).toLowerCase();
+    // Null/undefined check
+    if (summary == null || substring == null) {
+        console.log('Null or undefined values detected:', { summary, substring });
+        return false;
+    }
     
-    // Check if the summary includes the substring
-    const result = normalizedSummary.includes(normalizedSubstring);
-    console.log('String comparison result:', {
-        normalizedSummary,
-        normalizedSubstring,
-        result
-    });
-    
-    return result;
+    try {
+        // Convert both to lowercase for case-insensitive comparison
+        // Use String() constructor to handle non-string types
+        const normalizedSummary = String(summary).toLowerCase().trim();
+        const normalizedSubstring = String(substring).toLowerCase().trim();
+        
+        // Check if the summary includes the substring
+        console.log(`Comparing: '${normalizedSummary}' to see if it contains '${normalizedSubstring}'`);
+        const result = normalizedSummary.includes(normalizedSubstring);
+        console.log('String comparison result:', {
+            normalizedSummary,
+            normalizedSubstring,
+            result
+        });
+        
+        return result;
+    } catch (error) {
+        console.error('Error in string comparison:', error);
+        return false;
+    }
 }
 
 // Default keyword settings for event templates
@@ -93,7 +107,23 @@ const DEFAULT_EVENT_KEYWORDS = [
 
 // Helper to get keywords with backwards compatibility
 function getEventKeywords(extensionAPI) {
-    return getExtensionAPISetting(extensionAPI, "event-keywords", DEFAULT_EVENT_KEYWORDS);
+    // Direct check of raw setting value
+    const directValue = extensionAPI.settings.get("event-keywords");
+    console.log('Direct event-keywords value:', directValue);
+    
+    // Use default if no saved settings
+    if (!directValue) {
+        console.log('No saved keywords found, using defaults');
+        return DEFAULT_EVENT_KEYWORDS;
+    }
+    
+    // Log some details about the keywords for debugging
+    console.log('Found', directValue.length, 'custom keywords');
+    if (directValue.length > 0) {
+        console.log('First keyword:', directValue[0]);
+    }
+    
+    return directValue;
 }
 
 // Helper to format a template with attendee names and optional title
@@ -397,12 +427,23 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     continue
                 }
         
-                // Skip events with no or single attendee (likely personal events)
+                // Get event attendees
                 let attendees = result.event.attendees || []
-                if (attendees.length <= 1) {
-                    // Skip logging for single-attendee events
+                
+                // Check if this is a single person event (just the organizer)
+                // Critically: Google Calendar doesn't explicitly include the organizer in all cases
+                const isSingleAttendeeEvent = attendees.length === 0 || 
+                    (attendees.length === 1 && attendees[0].self === true);
+                
+                // If this is a TESTING command, we'll process all events for template testing
+                // Otherwise, check if we need to process this based on single vs multi-attendee logic
+                if (!testing && isSingleAttendeeEvent) {
+                    // Skip single-attendee events but log them in testing mode
+                    console.log(`Skipping single-attendee event: "${result.event.summary}"`)
                     no_update.add(eventId)
                     continue
+                } else if (testing && isSingleAttendeeEvent) {
+                    console.log(`Processing single-attendee event in testing mode: "${result.event.summary}"`)
                 }
         
                 // Process event updates or create new event blocks
@@ -470,10 +511,16 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
     // In testing mode, force template generation and logging without actual updates
     if (testing) {
         console.log('=== TESTING MODE: Force template generation ===');
+        
+        // Determine if this is a single-person event
+        const isSingleAttendeeEvent = attendees.length === 0 || 
+            (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true));
+            
         console.log('Testing event:', {
             id: eventId,
             summary: result.event.summary,
-            attendees: attendees.map(a => a.email)
+            attendees: attendees.map(a => ({ email: a.email, self: a.self, organizer: a.organizer })),
+            isSinglePerson: isSingleAttendeeEvent
         });
         
         let { headerString, childrenBlocks } = createEventBlocks(
@@ -487,6 +534,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
         console.log('Generated template:', {
             eventId,
             summary: result.event.summary,
+            isSinglePerson: isSingleAttendeeEvent,
             headerString,
             childrenCount: childrenBlocks.length
         });
@@ -777,45 +825,112 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         
     // If we didn't match via direct checks, try the keyword system
     console.log('No direct match found, trying keyword system...');
+    
+    // Log raw settings for debugging
+    console.log('Raw settings:', {
+        'event-keywords setting': extensionAPI.settings.get('event-keywords'),
+        'All settings': extensionAPI.settings.getAll ? extensionAPI.settings.getAll() : 'getAll not available'
+    });
+    
     const keywords = getEventKeywords(extensionAPI);
     console.log('Loaded event keywords:', keywords);
     let matchedKeyword = null;
     
-    // Find matching keyword by priority
-    for (const keyword of keywords.sort((a, b) => a.priority - b.priority)) {
-        // Skip keywords requiring multiple attendees if we don't have them
-        if (keyword.requiresMultipleAttendees && attendees.length <= 1) {
+    // First, let's identify the default keyword upfront for clarity
+    let defaultKeyword = keywords.find(k => k.isDefault || k.term === "");
+    console.log('Default keyword identified:', defaultKeyword || 'No default found');
+    
+    // Debug attendees count
+    console.log('Attendee details:', {
+        attendeeNamesCount: attendeeNames.length,
+        attendeeNames: attendeeNames,
+        attendeesCount: attendees.length,
+        attendees: attendees.map(a => ({ email: a.email, self: a.self, organizer: a.organizer })),
+        isSinglePerson: attendeeNames.length === 0 || 
+            (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true))
+    });
+    
+    // Find matching keyword by priority (properly sorted)
+    const sortedKeywords = [...keywords].sort((a, b) => a.priority - b.priority);
+    console.log('Keywords sorted by priority:', sortedKeywords.map(k => ({ 
+        term: k.term, 
+        priority: k.priority,
+        requiresMultipleAttendees: k.requiresMultipleAttendees 
+    })));
+    
+    // Determine if this is a single-person event (just me/myself)
+    // Google Calendar API quirk: if it's just you, attendees might be empty or have just you
+    const isSinglePersonEvent = attendeeNames.length === 0 || 
+        (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true));
+    
+    for (const keyword of sortedKeywords) {
+        // Skip keywords requiring multiple attendees for single-person events
+        if (keyword.requiresMultipleAttendees && isSinglePersonEvent) {
+            console.log(`Skipping keyword '${keyword.term}' - requires multiple attendees (this is a single-person event)`);
+            continue;
+        }
+        
+        // Conversely, skip keywords meant for single-person events when we have multiple people
+        if (!keyword.requiresMultipleAttendees && !isSinglePersonEvent) {
+            console.log(`Skipping keyword '${keyword.term}' - only for single-person events (this has multiple attendees)`);
             continue;
         }
         
         // Handle default template (empty term or isDefault flag)
         if (keyword.term === "" || keyword.isDefault) {
+            // Only save this as a default if it matches our single/multi person requirement
+            // Default keywords should still respect the requiresMultipleAttendees flag
             if (!matchedKeyword) {
+                console.log(`Saving default keyword '${keyword.term || "(empty term)"}' as fallback`);
                 matchedKeyword = keyword;
             }
             continue; // Save default but keep looking for better matches
         }
         
-        // Add additional debug logging to help diagnose the issue
+        // Check if event summary contains this keyword
+        const isMatch = checkStringForSubstring(event.summary, keyword.term);
         console.log('Checking keyword match:', {
             keyword: keyword.term,
             eventSummary: event.summary,
-            isMatch: checkStringForSubstring(event.summary, keyword.term)
+            isMatch: isMatch
         });
         
-        // Check if event summary contains this keyword
-        if (checkStringForSubstring(event.summary, keyword.term)) {
+        if (isMatch) {
+            console.log(`Found matching keyword: '${keyword.term}'`);
             matchedKeyword = keyword;
             break; // Found a specific match, stop looking
         }
     }
     
-    // If no match found, use a hardcoded default as fallback
+    // If no match found, use a proper fallback
     if (!matchedKeyword) {
-        // This should rarely happen since we have a default in keywords
-        headerString = formatTemplate("[[Call]] with {attendees}", attendeeNames, event.summary, includeEventTitle);
-    } else {
-        // Format the template with actual values
+        // Find a default that matches our single/multi-person requirement
+        const appropriateDefault = sortedKeywords.find(k => 
+            (k.isDefault || k.term === "") && 
+            (k.requiresMultipleAttendees !== isSinglePersonEvent) // requiresMultiple should match !isSingle
+        );
+        
+        if (appropriateDefault) {
+            console.log(`Using appropriate default keyword for ${isSinglePersonEvent ? 'single' : 'multi'}-person event`);
+            matchedKeyword = appropriateDefault;
+        } else if (defaultKeyword) {
+            // Fall back to any default if no appropriate one exists
+            console.log('Using general default keyword as fallback');
+            matchedKeyword = defaultKeyword;
+        } else {
+            // Ultimate fallback - hardcoded templates
+            console.log('No match and no default - using hardcoded fallback template');
+            if (isSinglePersonEvent) {
+                headerString = formatTemplate("[[Personal]] event: {attendees}", attendeeNames, event.summary, includeEventTitle);
+            } else {
+                headerString = formatTemplate("[[Call]] with {attendees}", attendeeNames, event.summary, includeEventTitle);
+            }
+        }
+    }
+    
+    // Format the template with actual values if we have a matched keyword
+    if (matchedKeyword && !headerString) {
+        console.log(`Formatting template with keyword: '${matchedKeyword.term || "(default)"}', template: '${matchedKeyword.template}'`);
         headerString = formatTemplate(matchedKeyword.template, attendeeNames, event.summary, includeEventTitle);
     }
     

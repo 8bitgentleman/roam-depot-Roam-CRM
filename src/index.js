@@ -12,6 +12,7 @@ import {
 import IntervalSettings from "./components/list_intervals"
 import displayCRMDialog from "./components/clay"
 import { moveFocus, getLastBlockAndFocus } from './utils';
+import EventKeywordSettings from "./components/event_keyword_settings"
 
 const testing = true
 const version = "v2.8.12"
@@ -41,6 +42,7 @@ function headerTextComponent() {
 //MARK: config panel
 function createPanelConfig(extensionAPI, pullFunction) {
     const wrappedIntervalConfig = () => IntervalSettings({ extensionAPI })
+    const wrappedEventKeywordConfig = () => EventKeywordSettings({ extensionAPI })
     return {
         tabTitle: plugin_title,
         settings: [
@@ -48,6 +50,29 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 id: "version-text",
                 name: "Version",
                 action: { type: "reactComponent", component: versionTextComponent },
+            },
+            {
+                id: "event-keywords-header",
+                name: "Event Keywords Settings",
+                action: { type: "reactComponent", component: headerTextComponent },
+            },
+            {
+                id: "event-keywords-setting",
+                name: "Customizable Event Keywords",
+                description:
+                    "Customize how calendar events are formatted based on keywords in the event title. Define custom templates for different types of events.",
+                className: "crm-event-keywords-setting",
+                action: { type: "reactComponent", component: wrappedEventKeywordConfig },
+            },
+            {
+                id: "testing-mode",
+                name: "Testing Mode",
+                description:
+                    "Enable testing mode for developers. Logs detailed debug info and skips saving data.",
+                action: {
+                    type: "switch",
+                    onChange: (evt) => { },
+                },
             },
             {
                 id: "modal-header",
@@ -203,6 +228,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
                     "In a block tagged [[Agenda]] (and when the Agenda Addr is turned on) If a person's name is tagged with a hashtag ( #[[Steve Jobs]] ), then the tagged name will be auto removed after the Agenda Addr is run.",
                 action: { type: "switch" },
             },
+            
             {
                 id: "templates-header",
                 name: "Setup Templates",
@@ -713,6 +739,18 @@ async function onload({ extensionAPI }) {
         callback: async () => {
             const allPeople = await getAllPeople()
             displayCRMDialog(allPeople)
+        },
+    })
+    
+    // Command Palette Test Calendar Template Matching
+    extensionAPI.ui.commandPalette.addCommand({
+        label: "Roam CRM - Test Calendar Template Matching",
+        "disable-hotkey": false,
+        callback: async () => {
+            const allPeople = await getAllPeople()
+            // Force testing mode for this command
+            await getEventInfo(allPeople, extensionAPI, true, true, 'manual-template-test')
+            showToast("Template matching test complete - check browser console for results", "SUCCESS")
         },
     })
     // Command Palette Quick Capture - Create a new DNP block and focus it in the sidebar
