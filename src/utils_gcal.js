@@ -433,17 +433,17 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                 // Check if this is a single person event (just the organizer)
                 // Critically: Google Calendar doesn't explicitly include the organizer in all cases
                 const isSingleAttendeeEvent = attendees.length === 0 || 
-                    (attendees.length === 1 && attendees[0].self === true);
+                    (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true)) ||
+                    !attendees.some(a => !a.self && !a.organizer); // No external attendees
                 
-                // If this is a TESTING command, we'll process all events for template testing
-                // Otherwise, check if we need to process this based on single vs multi-attendee logic
+                // In normal operation, skip single-attendee events entirely
+                // They'll only be processed if they match a specific keyword in createEventBlocks
                 if (!testing && isSingleAttendeeEvent) {
-                    // Skip single-attendee events but log them in testing mode
-                    console.log(`Skipping single-attendee event: "${result.event.summary}"`)
-                    no_update.add(eventId)
-                    continue
+                    console.log(`Skipping single-attendee event: "${result.event.summary}"`);
+                    no_update.add(eventId);
+                    continue;
                 } else if (testing && isSingleAttendeeEvent) {
-                    console.log(`Processing single-attendee event in testing mode: "${result.event.summary}"`)
+                    console.log(`Processing single-attendee event in testing mode: "${result.event.summary}"`);
                 }
         
                 // Process event updates or create new event blocks
@@ -514,13 +514,21 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
         
         // Determine if this is a single-person event
         const isSingleAttendeeEvent = attendees.length === 0 || 
-            (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true));
+            (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true)) ||
+            !attendees.some(a => !a.self && !a.organizer);
+            
+        // Check if this is a birthday event or all-day event
+        const isBirthdayEvent = result.event.summary && 
+            result.event.summary.toLowerCase().includes('birthday');
+        const isAllDayEvent = result.event.start && result.event.start.date && !result.event.start.dateTime;
             
         console.log('Testing event:', {
             id: eventId,
             summary: result.event.summary,
-            attendees: attendees.map(a => ({ email: a.email, self: a.self, organizer: a.organizer })),
-            isSinglePerson: isSingleAttendeeEvent
+            attendeesInfo: attendees.map(a => ({ email: a.email, self: a.self, organizer: a.organizer })),
+            isSinglePerson: isSingleAttendeeEvent,
+            isBirthday: isBirthdayEvent,
+            isAllDay: isAllDayEvent
         });
         
         let { headerString, childrenBlocks } = createEventBlocks(
@@ -624,7 +632,13 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                 attendees,
                 people,
                 extensionAPI
-            )
+            );
+            
+            // If headerString is empty, it's a signal to skip updating this block
+            if (!headerString) {
+                console.log(`Skipping block update for "${result.event.summary}" (empty header string)`);
+                return;
+            }
             // Update the existing block text
             await updateBlock({
                 uid: storedEvent.blockUID,
@@ -685,13 +699,19 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
     } else {
         // Creation logic for new events
         // Generate block content for new event
-        console.log('Creating new event block')
+        console.log('Creating new event block');
         let { headerString, childrenBlocks } = createEventBlocks(
             result.event,
             attendees,
             people,
             extensionAPI
-        )
+        );
+        
+        // If headerString is empty, it's a signal to skip creating this block
+        if (!headerString) {
+            console.log(`Skipping block creation for "${result.event.summary}" (empty header string)`);
+            return;
+        }
         // Generate unique ID for new block
         let blockUID = window.roamAlphaAPI.util.generateUID()
         // Calculate event date and get corresponding Roam page
@@ -840,15 +860,40 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     let defaultKeyword = keywords.find(k => k.isDefault || k.term === "");
     console.log('Default keyword identified:', defaultKeyword || 'No default found');
     
-    // Debug attendees count
-    console.log('Attendee details:', {
+    // Determine if this is a single-person event (just me/myself)
+    // Google Calendar API quirk: if it's just you, attendees might be empty or have just you
+    const isSinglePersonEvent = attendeeNames.length === 0 || 
+        (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true)) ||
+        !attendees.some(a => !a.self && !a.organizer);
+        
+    console.log('Event analysis:', {
+        summary: event.summary,
+        attendeeNames,
         attendeeNamesCount: attendeeNames.length,
-        attendeeNames: attendeeNames,
         attendeesCount: attendees.length,
-        attendees: attendees.map(a => ({ email: a.email, self: a.self, organizer: a.organizer })),
-        isSinglePerson: attendeeNames.length === 0 || 
-            (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true))
+        isSinglePerson: isSinglePersonEvent
     });
+        
+    // In normal (non-testing) mode, we skip creating blocks for single-person events
+    // unless they explicitly match one of the keywords
+    const testing = getExtensionAPISetting(extensionAPI, "testing-mode", false);
+    if (!testing && isSinglePersonEvent) {
+        // Check if there's a keyword specifically for single-person events that matches
+        const hasMatchingSinglePersonKeyword = keywords.some(k => 
+            !k.requiresMultipleAttendees && 
+            !k.isDefault && 
+            k.term && 
+            checkStringForSubstring(event.summary, k.term)
+        );
+        
+        // If there's no matching keyword for single-person events, skip this event
+        if (!hasMatchingSinglePersonKeyword) {
+            console.log(`Skipping single-person event with no matching keywords: "${event.summary}"`);
+            // Return an empty header string to signal that we don't want to create this block
+            headerString = '';
+            return { headerString, childrenBlocks };
+        }
+    }
     
     // Find matching keyword by priority (properly sorted)
     const sortedKeywords = [...keywords].sort((a, b) => a.priority - b.priority);
@@ -857,11 +902,6 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         priority: k.priority,
         requiresMultipleAttendees: k.requiresMultipleAttendees 
     })));
-    
-    // Determine if this is a single-person event (just me/myself)
-    // Google Calendar API quirk: if it's just you, attendees might be empty or have just you
-    const isSinglePersonEvent = attendeeNames.length === 0 || 
-        (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true));
     
     for (const keyword of sortedKeywords) {
         // Skip keywords requiring multiple attendees for single-person events
@@ -904,27 +944,15 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     
     // If no match found, use a proper fallback
     if (!matchedKeyword) {
-        // Find a default that matches our single/multi-person requirement
-        const appropriateDefault = sortedKeywords.find(k => 
-            (k.isDefault || k.term === "") && 
-            (k.requiresMultipleAttendees !== isSinglePersonEvent) // requiresMultiple should match !isSingle
-        );
-        
-        if (appropriateDefault) {
-            console.log(`Using appropriate default keyword for ${isSinglePersonEvent ? 'single' : 'multi'}-person event`);
-            matchedKeyword = appropriateDefault;
-        } else if (defaultKeyword) {
-            // Fall back to any default if no appropriate one exists
-            console.log('Using general default keyword as fallback');
+        // For single-person events with no match, we already returned early
+        // This is only for multi-person events
+        if (defaultKeyword && !isSinglePersonEvent) {
+            console.log('Using default template for multi-person event');
             matchedKeyword = defaultKeyword;
         } else {
-            // Ultimate fallback - hardcoded templates
-            console.log('No match and no default - using hardcoded fallback template');
-            if (isSinglePersonEvent) {
-                headerString = formatTemplate("[[Personal]] event: {attendees}", attendeeNames, event.summary, includeEventTitle);
-            } else {
-                headerString = formatTemplate("[[Call]] with {attendees}", attendeeNames, event.summary, includeEventTitle);
-            }
+            // Ultimate fallback for multi-person events
+            console.log('No matching keyword or default - using hardcoded multi-person template');
+            headerString = formatTemplate("[[Call]] with {attendees}", attendeeNames, event.summary, includeEventTitle);
         }
     }
     
