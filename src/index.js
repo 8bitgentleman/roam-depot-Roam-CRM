@@ -14,7 +14,7 @@ import displayCRMDialog from "./components/clay"
 import { moveFocus, getLastBlockAndFocus } from './utils';
 import EventKeywordSettings from "./components/event_keyword_settings"
 
-const testing = true
+const testing = false
 const version = "v2.9"
 
 const plugin_title = "Roam CRM"
@@ -748,7 +748,11 @@ async function onload({ extensionAPI }) {
         "disable-hotkey": false,
         callback: async () => {
             const allPeople = await getAllPeople()
-            // Force testing mode for this command
+            // This command runs in testing mode (true) which:
+            // 1. Shows detailed log output in console about keyword matching
+            // 2. Processes single-person events according to your keyword settings
+            // 3. DOESN'T actually create or update any blocks in Roam
+            // 4. DOESN'T save any data to extension storage
             await getEventInfo(allPeople, extensionAPI, true, true, 'manual-template-test')
             showToast("Template matching test complete - check browser console for results", "SUCCESS")
         },

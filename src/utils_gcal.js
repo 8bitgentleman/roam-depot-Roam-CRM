@@ -108,11 +108,24 @@ const DEFAULT_EVENT_KEYWORDS = [
 function getEventKeywords(extensionAPI) {
     // Direct check of raw setting value
     const directValue = extensionAPI.settings.get("event-keywords");
+    console.log('getEventKeywords - raw value:', directValue);
     
     // Use default if no saved settings
     if (!directValue) {
         console.log('No saved keywords found, using defaults');
+        console.log('DEFAULT_EVENT_KEYWORDS:', DEFAULT_EVENT_KEYWORDS);
         return DEFAULT_EVENT_KEYWORDS;
+    }
+    
+    // Check if any keywords have requiresMultipleAttendees=false
+    const singlePersonKeywords = directValue.filter(k => !k.requiresMultipleAttendees);
+    console.log('Single-person keywords found:', singlePersonKeywords.length);
+    if (singlePersonKeywords.length > 0) {
+        singlePersonKeywords.forEach(k => 
+            console.log(`- Keyword "${k.term || '(default)'}" can match single-person events`)
+        );
+    } else {
+        console.log('WARNING: No keywords configured for single-person events');
     }
 
     return directValue;
@@ -175,7 +188,25 @@ function convertEventDateFormats(start) {
 // MARK: eventInfo
 // Main function to sync Google Calendar events with Roam
 // Fetches events for the next 7 days and creates/updates corresponding blocks in Roam
+/**
+ * Syncs Google Calendar events with Roam
+ * 
+ * @param {Array} people - Array of people objects from getAllPeople
+ * @param {Object} extensionAPI - The Roam extension API
+ * @param {boolean} testing - When true, runs in test mode (logs only, no data saved)
+ *                          - Set to true by "Test Calendar Template Matching" command
+ *                          - Set to false by "Sync Calendar" button in modal
+ *                          - Otherwise uses the global testing variable
+ * @param {boolean} isManualSync - When true, ignores cooldown period
+ *                               - True for manual button clicks, false for automatic syncs
+ * @param {string} triggerSource - Identifies what triggered the sync (for logging)
+ * 
+ * Note: Single-person events will only be processed if they match a keyword
+ * with requiresMultipleAttendees=false, regardless of testing mode.
+ */
 export async function getEventInfo(people, extensionAPI, testing, isManualSync = false, triggerSource = 'unknown') {
+    console.log(`getEventInfo called: testing=${testing}, isManualSync=${isManualSync}, triggerSource=${triggerSource}`);
+    
     // Get previously stored calendar events from extension settings
     const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
 
@@ -432,18 +463,15 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true)) ||
                     !attendees.some(a => !a.self && !a.organizer); // No external attendees
                 
-                // In normal operation, skip single-attendee events entirely
-                // They'll only be processed if they match a specific keyword in createEventBlocks
-                if (!testing && isSingleAttendeeEvent) {
-                    console.log(`Skipping single-attendee event: "${result.event.summary}"`);
-                    no_update.add(eventId);
-                    continue;
-                } else if (testing && isSingleAttendeeEvent) {
-                    console.log(`Processing single-attendee event in testing mode: "${result.event.summary}"`);
+                // Log single-attendee events for reference
+                if (isSingleAttendeeEvent) {
+                    console.log(`Found single-attendee event: "${result.event.summary}"`);
+                    // We'll let the keyword system determine whether to process this event based on
+                    // the requiresMultipleAttendees setting for each keyword
                 }
         
                 // Process event updates or create new event blocks
-                await updateEventBlocks(storedEvents[eventId], result, attendees, people, extensionAPI, storedEvents)
+                await updateEventBlocks(storedEvents[eventId], result, attendees, people, extensionAPI, storedEvents, testing)
         
             } catch (err) {
                 // Handle individual event processing errors without failing entire sync
@@ -494,7 +522,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 
 // Helper function to handle creation and updates of event blocks in Roam
 // Separated from main function for better organization and readability
-async function updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents) {
+async function updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents, testing = false) {
     // Ensure the event exists and has an ID
     if (!result.event || !result.event.id) {
         console.error('Missing event data in updateEventBlocks:', result)
@@ -502,7 +530,8 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
     }
     
     const eventId = result.event.id
-    const testing = getExtensionAPISetting(extensionAPI, "testing-mode", false)
+    // Use the testing parameter passed from getEventInfo
+    // This ensures consistency between test command and other calls
 
     // In testing mode, force template generation and logging without actual updates
     if (testing) {
@@ -801,46 +830,17 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         })
     }
 
-    // Direct debug for specific keywords
-    console.log('=== DIRECT KEYWORD MATCHING TESTS ===');
+    // Debug area for keyword matching
+    console.log('=== KEYWORD MATCHING DEBUGGING ===');
     if (event.summary && typeof event.summary === 'string') {
         const summary = event.summary.toLowerCase();
         console.log(`Event summary: "${event.summary}" (lowercase: "${summary}")`);
-        
-        // Test for 1:1
-        const has1on1 = summary.includes('1:1');
-        console.log(`Contains "1:1": ${has1on1}`);
-        
-        // Test for dinner
-        const hasDinner = summary.includes('dinner');
-        console.log(`Contains "dinner": ${hasDinner}`);
-        
     } else {
         console.log('Event summary is not a string:', event.summary);
     }
-    
-    // Determine template based on direct checks
-    if (event.summary && typeof event.summary === 'string') {
-        const summary = event.summary.toLowerCase();
-        if (summary.includes('1:1')) {
-            headerString = `[[1:1]] with ${attendeeNames.join(" and ")}`;
-            if (includeEventTitle) {
-                headerString += ` about ${event.summary}`;
-            }
-            console.log('DIRECT MATCH: Using 1:1 template');
-            return { headerString, childrenBlocks };
-        } else if (summary.includes('dinner')) {
-            headerString = `[[Dinner]] with ${attendeeNames.join(" and ")}`;
-            if (includeEventTitle) {
-                headerString += ` about ${event.summary}`;
-            }
-            console.log('DIRECT MATCH: Using Dinner template');
-            return { headerString, childrenBlocks };
-        }
-    }
         
-    // If we didn't match via direct checks, try the keyword system
-    console.log('No direct match found, trying keyword system...');
+    // Use the keyword matching system
+    console.log('Applying keyword matching system...');
     
     const keywords = getEventKeywords(extensionAPI);
     console.log('Loaded event keywords:', keywords);
@@ -863,10 +863,9 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         isSinglePerson: isSinglePersonEvent
     });
         
-    // In normal (non-testing) mode, we skip creating blocks for single-person events
-    // unless they explicitly match one of the keywords
-    const testing = getExtensionAPISetting(extensionAPI, "testing-mode", false);
-    if (!testing && isSinglePersonEvent) {
+    // For single-person events, we need to find at least one matching keyword
+    // that is specifically configured to work with single-person events
+    if (isSinglePersonEvent) {
         // Check if there's a keyword specifically for single-person events that matches
         const hasMatchingSinglePersonKeyword = keywords.some(k => 
             !k.requiresMultipleAttendees && 
@@ -881,6 +880,8 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             // Return an empty header string to signal that we don't want to create this block
             headerString = '';
             return { headerString, childrenBlocks };
+        } else {
+            console.log(`Processing single-person event with matching keywords: "${event.summary}"`);
         }
     }
     

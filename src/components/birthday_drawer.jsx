@@ -13,6 +13,7 @@ import renderOverlay from "roamjs-components/util/renderOverlay"
 import remindersSystem from "../utils_reminders"
 import { calculateAge } from "../utils_reminders"
 import { getEventInfo } from "../utils_gcal"
+import { showToast } from "./toast"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import createBlock from "roamjs-components/writes/createBlock"
 import displayCRMDialog from "./clay"
@@ -134,9 +135,17 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                     !getExtensionAPISetting(extensionAPI, "calendar-setting", false)
                                 }
                                 onClick={() => {
-                                    getEventInfo(people, extensionAPI, false, true, 'Modal Button');
-
-                                    // TODO: add a toast if there are no changes or updates
+                                    console.log('Sync Calendar button clicked - starting manual sync');
+                                    showToast("Beginning calendar sync...", "INFO");
+                                    getEventInfo(people, extensionAPI, false, true, 'Modal Button')
+                                      .then(() => {
+                                          console.log('Calendar sync completed');
+                                          showToast("Calendar sync complete", "SUCCESS");
+                                      })
+                                      .catch(err => {
+                                          console.error('Calendar sync error:', err);
+                                          showToast("Calendar sync error: " + err.message, "DANGER");
+                                      });
                                 }}
                             />
                         </Tooltip>
