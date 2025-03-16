@@ -128,7 +128,12 @@ function getEventKeywords(extensionAPI) {
 
 // Helper to format a template with attendee names and optional title
 function formatTemplate(template, attendeeNames, eventSummary, includeEventTitle) {
-    let result = template.replace("{attendees}", attendeeNames.join(" and "));
+    let result = template;
+    
+    // Only replace {attendees} if it exists in the template
+    if (template.includes("{attendees}")) {
+        result = template.replace("{attendees}", attendeeNames.join(" and "));
+    }
     
     if (includeEventTitle && eventSummary) {
         result += ` about ${eventSummary}`;
@@ -233,8 +238,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
             endDatePageTitle: endDatePageTitle,
         })
 
-        console.log(`Fetched ${results.length} events from Google Calendar`)
-        console.log('Fetched events:', results);
+        console.log(`Fetched ${results.length} events:`, results);
        
         
         // Exit if no events or error message received

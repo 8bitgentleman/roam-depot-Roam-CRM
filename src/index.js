@@ -15,7 +15,7 @@ import { moveFocus, getLastBlockAndFocus } from './utils';
 import EventKeywordSettings from "./components/event_keyword_settings"
 
 const testing = true
-const version = "v2.8.12"
+const version = "v2.9"
 
 const plugin_title = "Roam CRM"
 

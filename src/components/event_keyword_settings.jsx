@@ -122,8 +122,8 @@ function EventKeywordSettings({ extensionAPI }) {
       return
     }
 
-    if (!formTemplate.includes("{attendees}")) {
-      showToast("Template must include {attendees} placeholder", "WARNING")
+    if (formRequiresMultipleAttendees && !formTemplate.includes("{attendees}")) {
+      showToast("Template must include {attendees} placeholder when multiple attendees are required", "WARNING")
       return
     }
 
@@ -146,7 +146,8 @@ function EventKeywordSettings({ extensionAPI }) {
       // Adding new keyword
       newKeywords = [...keywords, newKeyword]
     }
-
+    console.log("newKeywords", newKeywords);
+    
     // If this is a default keyword, unset any other defaults
     if (formIsDefault) {
       newKeywords = newKeywords.map((k, idx) => {
@@ -159,6 +160,7 @@ function EventKeywordSettings({ extensionAPI }) {
         }
       })
     }
+    console.log("newKeywords", newKeywords);
 
     // Make sure we have at least one default
     const hasDefault = newKeywords.some(k => k.isDefault)
@@ -218,7 +220,9 @@ function EventKeywordSettings({ extensionAPI }) {
         <FormGroup
           label="Template"
           labelInfo="(required)"
-          helperText="Use {attendees} as a placeholder for the attendee names."
+          helperText={formRequiresMultipleAttendees 
+            ? "Use {attendees} as a placeholder for the attendee names (required)." 
+            : "Use {attendees} as an optional placeholder for attendee names."}
         >
           <InputGroup
             placeholder="e.g., [[1:1]] with {attendees}"
