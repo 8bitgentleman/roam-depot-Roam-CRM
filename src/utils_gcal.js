@@ -41,12 +41,12 @@ function findPersonNameByEmail(people, email) {
 
 function checkStringForSubstring(summary, substring) {
     // Improved function to handle edge cases better
-    console.log('checkStringForSubstring debug:', {
-        summary: summary,
-        substring: substring,
-        summaryType: typeof summary,
-        substringType: typeof substring
-    });
+    // console.log('checkStringForSubstring debug:', {
+    //     summary: summary,
+    //     substring: substring,
+    //     summaryType: typeof summary,
+    //     substringType: typeof substring
+    // });
     
     // Empty keyword always returns false (should use isDefault flag instead)
     if (substring === "") {
@@ -67,7 +67,6 @@ function checkStringForSubstring(summary, substring) {
         const normalizedSubstring = String(substring).toLowerCase().trim();
         
         // Check if the summary includes the substring
-        console.log(`Comparing: '${normalizedSummary}' to see if it contains '${normalizedSubstring}'`);
         const result = normalizedSummary.includes(normalizedSubstring);
         console.log('String comparison result:', {
             normalizedSummary,
@@ -109,20 +108,13 @@ const DEFAULT_EVENT_KEYWORDS = [
 function getEventKeywords(extensionAPI) {
     // Direct check of raw setting value
     const directValue = extensionAPI.settings.get("event-keywords");
-    console.log('Direct event-keywords value:', directValue);
     
     // Use default if no saved settings
     if (!directValue) {
         console.log('No saved keywords found, using defaults');
         return DEFAULT_EVENT_KEYWORDS;
     }
-    
-    // Log some details about the keywords for debugging
-    console.log('Found', directValue.length, 'custom keywords');
-    if (directValue.length > 0) {
-        console.log('First keyword:', directValue[0]);
-    }
-    
+
     return directValue;
 }
 
@@ -850,19 +842,12 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     // If we didn't match via direct checks, try the keyword system
     console.log('No direct match found, trying keyword system...');
     
-    // Log raw settings for debugging
-    console.log('Raw settings:', {
-        'event-keywords setting': extensionAPI.settings.get('event-keywords'),
-        'All settings': extensionAPI.settings.getAll ? extensionAPI.settings.getAll() : 'getAll not available'
-    });
-    
     const keywords = getEventKeywords(extensionAPI);
     console.log('Loaded event keywords:', keywords);
     let matchedKeyword = null;
     
     // First, let's identify the default keyword upfront for clarity
     let defaultKeyword = keywords.find(k => k.isDefault || k.term === "");
-    console.log('Default keyword identified:', defaultKeyword || 'No default found');
     
     // Determine if this is a single-person event (just me/myself)
     // Google Calendar API quirk: if it's just you, attendees might be empty or have just you
@@ -901,22 +886,15 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     
     // Find matching keyword by priority (properly sorted)
     const sortedKeywords = [...keywords].sort((a, b) => a.priority - b.priority);
-    console.log('Keywords sorted by priority:', sortedKeywords.map(k => ({ 
-        term: k.term, 
-        priority: k.priority,
-        requiresMultipleAttendees: k.requiresMultipleAttendees 
-    })));
     
     for (const keyword of sortedKeywords) {
         // Skip keywords requiring multiple attendees for single-person events
         if (keyword.requiresMultipleAttendees && isSinglePersonEvent) {
-            console.log(`Skipping keyword '${keyword.term}' - requires multiple attendees (this is a single-person event)`);
             continue;
         }
         
         // Conversely, skip keywords meant for single-person events when we have multiple people
         if (!keyword.requiresMultipleAttendees && !isSinglePersonEvent) {
-            console.log(`Skipping keyword '${keyword.term}' - only for single-person events (this has multiple attendees)`);
             continue;
         }
         
@@ -925,7 +903,6 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             // Only save this as a default if it matches our single/multi person requirement
             // Default keywords should still respect the requiresMultipleAttendees flag
             if (!matchedKeyword) {
-                console.log(`Saving default keyword '${keyword.term || "(empty term)"}' as fallback`);
                 matchedKeyword = keyword;
             }
             continue; // Save default but keep looking for better matches
@@ -933,11 +910,6 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         
         // Check if event summary contains this keyword
         const isMatch = checkStringForSubstring(event.summary, keyword.term);
-        console.log('Checking keyword match:', {
-            keyword: keyword.term,
-            eventSummary: event.summary,
-            isMatch: isMatch
-        });
         
         if (isMatch) {
             console.log(`Found matching keyword: '${keyword.term}'`);
@@ -972,6 +944,6 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         matchedKeyword: matchedKeyword ? matchedKeyword.term || '(default)' : 'none',
         generatedHeader: headerString
     });
-    
+    console.log("")
     return { headerString, childrenBlocks }
 }
