@@ -9,10 +9,11 @@ import {
   FormGroup,
   InputGroup,
   Switch,
-  NumericInput
+  NumericInput,
+  Menu,
+  Popover,
+  Position
 } from "@blueprintjs/core"
-import { Select } from "@blueprintjs/select"
-import { MenuItem } from "@blueprintjs/core"
 import { showToast } from "./toast"
 import { getSmartblockWorkflows } from "../utils"
 
@@ -51,6 +52,8 @@ function EventKeywordSettings({ extensionAPI }) {
   const [editingIndex, setEditingIndex] = useState(null)
   const [isAddingNew, setIsAddingNew] = useState(false)
   const [smartblockWorkflows, setSmartblockWorkflows] = useState([])
+  const [filteredWorkflows, setFilteredWorkflows] = useState([])
+  const [workflowFilter, setWorkflowFilter] = useState("")
   
   // Form state
   const [formTerm, setFormTerm] = useState("")
@@ -71,8 +74,28 @@ function EventKeywordSettings({ extensionAPI }) {
     // Load available smartblock workflows
     const workflows = getSmartblockWorkflows()
     console.log("Loaded smartblock workflows", workflows);
-    setSmartblockWorkflows(workflows || [])
+    
+    // Sort workflows by name
+    const sortedWorkflows = [...workflows].sort((a, b) => 
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+    );
+    
+    setSmartblockWorkflows(sortedWorkflows || [])
+    setFilteredWorkflows(sortedWorkflows || [])
   }, [extensionAPI])
+
+  // Filter workflows when the filter input changes
+  useEffect(() => {
+    if (!workflowFilter.trim()) {
+      setFilteredWorkflows(smartblockWorkflows)
+      return
+    }
+    
+    const filtered = smartblockWorkflows.filter(workflow => 
+      workflow.name.toLowerCase().includes(workflowFilter.toLowerCase())
+    )
+    setFilteredWorkflows(filtered)
+  }, [workflowFilter, smartblockWorkflows])
 
   // Save keywords to extension settings
   const saveKeywords = (newKeywords) => {
@@ -91,6 +114,7 @@ function EventKeywordSettings({ extensionAPI }) {
     setFormSmartblock(null)
     setEditingIndex(null)
     setIsAddingNew(false)
+    setWorkflowFilter("")
   }
 
   // Start adding a new keyword
@@ -217,12 +241,39 @@ function EventKeywordSettings({ extensionAPI }) {
     }
   }
 
-  // Create SmartBlock workflow selector component
-  const SmartblockSelect = Select.ofType();
-
-  // SmartBlock workflow selector component
+  // Custom SmartBlock workflow selector using standard UI components
   const renderSmartblockSelect = () => {
     if (!formUseSmartblock) return null;
+    
+    const workflowMenu = (
+      <Menu>
+        <div style={{ padding: "5px", borderBottom: "1px solid #394b59" }}>
+          <InputGroup
+            placeholder="Filter workflows..."
+            value={workflowFilter}
+            onChange={e => setWorkflowFilter(e.target.value)}
+            autoFocus
+            small
+          />
+        </div>
+        <div style={{ maxHeight: "300px", overflow: "auto" }}>
+          {filteredWorkflows.length === 0 ? (
+            <Menu.Item disabled text="No matching workflows found" />
+          ) : (
+            filteredWorkflows.map(workflow => (
+              <Menu.Item
+                key={workflow.uid}
+                text={workflow.name}
+                onClick={() => {
+                  setFormSmartblock(workflow);
+                  setWorkflowFilter(""); // Reset filter when selection is made
+                }}
+              />
+            ))
+          )}
+        </div>
+      </Menu>
+    );
     
     return (
       <FormGroup
@@ -230,26 +281,17 @@ function EventKeywordSettings({ extensionAPI }) {
         labelInfo="(required)"
         helperText="Select a SmartBlock workflow to use for this keyword"
       >
-        <SmartblockSelect
-          items={smartblockWorkflows}
-          itemRenderer={(item, { handleClick, modifiers }) => (
-            <MenuItem
-              key={item.uid}
-              text={item.name}
-              onClick={handleClick}
-              active={modifiers.active}
-            />
-          )}
-          onItemSelect={(item) => setFormSmartblock(item)}
-          filterable={true}
-          noResults={<MenuItem disabled={true} text="No workflows found" />}
+        <Popover
+          content={workflowMenu}
+          position={Position.BOTTOM_LEFT}
+          minimal
         >
           <Button
             rightIcon="caret-down"
             text={formSmartblock ? formSmartblock.name : "Select a workflow..."}
             style={{ width: "100%" }}
           />
-        </SmartblockSelect>
+        </Popover>
       </FormGroup>
     );
   };
