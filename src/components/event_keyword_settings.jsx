@@ -11,7 +11,10 @@ import {
   Switch,
   NumericInput
 } from "@blueprintjs/core"
+import { Select } from "@blueprintjs/select"
+import { MenuItem } from "@blueprintjs/core"
 import { showToast } from "./toast"
+import { getSmartblockWorkflows } from "../utils"
 
 /**
  * Component for managing event keywords in Roam CRM extension settings
@@ -47,6 +50,7 @@ function EventKeywordSettings({ extensionAPI }) {
   const [keywords, setKeywords] = useState([])
   const [editingIndex, setEditingIndex] = useState(null)
   const [isAddingNew, setIsAddingNew] = useState(false)
+  const [smartblockWorkflows, setSmartblockWorkflows] = useState([])
   
   // Form state
   const [formTerm, setFormTerm] = useState("")
@@ -54,13 +58,20 @@ function EventKeywordSettings({ extensionAPI }) {
   const [formRequiresMultipleAttendees, setFormRequiresMultipleAttendees] = useState(true)
   const [formPriority, setFormPriority] = useState(10)
   const [formIsDefault, setFormIsDefault] = useState(false)
+  const [formSmartblock, setFormSmartblock] = useState(null)
+  const [formUseSmartblock, setFormUseSmartblock] = useState(false)
 
-  // Load keywords on component mount
+  // Load keywords and smartblocks on component mount
   useEffect(() => {
     const savedKeywords = extensionAPI.settings.get("event-keywords")
     console.log("Loaded keywords", savedKeywords);
     
     setKeywords(savedKeywords || DEFAULT_EVENT_KEYWORDS)
+    
+    // Load available smartblock workflows
+    const workflows = getSmartblockWorkflows()
+    console.log("Loaded smartblock workflows", workflows);
+    setSmartblockWorkflows(workflows || [])
   }, [extensionAPI])
 
   // Save keywords to extension settings
@@ -76,6 +87,8 @@ function EventKeywordSettings({ extensionAPI }) {
     setFormRequiresMultipleAttendees(true)
     setFormPriority(10)
     setFormIsDefault(false)
+    setFormUseSmartblock(false)
+    setFormSmartblock(null)
     setEditingIndex(null)
     setIsAddingNew(false)
   }
@@ -93,6 +106,10 @@ function EventKeywordSettings({ extensionAPI }) {
     setFormRequiresMultipleAttendees(keyword.requiresMultipleAttendees)
     setFormPriority(keyword.priority)
     setFormIsDefault(keyword.isDefault || false)
+    setFormUseSmartblock(keyword.useSmartblock || false)
+    setFormSmartblock(keyword.smartblockUid ? 
+      smartblockWorkflows.find(w => w.uid === keyword.smartblockUid) || null 
+      : null)
     setEditingIndex(index)
     setIsAddingNew(false)
   }
@@ -118,7 +135,12 @@ function EventKeywordSettings({ extensionAPI }) {
   const handleSubmit = () => {
     // Validate form
     if (!formTemplate) {
-      showToast("Template is required", "WARNING")
+      showToast("Parent Block Template is required", "WARNING")
+      return
+    }
+
+    if (formUseSmartblock && !formSmartblock) {
+      showToast("Please select a SmartBlock workflow", "WARNING")
       return
     }
 
@@ -133,9 +155,12 @@ function EventKeywordSettings({ extensionAPI }) {
       template: formTemplate,
       requiresMultipleAttendees: formRequiresMultipleAttendees,
       priority: formPriority,
-      isDefault: formIsDefault
+      isDefault: formIsDefault,
+      useSmartblock: formUseSmartblock,
+      smartblockUid: formUseSmartblock && formSmartblock ? formSmartblock.uid : null
     }
-
+    console.log("newKeyword", newKeyword);
+    
     let newKeywords
 
     if (editingIndex !== null) {
@@ -192,6 +217,43 @@ function EventKeywordSettings({ extensionAPI }) {
     }
   }
 
+  // Create SmartBlock workflow selector component
+  const SmartblockSelect = Select.ofType();
+
+  // SmartBlock workflow selector component
+  const renderSmartblockSelect = () => {
+    if (!formUseSmartblock) return null;
+    
+    return (
+      <FormGroup
+        label="SmartBlock Workflow"
+        labelInfo="(required)"
+        helperText="Select a SmartBlock workflow to use for this keyword"
+      >
+        <SmartblockSelect
+          items={smartblockWorkflows}
+          itemRenderer={(item, { handleClick, modifiers }) => (
+            <MenuItem
+              key={item.uid}
+              text={item.name}
+              onClick={handleClick}
+              active={modifiers.active}
+            />
+          )}
+          onItemSelect={(item) => setFormSmartblock(item)}
+          filterable={true}
+          noResults={<MenuItem disabled={true} text="No workflows found" />}
+        >
+          <Button
+            rightIcon="caret-down"
+            text={formSmartblock ? formSmartblock.name : "Select a workflow..."}
+            style={{ width: "100%" }}
+          />
+        </SmartblockSelect>
+      </FormGroup>
+    );
+  };
+
   // Render inline edit form
   const renderForm = () => {
     return (
@@ -218,6 +280,17 @@ function EventKeywordSettings({ extensionAPI }) {
         </FormGroup>
 
         <FormGroup
+          label="Priority"
+          helperText="Lower numbers have higher priority. Default should be high (e.g., 999)."
+        >
+          <NumericInput
+            min={1}
+            value={formPriority}
+            onValueChange={value => setFormPriority(value)}
+          />
+        </FormGroup>
+
+        <FormGroup
           label="Parent Block Template"
           labelInfo="(required)"
           helperText={formRequiresMultipleAttendees 
@@ -231,16 +304,18 @@ function EventKeywordSettings({ extensionAPI }) {
           />
         </FormGroup>
 
-        <FormGroup
-          label="Priority"
-          helperText="Lower numbers have higher priority. Default should be high (e.g., 999)."
-        >
-          <NumericInput
-            min={1}
-            value={formPriority}
-            onValueChange={value => setFormPriority(value)}
+        <div style={{ marginBottom: "15px" }}>
+          <Switch
+            label="Use SmartBlock workflow for content"
+            checked={formUseSmartblock}
+            onChange={e => setFormUseSmartblock(e.target.checked)}
           />
-        </FormGroup>
+          <div style={{ fontSize: "12px", color: "#bfccd6", marginLeft: "35px" }}>
+            When enabled, the selected SmartBlock will be triggered to create content under the parent block
+          </div>
+        </div>
+
+        {formUseSmartblock && renderSmartblockSelect()}
 
         <div style={{ marginBottom: "10px" }}>
           <Switch
@@ -269,6 +344,24 @@ function EventKeywordSettings({ extensionAPI }) {
       </Card>
     )
   }
+
+  // Helper to display the template or smartblock info
+  const renderTemplateInfo = (keyword) => {
+    return (
+      <div>
+        <div>Parent Block Template: <code style={{ backgroundColor: "#394b59", color: "#f5f8fa", padding: "2px 5px", borderRadius: "3px" }}>
+          {keyword.template}
+        </code></div>
+        {keyword.useSmartblock && (
+          <div style={{ marginTop: "5px" }}>
+            Content: <code style={{ backgroundColor: "#394b59", color: "#f5f8fa", padding: "2px 5px", borderRadius: "3px" }}>
+              SmartBlock - {smartblockWorkflows.find(w => w.uid === keyword.smartblockUid)?.name || 'Unknown workflow'}
+            </code>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="event-keyword-settings" style={{ padding: "10px" }}>
@@ -330,8 +423,13 @@ function EventKeywordSettings({ extensionAPI }) {
                           <Icon icon="star" style={{ marginLeft: "5px", color: "#137CBD" }} />
                         </Tooltip>
                       )}
+                      {keyword.useSmartblock && (
+                        <Tooltip content="Uses a SmartBlock workflow for content">
+                          <Icon icon="code-block" style={{ marginLeft: "5px", color: "#A854A8" }} />
+                        </Tooltip>
+                      )}
                     </h4>
-                    <div>Parent Block Template: <code style={{ backgroundColor: "#394b59", color: "#f5f8fa", padding: "2px 5px", borderRadius: "3px" }}>{keyword.template}</code></div>
+                    {renderTemplateInfo(keyword)}
                     <div>
                       <small>
                         Priority: {keyword.priority} •

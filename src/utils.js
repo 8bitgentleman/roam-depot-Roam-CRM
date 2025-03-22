@@ -1,5 +1,5 @@
 import createPage from "roamjs-components/writes/createPage"
-import createTagRegex from "roamjs-components/createTagRegex"
+import createTagRegex from "roamjs-components/util/createTagRegex"
 
 export async function getPageUID(page) {
     // Perform Roam Research datalog pull
@@ -249,7 +249,7 @@ export async function getLastBlockAndFocus() {
     });
 };
 
-export const getCustomWorkflows = () => {
+export const getSmartblockWorkflows = () => {
 
     const result = (window.roamAlphaAPI.data.fast
         .q(
