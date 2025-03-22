@@ -218,7 +218,7 @@ function EventKeywordSettings({ extensionAPI }) {
         </FormGroup>
 
         <FormGroup
-          label="Template"
+          label="Parent Block Template"
           labelInfo="(required)"
           helperText={formRequiresMultipleAttendees 
             ? "Use {attendees} as a placeholder for the attendee names (required)." 
@@ -331,7 +331,7 @@ function EventKeywordSettings({ extensionAPI }) {
                         </Tooltip>
                       )}
                     </h4>
-                    <div>Template: <code style={{ backgroundColor: "#394b59", color: "#f5f8fa", padding: "2px 5px", borderRadius: "3px" }}>{keyword.template}</code></div>
+                    <div>Parent Block Template: <code style={{ backgroundColor: "#394b59", color: "#f5f8fa", padding: "2px 5px", borderRadius: "3px" }}>{keyword.template}</code></div>
                     <div>
                       <small>
                         Priority: {keyword.priority} •

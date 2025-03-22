@@ -15,7 +15,7 @@ import { moveFocus, getLastBlockAndFocus } from './utils';
 import EventKeywordSettings from "./components/event_keyword_settings"
 
 const testing = false
-const version = "v2.9"
+const version = "v2.9.2"
 
 const plugin_title = "Roam CRM"
 
@@ -63,16 +63,6 @@ function createPanelConfig(extensionAPI, pullFunction) {
                     "Customize how calendar events are formatted based on keywords in the event title. Define custom templates for different types of events.",
                 className: "crm-event-keywords-setting",
                 action: { type: "reactComponent", component: wrappedEventKeywordConfig },
-            },
-            {
-                id: "testing-mode",
-                name: "Testing Mode",
-                description:
-                    "Enable testing mode for developers. Logs detailed debug info and skips saving data.",
-                action: {
-                    type: "switch",
-                    onChange: (evt) => { },
-                },
             },
             {
                 id: "modal-header",

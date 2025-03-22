@@ -1,7 +1,7 @@
 import createBlock from "roamjs-components/writes/createBlock"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import { showToast } from "./components/toast"
-import { getExtensionAPISetting, getPageUID } from "./utils"
+import { getExtensionAPISetting, getPageUID, getSmartblockWorkflows } from "./utils"
 
 function extractEmailFromString(text) {
     // Regular expression for matching an email address
@@ -183,6 +183,125 @@ function convertEventDateFormats(start) {
     }
 
     return date
+}
+
+// MARK: check for empty call template
+function isEmptyCallTemplate(blockUid) {
+    try {
+        console.log('------- STARTING CHECK FOR BLOCK:', blockUid, '-------');
+        
+        // Get the block and its children
+        const blockData = window.roamAlphaAPI.data.pull(
+            "[:block/string :block/children {:block/children ...}]",
+            [":block/uid", blockUid]
+        );
+        console.log('Block data:', blockData);
+        
+        // Safety check for missing data
+        if (!blockData) {
+            console.warn(`CHECK 1 FAILED: No block data found for UID: ${blockUid}`);
+            return { result: false, reason: "No block data found" };
+        }
+
+        // Check if this is a call block
+        if (!blockData[":block/string"] || !blockData[":block/string"].includes("[[Call]]")) {
+            console.warn(`CHECK 2 FAILED: Not a Call block. Block string: "${blockData[":block/string"]}"`);
+            return { result: false, reason: "Not a Call block" };
+        }
+        console.log('CHECK 2 PASSED: This is a Call block');
+
+        // Find the Notes and Next Actions sections
+        const children = blockData[":block/children"] || [];
+        console.log('Children count:', children.length);
+        
+        let notesBlock = null;
+        let nextActionsBlock = null;
+        let invalidBlocks = [];
+
+        // Find the Notes and Next Actions blocks and validate other blocks
+        for (const child of children) {
+            if (!child || typeof child !== 'object') {
+                console.warn('CHECK 3 FAILED: Invalid child block', child);
+                invalidBlocks.push("Invalid child object");
+                continue;
+            }
+
+            const childString = child[":block/string"] || "";
+            console.log('Child block string:', childString);
+            
+            if (childString.startsWith("Notes::")) {
+                notesBlock = child;
+                console.log('Found Notes block');
+            } else if (childString.startsWith("Next Actions::")) {
+                nextActionsBlock = child;
+                console.log('Found Next Actions block');
+            } else if (childString === "---" || childString.trim() === "---") {
+                // Ignore separator blocks
+                console.log('Found separator block, ignoring');
+            } else if (!childString.startsWith("Attachment::") && !childString.startsWith("Notion::")) {
+                // Any non-template block means this isn't default
+                console.warn(`CHECK 3 FAILED: Found non-template block: "${childString}"`);
+                invalidBlocks.push(childString);
+            }
+        }
+
+        // Check if both required sections exist
+        if (!notesBlock) {
+            console.warn('CHECK 4 FAILED: Notes block not found');
+            return { result: false, reason: "Notes block not found" };
+        }
+        if (!nextActionsBlock) {
+            console.warn('CHECK 4 FAILED: Next Actions block not found');
+            return { result: false, reason: "Next Actions block not found" };
+        }
+        if (invalidBlocks.length > 0) {
+            console.warn('CHECK 4 FAILED: Found invalid blocks:', invalidBlocks);
+            return { result: false, reason: "Found non-template blocks: " + invalidBlocks.join(", ") };
+        }
+        console.log('CHECK 4 PASSED: Found both Notes and Next Actions blocks with no invalid blocks');
+
+        // More robust empty bullet check for Notes
+        const notesChildren = notesBlock[":block/children"] || [];
+        console.log('Notes children count:', notesChildren.length);
+        const notesEmpty = isEmptyBulletList(notesChildren);
+        if (!notesEmpty.result) {
+            console.warn('CHECK 5 FAILED: Notes section is not an empty bullet list', notesEmpty.reason);
+            return { result: false, reason: "Notes section is not empty: " + notesEmpty.reason };
+        }
+        console.log('CHECK 5 PASSED: Notes section is an empty bullet');
+
+        // More robust empty bullet check for Next Actions
+        const nextActionsChildren = nextActionsBlock[":block/children"] || [];
+        console.log('Next Actions children count:', nextActionsChildren.length);
+        const nextActionsEmpty = isEmptyBulletList(nextActionsChildren);
+        if (!nextActionsEmpty.result) {
+            console.warn('CHECK 6 FAILED: Next Actions section is not an empty bullet list', nextActionsEmpty.reason);
+            return { result: false, reason: "Next Actions section is not empty: " + nextActionsEmpty.reason };
+        }
+        console.log('CHECK 6 PASSED: Next Actions section is an empty bullet');
+
+        // If we got here, it's an empty call template
+        console.log('------- ALL CHECKS PASSED: This is an empty call template -------');
+        return { result: true, reason: "All checks passed" };
+    } catch (error) {
+        console.error(`Error checking call template (${blockUid}):`, error);
+        return { result: false, reason: "Error: " + error.message };
+    }
+}
+
+
+// Helper function to check if a list contains only one empty bullet
+function isEmptyBulletList(children) {
+    // Should have exactly one child
+    if (children.length !== 1) return false;
+
+    const child = children[0];
+    // Child should exist and have an empty string
+    if (!child || (child[":block/string"] || "").trim() !== "") return false;
+
+    // Check if the child has any children itself (if it does, it's not a simple empty bullet)
+    const grandchildren = child[":block/children"] || [];
+    return grandchildren.length === 0;
 }
 
 // MARK: eventInfo
@@ -407,6 +526,35 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     })
                 })
                 console.groupEnd()
+                
+                // Process deleted events for removal
+                console.group('Processing Deleted Events:')
+                deletedEventIds.forEach(eventId => {
+                    const blockUid = storedEvents[eventId].blockUID;
+                    console.log(`Processing deletion for event: ${eventId}`);
+                    
+                    // Check if this is an empty call template before deleting
+                    if (isEmptyCallTemplate(blockUid)) {
+                        console.log(`Block ${blockUid} is an empty call template - will be deleted`);
+                        // Delete the block
+                        if (!testing) {
+                            window.roamAlphaAPI.data.block.delete({
+                                block: {
+                                    uid: blockUid
+                                }
+                            });
+                            // Remove from stored events
+                            delete storedEvents[eventId];
+                        } else {
+                            console.log('Testing mode: skipped actual deletion');
+                        }
+                    } else {
+                        console.log(`Block ${blockUid} has content - not deleting automatically`);
+                        // You could handle non-empty templates differently here
+                        // For example, adding a "DELETED EVENT" marker
+                    }
+                });
+                console.groupEnd();
             }
             console.groupEnd()
         }

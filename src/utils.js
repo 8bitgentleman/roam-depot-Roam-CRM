@@ -1,4 +1,5 @@
 import createPage from "roamjs-components/writes/createPage"
+import createTagRegex from "roamjs-components/createTagRegex"
 
 export async function getPageUID(page) {
     // Perform Roam Research datalog pull
@@ -189,24 +190,24 @@ export const moveFocus = (direction) => {
 
 export async function getLastBlockAndFocus() {
     const currentUid = await window.roamAlphaAPI.ui.mainWindow.getOpenPageOrBlockUid();
-    
+
     const pageQuery = `[:find ?pageUid .
                        :in $ ?uid
                        :where
                        [?b :block/uid ?uid]
                        [?b :block/page ?p]
                        [?p :block/uid ?pageUid]]`;
-                       
+
     const pageUid = window.roamAlphaAPI.q(pageQuery, currentUid) || currentUid;
-    
+
     const titleQuery = `[:find ?title .
                         :in $ ?pageUid
                         :where
                         [?p :block/uid ?pageUid]
                         [?p :node/title ?title]]`;
-                        
+
     const pageTitle = window.roamAlphaAPI.q(titleQuery, pageUid);
-  
+
     let query = `[:find ?order ?uid
                  :in $ ?pageTitle
                  :where 
@@ -214,36 +215,62 @@ export async function getLastBlockAndFocus() {
                  [?page :block/children ?block]
                  [?block :block/order ?order]
                  [?block :block/uid ?uid]]`;
-  
+
     let results = window.roamAlphaAPI.q(query, pageTitle);
     if (!results.length) return null;
-    
+
     let lastOrder = Math.max(...results.map(r => r[0]));
     let lastUid = results.find(r => r[0] === lastOrder)[1];
-  
+
     function getLastChild(uid) {
-      let childQuery = `[:find ?order ?uid
+        let childQuery = `[:find ?order ?uid
                         :in $ ?parent
                         :where
                         [?b :block/uid ?parent]
                         [?b :block/children ?child]
                         [?child :block/order ?order]
                         [?child :block/uid ?uid]]`;
-      
-      let children = window.roamAlphaAPI.q(childQuery, uid);
-      if (!children.length) return uid;
-      
-      let maxOrder = Math.max(...children.map(c => c[0]));
-      let nextUid = children.find(c => c[0] === maxOrder)[1];
-      return getLastChild(nextUid);
+
+        let children = window.roamAlphaAPI.q(childQuery, uid);
+        if (!children.length) return uid;
+
+        let maxOrder = Math.max(...children.map(c => c[0]));
+        let nextUid = children.find(c => c[0] === maxOrder)[1];
+        return getLastChild(nextUid);
     }
-  
+
     const finalUid = getLastChild(lastUid);
-    
+
     window.roamAlphaAPI.ui.setBlockFocusAndSelection({
-      location: {
-        "block-uid": finalUid,
-        "window-id": "main-window"
-      }
+        location: {
+            "block-uid": finalUid,
+            "window-id": "main-window"
+        }
     });
-  }
+};
+
+export const getCustomWorkflows = () => {
+
+    const result = (window.roamAlphaAPI.data.fast
+        .q(
+            `[:find
+  (pull ?r [:block/uid :block/string])
+  :where
+    (or
+      (and [?sb :node/title "SmartBlock"] [?r :block/refs ?sb])
+      (and [?sb :node/title "42SmartBlock"] [?r :block/refs ?sb])
+  )]`
+        )
+        .map((r) => {
+            const [block] = r;
+            return {
+                uid: block?.[":block/uid"] || "",
+                name: (block?.[":block/string"] || "")
+                    .replace(createTagRegex("SmartBlock"), "")
+                    .replace(createTagRegex("42SmartBlock"), "")
+                    .trim(),
+            };
+        }));
+
+    return result;
+};
