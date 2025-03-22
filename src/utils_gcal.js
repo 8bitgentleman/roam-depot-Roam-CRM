@@ -418,12 +418,6 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
         
         // Only run deletion detection if enabled in settings
         if (getExtensionAPISetting(extensionAPI, "detect-deleted-events", false)) {
-            console.group('Deletion Detection Debugging')
-            console.log('Current date window:', {
-                today: today.toISOString(),
-                pastStartDate: pastStartDate.toISOString(),
-                futureEndDate: futureEndDate.toISOString()
-            })
             console.log('All current event IDs from Google:', Array.from(allCurrentEventIds))
             console.log('All stored events:', storedEvents)
             
@@ -670,6 +664,9 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 
 // Helper function to handle creation and updates of event blocks in Roam
 // Separated from main function for better organization and readability
+// Modified updateEventBlocks function for Phase 2 implementation
+// This function will need to replace the existing updateEventBlocks function in utils_gcal.js
+
 async function updateEventBlocks(storedEvent, result, attendees, people, extensionAPI, storedEvents, testing = false) {
     // Ensure the event exists and has an ID
     if (!result.event || !result.event.id) {
@@ -704,7 +701,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
             isAllDay: isAllDayEvent
         });
         
-        let { headerString, childrenBlocks } = createEventBlocks(
+        let { headerString, childrenBlocks, useSmartblock, smartblockUid } = createEventBlocks(
             result.event,
             attendees,
             people,
@@ -717,7 +714,9 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
             summary: result.event.summary,
             isSinglePerson: isSingleAttendeeEvent,
             headerString,
-            childrenCount: childrenBlocks.length
+            childrenCount: childrenBlocks.length,
+            useSmartblock: useSmartblock,
+            smartblockUid: smartblockUid
         });
         return;
     }
@@ -800,7 +799,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
         // Update block if changes were detected
         if (needsUpdate) {
             // Generate new block content with updated information
-            let { headerString, childrenBlocks } = createEventBlocks(
+            let { headerString, childrenBlocks, useSmartblock, smartblockUid } = createEventBlocks(
                 result.event,
                 attendees,
                 people,
@@ -812,11 +811,63 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                 console.log(`Skipping block update for "${result.event.summary}" (empty header string)`);
                 return;
             }
+            
             // Update the existing block text
             await updateBlock({
                 uid: storedEvent.blockUID,
                 text: headerString
-            })
+            });
+
+            // Special handling for SmartBlock when the template changes
+            if (useSmartblock && smartblockUid) {
+                // First, check if we should trigger the SmartBlock
+                // We'll only trigger it if:
+                // 1. The block doesn't already have SmartBlock content, or
+                // 2. The block was previously created with a different SmartBlock
+                const blockData = await window.roamAlphaAPI.data.pull(
+                    "[:block/string :block/children {:block/children ...}]",
+                    [":block/uid", storedEvent.blockUID]
+                );
+                
+                // Store info about previous SmartBlock if it exists
+                const hadSmartblock = storedEvent.useSmartblock && storedEvent.smartblockUid;
+                const smartblockChanged = hadSmartblock && storedEvent.smartblockUid !== smartblockUid;
+                
+                // Check if we should run the SmartBlock (if it's new or changed)
+                if (!hadSmartblock || smartblockChanged) {
+                    console.log(`Running SmartBlock (${smartblockUid}) for event ${eventId}`);
+                    
+                    // First, create a child block to run the SmartBlock in
+                    const childUid = window.roamAlphaAPI.util.generateUID();
+                    await window.roamAlphaAPI.data.block.create({
+                        location: {
+                            "parent-uid": storedEvent.blockUID,
+                            order: 0
+                        },
+                        block: {
+                            uid: childUid,
+                            string: ""
+                        }
+                    });
+                    
+                    // Now trigger the SmartBlock on this child
+                    if (window.roamjs?.extension?.smartblocks) {
+                        console.log(`Triggering SmartBlock in child block ${childUid}`);
+                        try {
+                            await window.roamjs.extension.smartblocks.triggerSmartblock({
+                                srcUid: smartblockUid,
+                                targetUid: childUid,
+                            });
+                        } catch (err) {
+                            console.error(`Error triggering SmartBlock: ${err.message}`);
+                        }
+                    } else {
+                        console.warn("SmartBlocks extension not found or not initialized");
+                    }
+                } else {
+                    console.log("SmartBlock already applied to this event - skipping");
+                }
+            }
 
             // Handle date changes
             if (changes.date) {
@@ -860,7 +911,9 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                 summary: result.event.summary,
                 event_updated: result.event.updated,
                 event_start: eventStartValue,
-                attendees: attendees
+                attendees: attendees,
+                useSmartblock: useSmartblock,
+                smartblockUid: smartblockUid
             }
 
             console.log('Updated stored event data:', JSON.stringify({
@@ -873,7 +926,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
         // Creation logic for new events
         // Generate block content for new event
         console.log('Creating new event block');
-        let { headerString, childrenBlocks } = createEventBlocks(
+        let { headerString, childrenBlocks, useSmartblock, smartblockUid } = createEventBlocks(
             result.event,
             attendees,
             people,
@@ -885,6 +938,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
             console.log(`Skipping block creation for "${result.event.summary}" (empty header string)`);
             return;
         }
+        
         // Generate unique ID for new block
         let blockUID = window.roamAlphaAPI.util.generateUID()
         // Calculate event date and get corresponding Roam page
@@ -898,15 +952,56 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
         }
 
         // Create new block with event information
-        await createBlock({
-            parentUid: pageUID,
-            node: {
-                text: headerString,
-                open: false,
-                children: childrenBlocks,
-                uid: blockUID
+        if (useSmartblock && smartblockUid) {
+            // For SmartBlock, we create the parent with no children initially
+            await createBlock({
+                parentUid: pageUID,
+                node: {
+                    text: headerString,
+                    open: true, // Keep open to show SmartBlock content
+                    uid: blockUID
+                }
+            });
+            
+            // Then create a child block to trigger the SmartBlock
+            const childUid = window.roamAlphaAPI.util.generateUID();
+            await window.roamAlphaAPI.data.block.create({
+                location: {
+                    "parent-uid": blockUID,
+                    order: 0
+                },
+                block: {
+                    uid: childUid,
+                    string: ""
+                }
+            });
+            
+            // Now trigger the SmartBlock on this child
+            if (window.roamjs?.extension?.smartblocks) {
+                console.log(`Triggering SmartBlock in child block ${childUid}`);
+                try {
+                    await window.roamjs.extension.smartblocks.triggerSmartblock({
+                        srcUid: smartblockUid,
+                        targetUid: childUid,
+                    });
+                } catch (err) {
+                    console.error(`Error triggering SmartBlock: ${err.message}`);
+                }
+            } else {
+                console.warn("SmartBlocks extension not found or not initialized");
             }
-        })
+        } else {
+            // For regular templates, create with the standard children blocks
+            await createBlock({
+                parentUid: pageUID,
+                node: {
+                    text: headerString,
+                    open: false,
+                    children: childrenBlocks,
+                    uid: blockUID
+                }
+            });
+        }
 
         // Store new event data
         let eventStartValue = null;
@@ -926,23 +1021,27 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
             summary: result.event.summary,
             event_updated: result.event.updated,
             event_start: eventStartValue,
-            attendees: attendees
+            attendees: attendees,
+            useSmartblock: useSmartblock,
+            smartblockUid: smartblockUid
         }
     }
     console.groupEnd()
 }
 
 // MARK: create event block
+// Modified createEventBlocks function for Phase 2 implementation
+// This function will need to replace the existing createEventBlocks function in utils_gcal.js
+
 function createEventBlocks(event, attendees, people, extensionAPI) {
     let calendar = event.calendar || null
     let headerString
-    let childrenBlocks = [
-        { text: "Notes::", children: [{ text: "" }] },
-        { text: `Next Actions::`, children: [{ text: "" }] },
-    ]
+    let childrenBlocks = []
     const includeEventTitle = extensionAPI.settings.get("include-event-title") || false
     let attendeeNames = []
     let eventDatePage = window.roamAlphaAPI.util.dateToPageTitle(new Date(event.start.dateTime || event.start.date))
+    let useSmartblock = false
+    let smartblockUid = null
 
     attendees = attendees.filter((attendee) => attendee.email !== calendar)
     attendees.forEach((a) => {
@@ -962,6 +1061,8 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             attendeeNames.push(a.email)
         }
     })
+    
+    // Handle event attachments
     if (event.attachments && event.attachments.length > 0) {
         event.attachments.forEach((attachment) => {
             let resultString
@@ -972,9 +1073,9 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             }
             // Create the new object
             let newBlock = { text: resultString }
-            // Add the new object to the start of the childrenBlocks list
-            childrenBlocks.unshift({ text: "---" })
-            childrenBlocks.unshift(newBlock)
+            // Add the new object to the list
+            childrenBlocks.push({ text: "---" })
+            childrenBlocks.push(newBlock)
         })
     }
 
@@ -1027,7 +1128,7 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             console.log(`Skipping single-person event with no matching keywords: "${event.summary}"`);
             // Return an empty header string to signal that we don't want to create this block
             headerString = '';
-            return { headerString, childrenBlocks };
+            return { headerString, childrenBlocks, useSmartblock, smartblockUid };
         } else {
             console.log(`Processing single-person event with matching keywords: "${event.summary}"`);
         }
@@ -1084,15 +1185,40 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     // Format the template with actual values if we have a matched keyword
     if (matchedKeyword && !headerString) {
         console.log(`Formatting template with keyword: '${matchedKeyword.term || "(default)"}', template: '${matchedKeyword.template}'`);
-        headerString = formatTemplate(matchedKeyword.template, attendeeNames, event.summary, includeEventTitle);
+        
+        // Check if this keyword uses a SmartBlock
+        if (matchedKeyword.useSmartblock && matchedKeyword.smartblockUid) {
+            console.log(`This keyword uses SmartBlock with UID: ${matchedKeyword.smartblockUid}`);
+            useSmartblock = true;
+            smartblockUid = matchedKeyword.smartblockUid;
+            
+            // Even with SmartBlock, we still need a header for the parent block
+            headerString = formatTemplate(matchedKeyword.template, attendeeNames, event.summary, includeEventTitle);
+            
+            // For SmartBlock keywords, we'll add Notes and Next Actions blocks later in the process
+            // after the parent block is created, so we can leave childrenBlocks empty here
+            // We'll trigger the SmartBlock in updateEventBlocks
+        } else {
+            // Regular template formatting without SmartBlock
+            headerString = formatTemplate(matchedKeyword.template, attendeeNames, event.summary, includeEventTitle);
+            
+            // Add the standard Notes and Next Actions blocks for regular templates
+            childrenBlocks = [
+                { text: "Notes::", children: [{ text: "" }] },
+                { text: `Next Actions::`, children: [{ text: "" }] },
+            ];
+        }
     }
     
     // Log what keyword matched for debugging purposes
     console.log('Event template match:', {
         eventSummary: event.summary,
         matchedKeyword: matchedKeyword ? matchedKeyword.term || '(default)' : 'none',
-        generatedHeader: headerString
+        generatedHeader: headerString,
+        useSmartblock: useSmartblock,
+        smartblockUid: smartblockUid
     });
     console.log("")
-    return { headerString, childrenBlocks }
+    
+    return { headerString, childrenBlocks, useSmartblock, smartblockUid };
 }
