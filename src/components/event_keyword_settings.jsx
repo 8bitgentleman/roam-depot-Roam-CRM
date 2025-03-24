@@ -73,7 +73,6 @@ function EventKeywordSettings({ extensionAPI }) {
     
     // Load available smartblock workflows
     const workflows = getSmartblockWorkflows()
-    console.log("Loaded smartblock workflows", workflows);
     
     // Sort workflows by name
     const sortedWorkflows = [...workflows].sort((a, b) => 
@@ -195,7 +194,6 @@ function EventKeywordSettings({ extensionAPI }) {
       // Adding new keyword
       newKeywords = [...keywords, newKeyword]
     }
-    console.log("newKeywords", newKeywords);
     
     // If this is a default keyword, unset any other defaults
     if (formIsDefault) {
