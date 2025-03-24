@@ -47,25 +47,25 @@ function checkStringForSubstring(summary, substring) {
     //     summaryType: typeof summary,
     //     substringType: typeof substring
     // });
-    
+
     // Empty keyword always returns false (should use isDefault flag instead)
     if (substring === "") {
         console.log('Empty substring - will not match any summary');
         return false;
     }
-    
+
     // Null/undefined check
     if (summary == null || substring == null) {
         console.log('Null or undefined values detected:', { summary, substring });
         return false;
     }
-    
+
     try {
         // Convert both to lowercase for case-insensitive comparison
         // Use String() constructor to handle non-string types
         const normalizedSummary = String(summary).toLowerCase().trim();
         const normalizedSubstring = String(substring).toLowerCase().trim();
-        
+
         // Check if the summary includes the substring
         const result = normalizedSummary.includes(normalizedSubstring);
         console.log('String comparison result:', {
@@ -73,7 +73,7 @@ function checkStringForSubstring(summary, substring) {
             normalizedSubstring,
             result
         });
-        
+
         return result;
     } catch (error) {
         console.error('Error in string comparison:', error);
@@ -109,19 +109,19 @@ function getEventKeywords(extensionAPI) {
     // Direct check of raw setting value
     const directValue = extensionAPI.settings.get("event-keywords");
     console.log('getEventKeywords - raw value:', directValue);
-    
+
     // Use default if no saved settings
     if (!directValue) {
         console.log('No saved keywords found, using defaults');
         console.log('DEFAULT_EVENT_KEYWORDS:', DEFAULT_EVENT_KEYWORDS);
         return DEFAULT_EVENT_KEYWORDS;
     }
-    
+
     // Check if any keywords have requiresMultipleAttendees=false
     const singlePersonKeywords = directValue.filter(k => !k.requiresMultipleAttendees);
     console.log('Single-person keywords found:', singlePersonKeywords.length);
     if (singlePersonKeywords.length > 0) {
-        singlePersonKeywords.forEach(k => 
+        singlePersonKeywords.forEach(k =>
             console.log(`- Keyword "${k.term || '(default)'}" can match single-person events`)
         );
     } else {
@@ -134,16 +134,16 @@ function getEventKeywords(extensionAPI) {
 // Helper to format a template with attendee names and optional title
 function formatTemplate(template, attendeeNames, eventSummary, includeEventTitle) {
     let result = template;
-    
+
     // Only replace {attendees} if it exists in the template
     if (template.includes("{attendees}")) {
         result = template.replace("{attendees}", attendeeNames.join(" and "));
     }
-    
+
     if (includeEventTitle && eventSummary) {
         result += ` about ${eventSummary}`;
     }
-    
+
     return result;
 }
 
@@ -186,9 +186,15 @@ function convertEventDateFormats(start) {
 }
 
 // MARK: check for empty call template
-function isEmptyCallTemplate(blockUid) {
+function isEmptyCallTemplate(blockUid, storedEvent) {
     try {
-        console.log('------- STARTING CHECK FOR BLOCK:', blockUid, '-------');
+        console.log('------- CHECKING IF BLOCK CAN BE SAFELY DELETED:', blockUid, '-------');
+        
+        // If this is from a SmartBlock template, we should be more cautious
+        if (storedEvent && storedEvent.useSmartblock && storedEvent.smartblockUid) {
+            console.log('Event was created with a SmartBlock template - preventing automatic deletion');
+            return { result: false, reason: "SmartBlock templates are preserved by default" };
+        }
         
         // Get the block and its children
         const blockData = window.roamAlphaAPI.data.pull(
@@ -203,12 +209,17 @@ function isEmptyCallTemplate(blockUid) {
             return { result: false, reason: "No block data found" };
         }
 
-        // Check if this is a call block
-        if (!blockData[":block/string"] || !blockData[":block/string"].includes("[[Call]]")) {
-            console.warn(`CHECK 2 FAILED: Not a Call block. Block string: "${blockData[":block/string"]}"`);
-            return { result: false, reason: "Not a Call block" };
+        // Check if this is a call block - we'll use a more flexible approach here
+        // to support custom templates
+        const blockString = blockData[":block/string"] || "";
+        if (!blockString.includes("[[Call]]") && 
+            !blockString.includes("[[1:1]]") && 
+            !blockString.includes("[[Meeting]]") && 
+            !blockString.includes("[[Dinner]]")) {
+            console.warn(`CHECK 2 FAILED: Not a recognized event template. Block string: "${blockString}"`);
+            return { result: false, reason: "Not a recognized event template" };
         }
-        console.log('CHECK 2 PASSED: This is a Call block');
+        console.log('CHECK 2 PASSED: This is a recognized event template');
 
         // Find the Notes and Next Actions sections
         const children = blockData[":block/children"] || [];
@@ -289,19 +300,26 @@ function isEmptyCallTemplate(blockUid) {
     }
 }
 
-
-// Helper function to check if a list contains only one empty bullet
+// Helper function to check if a list contains only one empty bullet 
 function isEmptyBulletList(children) {
     // Should have exactly one child
-    if (children.length !== 1) return false;
+    if (children.length !== 1) {
+        return { result: false, reason: `Expected 1 child, found ${children.length}` };
+    }
 
     const child = children[0];
     // Child should exist and have an empty string
-    if (!child || (child[":block/string"] || "").trim() !== "") return false;
+    if (!child || (child[":block/string"] || "").trim() !== "") {
+        return { result: false, reason: "Child block has content" };
+    }
 
     // Check if the child has any children itself (if it does, it's not a simple empty bullet)
     const grandchildren = child[":block/children"] || [];
-    return grandchildren.length === 0;
+    if (grandchildren.length > 0) {
+        return { result: false, reason: "Child block has children" };
+    }
+    
+    return { result: true, reason: "Empty bullet" };
 }
 
 // MARK: eventInfo
@@ -325,19 +343,17 @@ function isEmptyBulletList(children) {
  */
 export async function getEventInfo(people, extensionAPI, testing, isManualSync = false, triggerSource = 'unknown') {
     console.log(`getEventInfo called: testing=${testing}, isManualSync=${isManualSync}, triggerSource=${triggerSource}`);
-    
+
     // Get previously stored calendar events from extension settings
     const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
 
     // Check if sync is in progress
     if (extensionAPI.settings.get("sync-in-progress")) {
         console.log('Sync already in progress')
-        // if (!testing) {
-        //     showToast("Calendar sync already in progress", "ALERT")
-        // }
+
         return
     }
-    console.log("Sync sources", isManualSync, triggerSource, testing);
+    // console.log("Sync sources", isManualSync, triggerSource, testing);
 
     // Check cooldown only for automatic syncs
     if (!isManualSync) {
@@ -351,13 +367,13 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
         }
         console.log(`Starting automatic sync - ${lastSyncTime ? `last sync was ${Math.round((now - lastSyncTime) / 3600000 * 10) / 10} hours ago` : 'first sync'}`)
     } else {
-        console.log('Starting manual sync')
+        // console.log('Starting manual sync')
     }
 
     try {
         extensionAPI.settings.set("sync-in-progress", true)
         console.group(`Calendar Sync Start [${triggerSource}]:`, new Date().toISOString())
-        console.log('Current stored events:', JSON.parse(JSON.stringify(storedEvents)))
+        // console.log('Current stored events:', JSON.parse(JSON.stringify(storedEvents)))
 
         // Track emails with auth issues and events that don't need updates
         let prevent_update = new Set()
@@ -380,52 +396,53 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
             endDatePageTitle: endDatePageTitle,
         })
 
-        console.log(`Fetched ${results.length} events:`, results);
-       
-        
+        // console.log(`Fetched ${results.length} events:`, results);
+
+
         // Exit if no events or error message received
         if (!results || results[0]?.text === "No Events Scheduled for Selected Date(s)!") {
             console.log('No events to process')
             console.groupEnd()
             return
         }
-        
+
         // Build sets of current event IDs from the fetched events
         const allCurrentEventIds = new Set()
         const createUpdateEventIds = new Set()
-        
+
         // First pass: categorize events and collect IDs
         for (const result of results) {
             const eventId = result.event?.id
-            
+
             if (eventId) {
                 allCurrentEventIds.add(eventId)
-                
+
                 // Check if event is in create/update window (today or future)
                 if (result.event?.start) {
                     const eventStart = convertEventDateFormats(result.event.start)
                     const isCreateUpdateCandidate = eventStart >= today
-                    
+
                     if (isCreateUpdateCandidate) {
                         createUpdateEventIds.add(eventId)
                     }
                 }
             }
         }
-        
+
         // Initialize variables for deletion detection
         let deletedEventIds = [];
-        
+
         // Only run deletion detection if enabled in settings
         if (getExtensionAPISetting(extensionAPI, "detect-deleted-events", false)) {
             console.log('All current event IDs from Google:', Array.from(allCurrentEventIds))
             console.log('All stored events:', storedEvents)
-            
+
             // Process each stored event with detailed logging
+            // for debugging ponly
             console.group('Examining each stored event:')
             Object.keys(storedEvents).forEach(eventId => {
                 console.group(`Event ID: ${eventId}`)
-                
+
                 // Log the event data
                 console.log('Stored data:', {
                     blockUID: storedEvents[eventId].blockUID,
@@ -434,70 +451,69 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     hasEventStart: Boolean(storedEvents[eventId].event_start),
                     isAllDay: storedEvents[eventId].event_start && !storedEvents[eventId].event_start.includes('T')
                 })
-                
+
                 // Check if in current calendar events
                 const isInCurrentEvents = allCurrentEventIds.has(eventId)
                 console.log('Is in current Google Calendar events?', isInCurrentEvents)
-                
+
                 // Show the detailed checks we'll perform
                 if (!storedEvents[eventId].event_start) {
                     console.log('⚠️ Missing event_start data - will be skipped in detection')
                     console.groupEnd()
-                    // Don't use 'return' here as we're in a forEach function
                     return; // This only exits the current iteration of forEach
                 }
-                
+
                 // Check date window
                 const eventStartDate = new Date(storedEvents[eventId].event_start)
                 const isAllDay = storedEvents[eventId].event_start && !storedEvents[eventId].event_start.includes('T')
-                
-                console.log('Event start date details:', { 
+
+                console.log('Event start date details:', {
                     raw: storedEvents[eventId].event_start,
                     parsed: eventStartDate.toISOString(),
                     isAllDay: isAllDay,
                     isValidDate: !isNaN(eventStartDate.getTime())
                 })
-                
+
                 const isAfterStartWindow = eventStartDate >= pastStartDate
                 const isBeforeEndWindow = eventStartDate <= futureEndDate
-                console.log('Date window check:', { 
-                    isAfterStartWindow, 
+                console.log('Date window check:', {
+                    isAfterStartWindow,
                     isBeforeEndWindow,
                     inWindow: isAfterStartWindow && isBeforeEndWindow
                 })
-                
+
                 console.log('Final detection result:', {
                     shouldDetectAsDeleted: (isAfterStartWindow && isBeforeEndWindow && !isInCurrentEvents)
                 })
-                
+
                 console.groupEnd()
             })
             console.groupEnd()
-            
+
             // Now actually perform the detection
             deletedEventIds = Object.keys(storedEvents).filter(eventId => {
                 const storedEvent = storedEvents[eventId];
-                
+
                 // Skip events without any start time info
                 if (!storedEvent.event_start) {
                     console.log(`Event ${eventId} missing event_start - can't check for deletion`);
                     return false;
                 }
-                
+
                 try {
                     // Parse the start date regardless of format
                     const eventStartDate = new Date(storedEvent.event_start);
-                    
+
                     // Ensure we got a valid date
                     if (isNaN(eventStartDate.getTime())) {
                         console.log(`Event ${eventId} has invalid date format: ${storedEvent.event_start}`);
                         return false;
                     }
-                    
+
                     // Check if it's in our deletion window
-                    const isInDeletionWindow = eventStartDate >= pastStartDate && 
-                                               eventStartDate <= futureEndDate;
-                    
+                    const isInDeletionWindow = eventStartDate >= pastStartDate &&
+                        eventStartDate <= futureEndDate;
+
                     // Is it in our window and not in the current calendar?
                     return isInDeletionWindow && !allCurrentEventIds.has(eventId);
                 } catch (err) {
@@ -505,9 +521,9 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     return false;
                 }
             })
-            
+
             console.log(`Detected ${deletedEventIds.length} deleted events:`, deletedEventIds);
-            
+
             // Log deleted events details
             if (deletedEventIds.length > 0) {
                 console.group('Detected Deleted Events Details:')
@@ -520,16 +536,22 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     })
                 })
                 console.groupEnd()
-                
+
                 // Process deleted events for removal
                 console.group('Processing Deleted Events:')
                 deletedEventIds.forEach(eventId => {
+                    const storedEvent = storedEvents[eventId];
+                    if (!storedEvent || !storedEvent.blockUID) {
+                        console.log(`No stored block for event: ${eventId}`);
+                        return;
+                    }
                     const blockUid = storedEvents[eventId].blockUID;
                     console.log(`Processing deletion for event: ${eventId}`);
-                    
+
                     // Check if this is an empty call template before deleting
-                    if (isEmptyCallTemplate(blockUid)) {
-                        console.log(`Block ${blockUid} is an empty call template - will be deleted`);
+                    // Pass the stored event data to help with SmartBlock detection
+                    if (isEmptyCallTemplate(blockUid, storedEvent).result) {
+                        console.log(`Block ${blockUid} is an empty template - will be deleted`);
                         // Delete the block
                         if (!testing) {
                             window.roamAlphaAPI.data.block.delete({
@@ -559,29 +581,29 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
             try {
                 // Make sure event and id exist before proceeding
                 if (!result.event || !result.event.id) {
-                    console.warn('⚠️ Skipping event with missing ID:', result)
+                    // console.warn('⚠️ Skipping event with missing ID:', result)
                     continue;
                 }
-                
+
                 const eventId = result.event.id
-                
+
                 // Skip processing past events (not in create/update window)
                 // But always process events in testing mode
                 if (eventId && !createUpdateEventIds.has(eventId) && !testing) {
                     continue;
                 }
-        
+
                 // Log duplicate processing attempts
                 if (processed_events.has(eventId)) {
-                    console.warn('⚠️ Attempting to process same event twice in one sync:', {
-                        eventId,
-                        summary: result.event?.summary,
-                        start: result.event?.start
-                    })
+                    // console.warn('⚠️ Attempting to process same event twice in one sync:', {
+                    //     eventId,
+                    //     summary: result.event?.summary,
+                    //     start: result.event?.start
+                    // })
                     continue
                 }
                 processed_events.add(eventId)
-        
+
                 // Log authentication errors
                 if (result.text.includes("Error: Must log in") || result.text.includes("Error for calendar")) {
                     const errorEmail = extractEmailFromString(result.text)
@@ -595,26 +617,26 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                     }
                     continue
                 }
-        
+
                 // Get event attendees
                 let attendees = result.event.attendees || []
-                
+
                 // Check if this is a single person event (just the organizer)
                 // Critically: Google Calendar doesn't explicitly include the organizer in all cases
-                const isSingleAttendeeEvent = attendees.length === 0 || 
+                const isSingleAttendeeEvent = attendees.length === 0 ||
                     (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true)) ||
                     !attendees.some(a => !a.self && !a.organizer); // No external attendees
-                
+
                 // Log single-attendee events for reference
                 if (isSingleAttendeeEvent) {
-                    console.log(`Found single-attendee event: "${result.event.summary}"`);
+                    // console.log(`Found single-attendee event: "${result.event.summary}"`);
                     // We'll let the keyword system determine whether to process this event based on
                     // the requiresMultipleAttendees setting for each keyword
                 }
-        
+
                 // Process event updates or create new event blocks
                 await updateEventBlocks(storedEvents[eventId], result, attendees, people, extensionAPI, storedEvents, testing)
-        
+
             } catch (err) {
                 // Handle individual event processing errors without failing entire sync
                 console.error('❌ Error processing event:', {
@@ -673,7 +695,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
         console.error('Missing event data in updateEventBlocks:', result)
         return
     }
-    
+
     const eventId = result.event.id
     // Use the testing parameter passed from getEventInfo
     // This ensures consistency between test command and other calls
@@ -681,17 +703,17 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
     // In testing mode, force template generation and logging without actual updates
     if (testing) {
         console.log('=== TESTING MODE: Force template generation ===');
-        
+
         // Determine if this is a single-person event
-        const isSingleAttendeeEvent = attendees.length === 0 || 
+        const isSingleAttendeeEvent = attendees.length === 0 ||
             (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true)) ||
             !attendees.some(a => !a.self && !a.organizer);
-            
+
         // Check if this is a birthday event or all-day event
-        const isBirthdayEvent = result.event.summary && 
+        const isBirthdayEvent = result.event.summary &&
             result.event.summary.toLowerCase().includes('birthday');
         const isAllDayEvent = result.event.start && result.event.start.date && !result.event.start.dateTime;
-            
+
         console.log('Testing event:', {
             id: eventId,
             summary: result.event.summary,
@@ -700,14 +722,14 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
             isBirthday: isBirthdayEvent,
             isAllDay: isAllDayEvent
         });
-        
+
         let { headerString, childrenBlocks, useSmartblock, smartblockUid } = createEventBlocks(
             result.event,
             attendees,
             people,
             extensionAPI
         );
-        
+
         console.log('=== TESTING RESULT ===');
         console.log('Generated template:', {
             eventId,
@@ -743,12 +765,12 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
 
     // Only log if we're creating a new event
     if (!storedEvent) {
-        console.log('Creating new event block:', JSON.stringify({
-            eventId,
-            summary: result.event.summary,
-            start: result.event.start,
-            attendees: attendees.map(a => a.email)
-        }, null, 2))
+        // console.log('Creating new event block:', JSON.stringify({
+        //     eventId,
+        //     summary: result.event.summary,
+        //     start: result.event.start,
+        //     attendees: attendees.map(a => a.email)
+        // }, null, 2))
     }
 
     if (storedEvent) {
@@ -805,13 +827,13 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                 people,
                 extensionAPI
             );
-            
+
             // If headerString is empty, it's a signal to skip updating this block
             if (!headerString) {
                 console.log(`Skipping block update for "${result.event.summary}" (empty header string)`);
                 return;
             }
-            
+
             // Update the existing block text
             await updateBlock({
                 uid: storedEvent.blockUID,
@@ -828,15 +850,15 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                     "[:block/string :block/children {:block/children ...}]",
                     [":block/uid", storedEvent.blockUID]
                 );
-                
+
                 // Store info about previous SmartBlock if it exists
                 const hadSmartblock = storedEvent.useSmartblock && storedEvent.smartblockUid;
                 const smartblockChanged = hadSmartblock && storedEvent.smartblockUid !== smartblockUid;
-                
+
                 // Check if we should run the SmartBlock (if it's new or changed)
                 if (!hadSmartblock || smartblockChanged) {
                     console.log(`Running SmartBlock (${smartblockUid}) for event ${eventId}`);
-                    
+
                     // First, create a child block to run the SmartBlock in
                     const childUid = window.roamAlphaAPI.util.generateUID();
                     await window.roamAlphaAPI.data.block.create({
@@ -849,7 +871,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                             string: ""
                         }
                     });
-                    
+
                     // Now trigger the SmartBlock on this child
                     if (window.roamjs?.extension?.smartblocks) {
                         console.log(`Triggering SmartBlock in child block ${childUid}`);
@@ -905,7 +927,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                     eventStartValue = result.event.start.date;
                 }
             }
-            
+
             storedEvents[eventId] = {
                 blockUID: storedEvent.blockUID,
                 summary: result.event.summary,
@@ -925,20 +947,20 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
     } else {
         // Creation logic for new events
         // Generate block content for new event
-        console.log('Creating new event block');
+        // console.log('Creating new event block');
         let { headerString, childrenBlocks, useSmartblock, smartblockUid } = createEventBlocks(
             result.event,
             attendees,
             people,
             extensionAPI
         );
-        
+
         // If headerString is empty, it's a signal to skip creating this block
         if (!headerString) {
             console.log(`Skipping block creation for "${result.event.summary}" (empty header string)`);
             return;
         }
-        
+
         // Generate unique ID for new block
         let blockUID = window.roamAlphaAPI.util.generateUID()
         // Calculate event date and get corresponding Roam page
@@ -962,7 +984,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                     uid: blockUID
                 }
             });
-            
+
             // Then create a child block to trigger the SmartBlock
             const childUid = window.roamAlphaAPI.util.generateUID();
             await window.roamAlphaAPI.data.block.create({
@@ -975,7 +997,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                     string: ""
                 }
             });
-            
+
             // Now trigger the SmartBlock on this child
             if (window.roamjs?.extension?.smartblocks) {
                 console.log(`Triggering SmartBlock in child block ${childUid}`);
@@ -1015,7 +1037,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
                 eventStartValue = result.event.start.date;
             }
         }
-        
+
         storedEvents[eventId] = {
             blockUID: blockUID,
             summary: result.event.summary,
@@ -1061,7 +1083,7 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             attendeeNames.push(a.email)
         }
     })
-    
+
     // Handle event attachments
     if (event.attachments && event.attachments.length > 0) {
         event.attachments.forEach((attachment) => {
@@ -1083,46 +1105,46 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     console.log('=== KEYWORD MATCHING DEBUGGING ===');
     if (event.summary && typeof event.summary === 'string') {
         const summary = event.summary.toLowerCase();
-        console.log(`Event summary: "${event.summary}" (lowercase: "${summary}")`);
+        // console.log(`Event summary: "${event.summary}" (lowercase: "${summary}")`);
     } else {
         console.log('Event summary is not a string:', event.summary);
     }
-        
+
     // Use the keyword matching system
     console.log('Applying keyword matching system...');
-    
+
     const keywords = getEventKeywords(extensionAPI);
     console.log('Loaded event keywords:', keywords);
     let matchedKeyword = null;
-    
+
     // First, let's identify the default keyword upfront for clarity
     let defaultKeyword = keywords.find(k => k.isDefault || k.term === "");
-    
+
     // Determine if this is a single-person event (just me/myself)
     // Google Calendar API quirk: if it's just you, attendees might be empty or have just you
-    const isSinglePersonEvent = attendeeNames.length === 0 || 
+    const isSinglePersonEvent = attendeeNames.length === 0 ||
         (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true)) ||
         !attendees.some(a => !a.self && !a.organizer);
-        
-    console.log('Event analysis:', {
-        summary: event.summary,
-        attendeeNames,
-        attendeeNamesCount: attendeeNames.length,
-        attendeesCount: attendees.length,
-        isSinglePerson: isSinglePersonEvent
-    });
-        
+
+    // console.log('Event analysis:', {
+    //     summary: event.summary,
+    //     attendeeNames,
+    //     attendeeNamesCount: attendeeNames.length,
+    //     attendeesCount: attendees.length,
+    //     isSinglePerson: isSinglePersonEvent
+    // });
+
     // For single-person events, we need to find at least one matching keyword
     // that is specifically configured to work with single-person events
     if (isSinglePersonEvent) {
         // Check if there's a keyword specifically for single-person events that matches
-        const hasMatchingSinglePersonKeyword = keywords.some(k => 
-            !k.requiresMultipleAttendees && 
-            !k.isDefault && 
-            k.term && 
+        const hasMatchingSinglePersonKeyword = keywords.some(k =>
+            !k.requiresMultipleAttendees &&
+            !k.isDefault &&
+            k.term &&
             checkStringForSubstring(event.summary, k.term)
         );
-        
+
         // If there's no matching keyword for single-person events, skip this event
         if (!hasMatchingSinglePersonKeyword) {
             console.log(`Skipping single-person event with no matching keywords: "${event.summary}"`);
@@ -1133,21 +1155,21 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             console.log(`Processing single-person event with matching keywords: "${event.summary}"`);
         }
     }
-    
+
     // Find matching keyword by priority (properly sorted)
     const sortedKeywords = [...keywords].sort((a, b) => a.priority - b.priority);
-    
+
     for (const keyword of sortedKeywords) {
         // Skip keywords requiring multiple attendees for single-person events
         if (keyword.requiresMultipleAttendees && isSinglePersonEvent) {
             continue;
         }
-        
+
         // Conversely, skip keywords meant for single-person events when we have multiple people
         if (!keyword.requiresMultipleAttendees && !isSinglePersonEvent) {
             continue;
         }
-        
+
         // Handle default template (empty term or isDefault flag)
         if (keyword.term === "" || keyword.isDefault) {
             // Only save this as a default if it matches our single/multi person requirement
@@ -1157,17 +1179,17 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             }
             continue; // Save default but keep looking for better matches
         }
-        
+
         // Check if event summary contains this keyword
         const isMatch = checkStringForSubstring(event.summary, keyword.term);
-        
+
         if (isMatch) {
             console.log(`Found matching keyword: '${keyword.term}'`);
             matchedKeyword = keyword;
             break; // Found a specific match, stop looking
         }
     }
-    
+
     // If no match found, use a proper fallback
     if (!matchedKeyword) {
         // For single-person events with no match, we already returned early
@@ -1181,27 +1203,27 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             headerString = formatTemplate("[[Call]] with {attendees}", attendeeNames, event.summary, includeEventTitle);
         }
     }
-    
+
     // Format the template with actual values if we have a matched keyword
     if (matchedKeyword && !headerString) {
         console.log(`Formatting template with keyword: '${matchedKeyword.term || "(default)"}', template: '${matchedKeyword.template}'`);
-        
+
         // Check if this keyword uses a SmartBlock
         if (matchedKeyword.useSmartblock && matchedKeyword.smartblockUid) {
             console.log(`This keyword uses SmartBlock with UID: ${matchedKeyword.smartblockUid}`);
             useSmartblock = true;
             smartblockUid = matchedKeyword.smartblockUid;
-            
+
             // Even with SmartBlock, we still need a header for the parent block
             headerString = formatTemplate(matchedKeyword.template, attendeeNames, event.summary, includeEventTitle);
-            
+
             // For SmartBlock keywords, we'll add Notes and Next Actions blocks later in the process
             // after the parent block is created, so we can leave childrenBlocks empty here
             // We'll trigger the SmartBlock in updateEventBlocks
         } else {
             // Regular template formatting without SmartBlock
             headerString = formatTemplate(matchedKeyword.template, attendeeNames, event.summary, includeEventTitle);
-            
+
             // Add the standard Notes and Next Actions blocks for regular templates
             childrenBlocks = [
                 { text: "Notes::", children: [{ text: "" }] },
@@ -1209,7 +1231,7 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
             ];
         }
     }
-    
+
     // Log what keyword matched for debugging purposes
     console.log('Event template match:', {
         eventSummary: event.summary,
@@ -1219,6 +1241,6 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         smartblockUid: smartblockUid
     });
     console.log("")
-    
+
     return { headerString, childrenBlocks, useSmartblock, smartblockUid };
 }
