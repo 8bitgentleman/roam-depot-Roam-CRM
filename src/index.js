@@ -372,6 +372,43 @@ async function onload({ extensionAPI }) {
         "last-birthday-check-date",
         window.roamAlphaAPI.util.dateToPageUid(new Date()),
     )
+    
+    // Set up birthday checks ONLY for users who don't have calendar integration enabled
+    // Users with calendar integration will get these checks through the calendar interval
+    if (!getExtensionAPISetting(extensionAPI, "calendar-setting", false)) {
+        console.log("Setting up dedicated birthday check interval (calendar integration disabled)");
+        const birthdayCheckIntervalId = setInterval(
+            async () => {
+                try {
+                    // Check if the date has changed since last birthday check
+                    const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date());
+                    const lastBirthdayCheckDate = getExtensionAPISetting(
+                        extensionAPI,
+                        "last-birthday-check-date",
+                        "01-19-2024"
+                    );
+                    
+                    // If we've crossed over to a new date since the last check
+                    if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
+                        console.log("New day detected during birthday check interval");
+                        // Get an updated list of people
+                        const updatedPeople = await getAllPeople();
+                        // Run the birthday checks - this will update DNP and show modal if needed
+                        await displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
+                        // Update the last birthday check date
+                        extensionAPI.settings.set(
+                            "last-birthday-check-date",
+                            todaysDNPUID
+                        );
+                    }
+                } catch (error) {
+                    console.error("Error in birthday check interval:", error);
+                }
+            },
+            30 * 60 * 1000 // every 30 minutes
+        );
+        runners.intervals.push(birthdayCheckIntervalId);
+    }
 
     if (getExtensionAPISetting(extensionAPI, "calendar-setting", false)) {
         // bring in the events
@@ -382,10 +419,35 @@ async function onload({ extensionAPI }) {
             googleLoadedHandler = createGoogleLoadedHandler(people, extensionAPI)
             document.body.addEventListener("roamjs:google:loaded", googleLoadedHandler)
         }
-        // Set an interval to fetch google events every hour
+        // Set an interval to fetch google events every hour and check for new days
         const intervalId = setInterval(
-            () => getEventInfo(people, extensionAPI, testing, false, 'hourly-interval'),
-            60 * 60 * 1000,
+            async () => {
+                // Check calendar events
+                await getEventInfo(people, extensionAPI, testing, false, 'hourly-interval');
+                
+                // Also check if the date has changed since last birthday check
+                const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date());
+                const lastBirthdayCheckDate = getExtensionAPISetting(
+                    extensionAPI,
+                    "last-birthday-check-date",
+                    "01-19-2024"
+                );
+                
+                // If we've crossed over to a new date since the last check
+                if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
+                    console.log("New day detected during hourly check, running birthday checks");
+                    // Get an updated list of people
+                    const updatedPeople = await getAllPeople();
+                    // Display birthdays in modal (if appropriate)
+                    displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
+                    // Update the last birthday check date
+                    extensionAPI.settings.set(
+                        "last-birthday-check-date",
+                        todaysDNPUID
+                    );
+                }
+            },
+            60 * 60 * 1000, // hourly
         )
         runners.intervals.push(intervalId)
 
@@ -393,32 +455,101 @@ async function onload({ extensionAPI }) {
         // This is so the check runs right when your laptop is openend
         addEventListener(document, "visibilitychange", () => {
             if (document.visibilityState === "visible") {
-                getEventInfo(people, extensionAPI, testing, false, 'visibility-change')
+                getEventInfo(people, extensionAPI, testing, false, 'visibility-change');
+                
+                // Also check if the date has changed since the tab was last visible
+                // This helps catch overnight changes when Roam is left open
+                const visibilityLastDate = getExtensionAPISetting(
+                    extensionAPI,
+                    "visibility-last-date",
+                    null
+                );
+                
+                if (visibilityLastDate) {
+                    const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date());
+                    if (visibilityLastDate !== todaysDNPUID) {
+                        console.log("Date changed since tab was last visible");
+                        const lastBirthdayCheckDate = getExtensionAPISetting(
+                            extensionAPI,
+                            "last-birthday-check-date", 
+                            "01-19-2024"
+                        );
+                        
+                        // If we haven't checked birthdays today
+                        if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
+                            console.log("Running birthday checks after visibility change");
+                            // Get an updated list of people since we might have been away for a while
+                            getAllPeople().then(updatedPeople => {
+                                displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
+                                // Update the last birthday check date
+                                extensionAPI.settings.set(
+                                    "last-birthday-check-date",
+                                    todaysDNPUID
+                                );
+                            });
+                        }
+                    }
+                }
+                
+                // Store the current date whenever visibility changes to visible
+                extensionAPI.settings.set(
+                    "visibility-last-date",
+                    window.roamAlphaAPI.util.dateToPageUid(new Date())
+                );
             }
         })
     }
 
-    if (getExtensionAPISetting(extensionAPI, "trigger-modal", false)) {
-        // This is so the check runs right when your laptop is openend
-        addEventListener(document, "visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-                const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
+    // Enhanced visibility change detection for ALL users
+    // This handles the overnight scenario and also tab switching
+    addEventListener(document, "visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+            // Get the date when we last saw the page visible
+            const visibilityLastDate = getExtensionAPISetting(
+                extensionAPI,
+                "visibility-last-date",
+                null
+            );
+            
+            // Current date
+            const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date());
+            
+            // If we have a previous date and it's different from today
+            // OR if the user has specifically enabled the 'trigger modal at start of day' setting
+            if ((visibilityLastDate && visibilityLastDate !== todaysDNPUID) || 
+                getExtensionAPISetting(extensionAPI, "trigger-modal", false)) {
+                
+                console.log("Date changed or trigger-modal enabled, checking birthdays");
                 const lastBirthdayCheckDate = getExtensionAPISetting(
                     extensionAPI,
                     "last-birthday-check-date",
-                    "01-19-2024",
-                )
+                    "01-19-2024"
+                );
+                
+                // Only trigger if we haven't yet checked today
                 if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
-                    // is this redundant code?
-                    displayBirthdays(people, lastBirthdayCheckDate, extensionAPI)
-                    extensionAPI.settings.set(
-                        "last-birthday-check-date",
-                        window.roamAlphaAPI.util.dateToPageUid(new Date()),
-                    )
+                    console.log("Displaying birthdays after visibility change");
+                    
+                    // Get fresh data since we might have been away for a while
+                    getAllPeople().then(updatedPeople => {
+                        displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
+                        
+                        // Update last check date
+                        extensionAPI.settings.set(
+                            "last-birthday-check-date",
+                            todaysDNPUID
+                        );
+                    });
                 }
             }
-        })
-    }
+            
+            // Always update the visibility last date
+            extensionAPI.settings.set(
+                "visibility-last-date",
+                todaysDNPUID
+            );
+        }
+    });
 
     // always set people pages to hide DONE
     // TODO put this behind a flag

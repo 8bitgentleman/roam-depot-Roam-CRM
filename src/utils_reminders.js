@@ -476,7 +476,7 @@ async function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
         }
     })
 
-    // check if there are lower priority birthdays and create on DNP
+    // check if there are birthdays to create on DNP
     const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date())
     let todaysDNPTitle = window.roamAlphaAPI.util.dateToPageTitle(new Date())
     // check if page exists
@@ -484,27 +484,86 @@ async function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
     // This avoids creating bad pages
     let pageUID = await getPageUID(todaysDNPTitle)
     
-    if (isSecondDateAfter(lastBirthdayCheck, todaysDNPUID)) {
-        // Check if we should include A&B list birthdays on DNP
-        const showAllBirthdays = getExtensionAPISetting(extensionAPI, "dnp-all-birthdays", false);
+    // Always create birthday blocks for TODAY regardless of lastBirthdayCheck
+    
+    // First check if there's already a "Birthdays Today" block to avoid duplicates
+    const existingBlocks = await window.roamAlphaAPI.q(`
+        [:find (pull ?b [:block/string :block/uid])
+        :where
+        [?p :block/uid "${pageUID}"]
+        [?b :block/page ?p]
+        [?b :block/string ?s]
+        [(clojure.string/includes? ?s "Birthdays Today")]]
+    `);
+    
+    let birthdayBlockExists = false;
+    let existingBlockUid = null;
+    
+    if (existingBlocks && existingBlocks.length > 0) {
+        birthdayBlockExists = true;
+        existingBlockUid = existingBlocks[0][0].uid;
+    }
+    
+    // Check if we should include A&B list birthdays on DNP
+    const showAllBirthdays = getExtensionAPISetting(extensionAPI, "dnp-all-birthdays", false);
 
-        // Combine birthday lists based on setting
-        const birthdaysToShow = showAllBirthdays
-            ? [...birthdays.otherBirthdaysToday, ...birthdays.aAndBBirthdaysToday]
-            : birthdays.otherBirthdaysToday;
+    // Combine birthday lists based on setting
+    const birthdaysToShow = showAllBirthdays
+        ? [...birthdays.otherBirthdaysToday, ...birthdays.aAndBBirthdaysToday]
+        : birthdays.otherBirthdaysToday;
 
-        // Only create block if there are birthdays to show
-        if (birthdaysToShow.length > 0) {
-            await createBlock({
-                parentUid: pageUID,
-                order: "last",
-                node: {
-                    text: `Birthdays Today`,
-                    children: birthdaysToShow.map((p) => ({
-                        text: `[${p.name} is ${calculateAge(p.birthday)} years old](((${p.birthday_UID})))`,
-                    })),
-                },
-            });
+    // Only handle birthdays if there are any to show
+    if (birthdaysToShow.length > 0) {
+        try {
+            if (birthdayBlockExists && existingBlockUid) {
+                // Update the existing block with potentially new birthdays
+                // First get the existing block's children
+                const existingChildren = await window.roamAlphaAPI.q(`
+                    [:find (pull ?c [:block/string :block/uid])
+                    :where
+                    [?b :block/uid "${existingBlockUid}"]
+                    [?c :block/parents ?b]]
+                `);
+                
+                // Check if we need to update - compare existing vs new
+                const existingBirthdayTexts = new Set();
+                if (existingChildren && existingChildren.length > 0) {
+                    existingChildren.forEach(child => {
+                        if (child[0] && child[0].string) {
+                            existingBirthdayTexts.add(child[0].string);
+                        }
+                    });
+                }
+                
+                // Create any missing birthday entries
+                for (const person of birthdaysToShow) {
+                    const birthdayText = `[${person.name} is ${calculateAge(person.birthday)} years old](((${person.birthday_UID})))`;
+                    if (!existingBirthdayTexts.has(birthdayText)) {
+                        await createBlock({
+                            parentUid: existingBlockUid,
+                            order: "last",
+                            node: {
+                                text: birthdayText
+                            }
+                        });
+                    }
+                }
+            } else {
+                // No existing block, create a new one
+                await createBlock({
+                    parentUid: pageUID,
+                    order: "last",
+                    node: {
+                        text: `Birthdays Today`,
+                        children: birthdaysToShow.map((p) => ({
+                            text: `[${p.name} is ${calculateAge(p.birthday)} years old](((${p.birthday_UID})))`,
+                        })),
+                    },
+                });
+                console.log(`Created birthday block for ${birthdaysToShow.length} people`);
+            }
+        } catch (error) {
+            console.error("Error handling birthday block:", error);
         }
     }
 
