@@ -15,7 +15,7 @@ import { moveFocus, getLastBlockAndFocus } from './utils';
 import EventKeywordSettings from "./components/event_keyword_settings"
 
 const testing = false
-const version = "v2.9.4"
+const version = "v2.9.5"
 
 const plugin_title = "Roam CRM"
 
@@ -140,6 +140,14 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 id: "dnp-all-birthdays",
                 name: "Include A/B List birthdays on Daily Notes",
                 description: "When enabled, birthdays for A/B List contacts will appear on Daily Notes pages alongside other birthdays. By default, A/B List birthdays only appear in the CRM drawer. F List birthdays are always excluded.",
+                action: {
+                    type: "switch",
+                },
+            },
+            {
+                id: "show-birthday-check-toast",
+                name: "Show notification for background birthday checks",
+                description: "When enabled, a toast notification will appear whenever the automatic birthday check runs (hourly or every 30 minutes based on your settings).",
                 action: {
                     type: "switch",
                 },
@@ -400,6 +408,16 @@ async function onload({ extensionAPI }) {
                             "last-birthday-check-date",
                             todaysDNPUID
                         );
+                        
+                        // Show toast if setting is enabled
+                        if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
+                            showToast("Birthday check complete - Daily Notes updated", "SUCCESS");
+                        }
+                    } else {
+                        // Always show the toast for periodic checks if setting is enabled
+                        if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
+                            showToast("Birthday check complete - No updates needed", "INFO");
+                        }
                     }
                 } catch (error) {
                     console.error("Error in birthday check interval:", error);
@@ -439,12 +457,22 @@ async function onload({ extensionAPI }) {
                     // Get an updated list of people
                     const updatedPeople = await getAllPeople();
                     // Display birthdays in modal (if appropriate)
-                    displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
+                    await displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
                     // Update the last birthday check date
                     extensionAPI.settings.set(
                         "last-birthday-check-date",
                         todaysDNPUID
                     );
+                    
+                    // Show toast if setting is enabled
+                    if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
+                        showToast("Birthday check complete - Daily Notes updated", "SUCCESS");
+                    }
+                } else {
+                    // Always show the toast for periodic checks if setting is enabled
+                    if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
+                        showToast("Birthday check complete - No updates needed", "INFO");
+                    }
                 }
             },
             60 * 60 * 1000, // hourly
@@ -531,15 +559,23 @@ async function onload({ extensionAPI }) {
                     console.log("Displaying birthdays after visibility change");
                     
                     // Get fresh data since we might have been away for a while
-                    getAllPeople().then(updatedPeople => {
-                        displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
+                    getAllPeople().then(async updatedPeople => {
+                        await displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
                         
                         // Update last check date
                         extensionAPI.settings.set(
                             "last-birthday-check-date",
                             todaysDNPUID
                         );
+                        
+                        // Show toast if setting is enabled
+                        if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
+                            showToast("Birthday check complete after tab activation - Daily Notes updated", "SUCCESS");
+                        }
                     });
+                } else if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
+                    // Show toast for visibility change check if enabled
+                    showToast("Birthday check verified - already up to date", "INFO");
                 }
             }
             
