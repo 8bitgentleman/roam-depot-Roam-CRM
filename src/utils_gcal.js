@@ -14,6 +14,49 @@ function extractEmailFromString(text) {
     return found ? found[0] : null
 }
 
+// Enhanced event fingerprinting for backup identification
+function createEventFingerprint(event) {
+    const date = event.start?.dateTime || event.start?.date || '';
+    const summary = (event.summary || '').replace(/\|/g, '~'); // Sanitize pipe characters
+    const organizer = (event.organizer?.email || '').replace(/\|/g, '~');
+    const eventId = (event.id || '').substring(0, 8); // First 8 chars of ID for extra matching
+
+    const fingerprint = `${date}|${summary}|${organizer}|${eventId}`.toLowerCase().trim();
+
+    // Warn about potential collisions for debugging
+    if (fingerprint.length < 10) {
+        console.warn('Short event fingerprint generated:', fingerprint, 'for event:', event.summary);
+    }
+
+    return fingerprint;
+}
+
+// Backwards-compatible date parsing for stored events
+function parseStoredEventDate(dateString) {
+    if (!dateString) return null;
+
+    try {
+        // If it already has time info, use as-is
+        if (dateString.includes('T') || dateString.includes(' ')) {
+            return new Date(dateString);
+        }
+
+        // For all-day events stored as date-only strings like "2024-06-19"
+        // Parse explicitly to avoid timezone issues
+        const [year, month, day] = dateString.split('-').map(num => parseInt(num, 10));
+        if (year && month && day) {
+            // Create date at midnight UTC to prevent timezone shifts
+            return new Date(Date.UTC(year, month - 1, day));
+        }
+
+        // Fallback to standard parsing
+        return new Date(dateString);
+    } catch (error) {
+        console.error('Error parsing stored event date:', dateString, error);
+        return null;
+    }
+}
+
 function findPersonByEmail(people, email) {
     const emailLower = email.toLowerCase() // Convert the search email to lowercase
 
@@ -174,7 +217,7 @@ function convertEventDateFormats(start) {
 }
 
 // MARK: check for empty call template
-function isEmptyCallTemplate(blockUid, storedEvent) {
+export function isEmptyCallTemplate(blockUid, storedEvent) {
     try {
         
         // If this is from a SmartBlock template, we should be more cautious
@@ -464,8 +507,42 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 
         // Only run deletion detection if enabled in settings
         if (getExtensionAPISetting(extensionAPI, "detect-deleted-events", false)) {
+            console.group('=== DELETION DETECTION DEBUG ===');
+            console.log('Fetch window:', { pastStartDate, futureEndDate });
+            console.log('Total fetched events:', results.length);
             console.log('All current event IDs from Google:', Array.from(allCurrentEventIds))
             console.log('All stored events:', storedEvents)
+
+            // Enhanced calendar-specific error tracking
+            const calendarErrors = new Map();
+            results.forEach(result => {
+                if (result.text?.includes("Error for calendar") || result.text?.includes("Must log in")) {
+                    const calendar = extractEmailFromString(result.text) || 'unknown-calendar';
+                    calendarErrors.set(calendar, result.text);
+                }
+            });
+
+            // Don't delete events from calendars with errors
+            if (calendarErrors.size > 0) {
+                console.warn('🚫 Calendars with authentication/access errors:', Array.from(calendarErrors.keys()));
+                calendarErrors.forEach((error, calendar) => {
+                    console.warn(`  - ${calendar}: ${error}`);
+                });
+
+                // Filter out events from problematic calendars before building current event IDs
+                const safeEventIds = new Set();
+                results.forEach(result => {
+                    if (result.event?.id && !calendarErrors.has(result.event?.calendar)) {
+                        safeEventIds.add(result.event.id);
+                    }
+                });
+
+                // Replace allCurrentEventIds with safe event IDs only
+                allCurrentEventIds.clear();
+                safeEventIds.forEach(id => allCurrentEventIds.add(id));
+
+                console.log('📧 Using filtered event IDs (excluding problematic calendars):', Array.from(allCurrentEventIds));
+            }
 
             // Process each stored event with detailed logging
             // for debugging ponly
@@ -494,75 +571,163 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
             })
             console.groupEnd()
 
-            // Now actually perform the detection
-            deletedEventIds = Object.keys(storedEvents).filter(eventId => {
+            // Enhanced deletion detection with event fingerprinting and ID reconciliation
+            const deletionCandidates = [];
+            const reconciledEvents = [];
+
+            Object.keys(storedEvents).forEach(eventId => {
                 const storedEvent = storedEvents[eventId];
 
                 // Skip events without any start time info
                 if (!storedEvent.event_start) {
                     console.log(`Event ${eventId} missing event_start - can't check for deletion`);
-                    return false;
+                    return;
                 }
 
                 try {
-                    // Parse the start date regardless of format
-                    const eventStartDate = new Date(storedEvent.event_start);
+                    // Use improved date parsing
+                    const eventStartDate = parseStoredEventDate(storedEvent.event_start);
 
                     // Ensure we got a valid date
-                    if (isNaN(eventStartDate.getTime())) {
+                    if (!eventStartDate || isNaN(eventStartDate.getTime())) {
                         console.warn(`Event ${eventId} has invalid date format: ${storedEvent.event_start}`);
-                        return false;
+                        return;
                     }
 
                     // Check if it's in our deletion window
                     const isInDeletionWindow = eventStartDate >= pastStartDate &&
                         eventStartDate <= futureEndDate;
 
-                    // Is it in our window and not in the current calendar?
-                    return isInDeletionWindow && !allCurrentEventIds.has(eventId);
+                    if (isInDeletionWindow && !allCurrentEventIds.has(eventId)) {
+                        // Try to find by fingerprint before marking for deletion
+                        const storedFingerprint = createEventFingerprint({
+                            start: { dateTime: storedEvent.event_start, date: storedEvent.event_start },
+                            summary: storedEvent.summary,
+                            organizer: { email: storedEvent.organizer_email || '' },
+                            id: eventId // Use the stored event ID
+                        });
+
+                        const matchByFingerprint = results.find(r => {
+                            if (!r.event) return false;
+                            const fetchedFingerprint = createEventFingerprint(r.event);
+                            return fetchedFingerprint === storedFingerprint;
+                        });
+
+                        if (matchByFingerprint) {
+                            console.log(`📝 Event ID reconciliation: "${storedEvent.summary}" found with new ID`);
+                            console.log(`  Old ID: ${eventId}`);
+                            console.log(`  New ID: ${matchByFingerprint.event.id}`);
+
+                            // Update the stored event with new ID
+                            storedEvents[matchByFingerprint.event.id] = storedEvents[eventId];
+                            delete storedEvents[eventId];
+                            reconciledEvents.push({
+                                oldId: eventId,
+                                newId: matchByFingerprint.event.id,
+                                summary: storedEvent.summary
+                            });
+                        } else {
+                            // No fingerprint match found - candidate for deletion
+                            deletionCandidates.push(eventId);
+                        }
+                    }
                 } catch (err) {
                     console.error(`Error processing date for event ${eventId}:`, err);
-                    return false;
                 }
-            })
+            });
 
-
-            // Log deleted events details
-            if (deletedEventIds.length > 0) {
-                console.group('Detected Deleted Events Details:')
-                console.groupEnd()
-
-                // Process deleted events for removal
-                console.group('Processing Deleted Events:')
-                deletedEventIds.forEach(eventId => {
-                    const storedEvent = storedEvents[eventId];
-                    if (!storedEvent || !storedEvent.blockUID) {
-                        console.warn(`No stored block for event: ${eventId}`);
-                        return;
-                    }
-                    const blockUid = storedEvents[eventId].blockUID;
-
-                    // Check if this is an empty call template before deleting
-                    // Pass the stored event data to help with SmartBlock detection
-                    if (isEmptyCallTemplate(blockUid, storedEvent).result) {
-                        // Delete the block
-                        if (!testing) {
-                            window.roamAlphaAPI.data.block.delete({
-                                block: {
-                                    uid: blockUid
-                                }
-                            });
-                            // Remove from stored events
-                            delete storedEvents[eventId];
-                        } 
-                    } else {
-                        console.log(`Block ${blockUid} has content - not deleting automatically`);
-                        // You could handle non-empty templates differently here
-                        // For example, adding a "DELETED EVENT" marker
-                    }
+            if (reconciledEvents.length > 0) {
+                console.log(`🔄 Successfully reconciled ${reconciledEvents.length} events with changed IDs`);
+                reconciledEvents.forEach(event => {
+                    console.log(`  - "${event.summary}": ${event.oldId} → ${event.newId}`);
                 });
-                console.groupEnd();
             }
+
+            deletedEventIds = deletionCandidates;
+
+
+            // Enhanced deletion processing with confirmation modal
+            if (deletedEventIds.length > 0) {
+                console.group('🗑️ Detected Deleted Events:');
+
+                // Create detailed deletion candidates list
+                const pendingDeletions = deletedEventIds.map(eventId => {
+                    const storedEvent = storedEvents[eventId];
+                    return {
+                        id: eventId,
+                        summary: storedEvent.summary || 'Unknown Event',
+                        date: storedEvent.event_start || 'Unknown Date',
+                        blockUID: storedEvent.blockUID,
+                        calendar: storedEvent.calendar || 'Unknown Calendar'
+                    };
+                });
+
+                // Log each deletion candidate
+                pendingDeletions.forEach(event => {
+                    console.log(`📅 "${event.summary}" on ${event.date} (ID: ${event.id})`);
+                });
+
+                console.groupEnd();
+
+                // Check if deletion confirmation modal is enabled
+                const useConfirmationModal = getExtensionAPISetting(extensionAPI, "deletion-confirmation-modal", false);
+
+                if (useConfirmationModal) {
+                    // Store deletion candidates for manual review
+                    await extensionAPI.settings.set("pending-deletions", pendingDeletions);
+                    await extensionAPI.settings.set("pending-deletions-timestamp", Date.now());
+
+                    // Show user-friendly notification with option to review
+                    if (!testing) {
+                        showToast(
+                            `${deletedEventIds.length} calendar events appear to be deleted. Click Settings → Review Pending Deletions to confirm.`,
+                            "WARNING"
+                        );
+                    }
+
+                    console.log(`💾 Stored ${deletedEventIds.length} events for manual review in extension settings`);
+                } else {
+                    // Legacy auto-deletion behavior
+                    console.group('🔄 Processing Auto-Deletions:');
+
+                    deletedEventIds.forEach(eventId => {
+                        const storedEvent = storedEvents[eventId];
+                        if (!storedEvent || !storedEvent.blockUID) {
+                            console.warn(`No stored block for event: ${eventId}`);
+                            return;
+                        }
+                        const blockUid = storedEvents[eventId].blockUID;
+
+                        // Check if this is an empty call template before deleting
+                        // Pass the stored event data to help with SmartBlock detection
+                        const emptyTemplateCheck = isEmptyCallTemplate(blockUid, storedEvent);
+                        if (emptyTemplateCheck.result) {
+                            // Delete the block
+                            if (!testing) {
+                                console.log(`🗑️ Auto-deleting empty template: "${storedEvent.summary}"`);
+                                window.roamAlphaAPI.data.block.delete({
+                                    block: {
+                                        uid: blockUid
+                                    }
+                                });
+                                // Remove from stored events
+                                delete storedEvents[eventId];
+                            } else {
+                                console.log(`🧪 TEST MODE: Would delete empty template: "${storedEvent.summary}"`);
+                            }
+                        } else {
+                            console.log(`📝 Preserving block with content: "${storedEvent.summary}" (${emptyTemplateCheck.reason})`);
+                            // Note: Could add a "DELETED EVENT" marker here in the future
+                        }
+                    });
+
+                    console.groupEnd();
+                }
+            } else {
+                console.log('✅ No events detected as deleted');
+            }
+
+            console.groupEnd(); // Close deletion detection debug group
             console.groupEnd()
         }
 

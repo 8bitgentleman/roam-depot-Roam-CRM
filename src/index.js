@@ -2,7 +2,7 @@ import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from "./components/toast"
 import { getAllPeople, parseAgendaPull } from "./utils_reminders"
 import { getPageUID, isSecondDateAfter, getExtensionAPISetting } from "./utils"
-import { getEventInfo } from "./utils_gcal"
+import { getEventInfo, isEmptyCallTemplate } from "./utils_gcal"
 import {
     createLastWeekCalls,
     createLastMonthCalls,
@@ -183,6 +183,16 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 name: "Detect deleted calendar events",
                 description:
                     "Check for events that have been deleted from Google Calendar in the last 7 days and next 7 days. Currently only logs deletions to console.",
+                action: {
+                    type: "switch",
+                    onChange: (evt) => { },
+                },
+            },
+            {
+                id: "deletion-confirmation-modal",
+                name: "Show deletion confirmation dialog",
+                description:
+                    "When events are detected as deleted from Google Calendar, show a confirmation dialog instead of auto-deleting. Provides safer deletion control with manual review.",
                 action: {
                     type: "switch",
                     onChange: (evt) => { },
@@ -528,64 +538,66 @@ async function onload({ extensionAPI }) {
         })
     }
 
-    // Enhanced visibility change detection for ALL users
-    // This handles the overnight scenario and also tab switching
-    addEventListener(document, "visibilitychange", () => {
-        if (document.visibilityState === "visible") {
-            // Get the date when we last saw the page visible
-            const visibilityLastDate = getExtensionAPISetting(
-                extensionAPI,
-                "visibility-last-date",
-                null
-            );
-            
-            // Current date
-            const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date());
-            
-            // If we have a previous date and it's different from today
-            // OR if the user has specifically enabled the 'trigger modal at start of day' setting
-            if ((visibilityLastDate && visibilityLastDate !== todaysDNPUID) || 
-                getExtensionAPISetting(extensionAPI, "trigger-modal", false)) {
-                
-                console.log("Date changed or trigger-modal enabled, checking birthdays");
-                const lastBirthdayCheckDate = getExtensionAPISetting(
+    // Enhanced visibility change detection for users WITHOUT calendar integration
+    // This ensures birthday checks work for all users, not just those with calendar sync
+    if (!getExtensionAPISetting(extensionAPI, "calendar-setting", false)) {
+        addEventListener(document, "visibilitychange", async () => {
+            if (document.visibilityState === "visible") {
+                // Get the date when we last saw the page visible
+                const visibilityLastDate = getExtensionAPISetting(
                     extensionAPI,
-                    "last-birthday-check-date",
-                    "01-19-2024"
+                    "visibility-last-date",
+                    null
                 );
-                
-                // Only trigger if we haven't yet checked today
-                if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
-                    console.log("Displaying birthdays after visibility change");
-                    
-                    // Get fresh data since we might have been away for a while
-                    getAllPeople().then(async updatedPeople => {
-                        await displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
-                        
-                        // Update last check date
-                        extensionAPI.settings.set(
-                            "last-birthday-check-date",
-                            todaysDNPUID
-                        );
-                        
-                        // Show toast if setting is enabled
-                        if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
-                            showToast("Birthday check complete after tab activation - Daily Notes updated", "SUCCESS");
-                        }
-                    });
-                } else if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
-                    // Show toast for visibility change check if enabled
-                    showToast("Birthday check verified - already up to date", "INFO");
+
+                // Current date
+                const todaysDNPUID = window.roamAlphaAPI.util.dateToPageUid(new Date());
+
+                // If we have a previous date and it's different from today
+                // OR if the user has specifically enabled the 'trigger modal at start of day' setting
+                if ((visibilityLastDate && visibilityLastDate !== todaysDNPUID) ||
+                    getExtensionAPISetting(extensionAPI, "trigger-modal", false)) {
+
+                    console.log("Date changed or trigger-modal enabled, checking birthdays (non-calendar users)");
+                    const lastBirthdayCheckDate = getExtensionAPISetting(
+                        extensionAPI,
+                        "last-birthday-check-date",
+                        "01-19-2024"
+                    );
+
+                    // Only trigger if we haven't yet checked today
+                    if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
+                        console.log("Displaying birthdays after visibility change (non-calendar users)");
+
+                        // Get fresh data since we might have been away for a while
+                        getAllPeople().then(async updatedPeople => {
+                            await displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
+
+                            // Update last check date
+                            await extensionAPI.settings.set(
+                                "last-birthday-check-date",
+                                todaysDNPUID
+                            );
+
+                            // Show toast if setting is enabled
+                            if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
+                                showToast("Birthday check complete after tab activation - Daily Notes updated", "SUCCESS");
+                            }
+                        });
+                    } else if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
+                        // Show toast for visibility change check if enabled
+                        showToast("Birthday check verified - already up to date", "INFO");
+                    }
                 }
+
+                // Always update the visibility last date
+                await extensionAPI.settings.set(
+                    "visibility-last-date",
+                    todaysDNPUID
+                );
             }
-            
-            // Always update the visibility last date
-            extensionAPI.settings.set(
-                "visibility-last-date",
-                todaysDNPUID
-            );
-        }
-    });
+        });
+    }
 
     // always set people pages to hide DONE
     // TODO put this behind a flag
@@ -912,6 +924,143 @@ async function onload({ extensionAPI }) {
             // 4. DOESN'T save any data to extension storage
             await getEventInfo(allPeople, extensionAPI, true, true, 'manual-template-test')
             showToast("Template matching test complete - check browser console for results", "SUCCESS")
+        },
+    })
+
+    // Command Palette Review Pending Deletions
+    extensionAPI.ui.commandPalette.addCommand({
+        label: "Roam CRM - Review Pending Calendar Deletions",
+        "disable-hotkey": false,
+        callback: async () => {
+            const pendingDeletions = getExtensionAPISetting(extensionAPI, "pending-deletions", []);
+            const timestamp = getExtensionAPISetting(extensionAPI, "pending-deletions-timestamp", null);
+
+            if (pendingDeletions.length === 0) {
+                showToast("No pending deletions to review", "INFO");
+                return;
+            }
+
+            const timeAgo = timestamp ?
+                `${Math.round((Date.now() - timestamp) / (1000 * 60))} minutes ago` :
+                'unknown time';
+
+            // Log detailed information about pending deletions
+            console.group(`📋 Review Pending Deletions (detected ${timeAgo})`);
+            console.log(`Found ${pendingDeletions.length} events pending deletion:`);
+
+            pendingDeletions.forEach((event, index) => {
+                console.group(`${index + 1}. "${event.summary}"`);
+                console.log(`Date: ${event.date}`);
+                console.log(`Event ID: ${event.id}`);
+                console.log(`Block UID: ${event.blockUID}`);
+                console.log(`Calendar: ${event.calendar}`);
+
+                // Check if block still exists
+                try {
+                    const blockExists = window.roamAlphaAPI.q(`[:find ?e . :where [?e :block/uid "${event.blockUID}"]]`);
+                    console.log(`Block exists: ${blockExists ? 'Yes' : 'No'}`);
+                } catch (err) {
+                    console.log(`Block exists: Error checking (${err.message})`);
+                }
+                console.groupEnd();
+            });
+
+            console.log('\n🔧 Actions available:');
+            console.log('- To approve all deletions: Run "Roam CRM - Confirm Pending Deletions"');
+            console.log('- To cancel all deletions: Run "Roam CRM - Cancel Pending Deletions"');
+            console.log('- Individual blocks can be checked in Roam by searching for their UID');
+            console.groupEnd();
+
+            showToast(`Found ${pendingDeletions.length} events pending deletion - see console for details`, "WARNING");
+        },
+    })
+
+    // Command Palette Confirm Pending Deletions
+    extensionAPI.ui.commandPalette.addCommand({
+        label: "Roam CRM - Confirm Pending Deletions",
+        "disable-hotkey": false,
+        callback: async () => {
+            const pendingDeletions = getExtensionAPISetting(extensionAPI, "pending-deletions", []);
+            const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {});
+
+            if (pendingDeletions.length === 0) {
+                showToast("No pending deletions to confirm", "INFO");
+                return;
+            }
+
+            // Add confirmation dialog before bulk deletion
+            const confirmed = window.confirm(
+                `⚠️ CONFIRM BULK DELETION\n\n` +
+                `You are about to permanently delete ${pendingDeletions.length} calendar event blocks from Roam.\n\n` +
+                `Events to be deleted:\n${pendingDeletions.slice(0, 5).map(e => `• ${e.summary}`).join('\n')}` +
+                `${pendingDeletions.length > 5 ? `\n... and ${pendingDeletions.length - 5} more` : ''}\n\n` +
+                `⚠️ This action cannot be undone!\n\n` +
+                `Click OK to proceed with deletion, or Cancel to abort.`
+            );
+
+            if (!confirmed) {
+                showToast("Deletion cancelled by user", "INFO");
+                return;
+            }
+
+            console.group(`🗑️ Confirming ${pendingDeletions.length} pending deletions`);
+            let deletedCount = 0;
+            let preservedCount = 0;
+
+            for (const event of pendingDeletions) {
+                try {
+                    // Check if this is an empty call template before deleting
+                    const emptyTemplateCheck = isEmptyCallTemplate(event.blockUID, storedEvents[event.id]);
+
+                    if (emptyTemplateCheck.result) {
+                        // Delete the block
+                        await window.roamAlphaAPI.data.block.delete({
+                            block: { uid: event.blockUID }
+                        });
+
+                        // Remove from stored events
+                        delete storedEvents[event.id];
+                        deletedCount++;
+
+                        console.log(`✅ Deleted: "${event.summary}"`);
+                    } else {
+                        preservedCount++;
+                        console.log(`📝 Preserved (has content): "${event.summary}" - ${emptyTemplateCheck.reason}`);
+                    }
+                } catch (err) {
+                    console.error(`❌ Error deleting "${event.summary}":`, err.message);
+                    preservedCount++;
+                }
+            }
+
+            // Update stored events and clear pending deletions
+            await extensionAPI.settings.set("synced-cal-events", storedEvents);
+            await extensionAPI.settings.set("pending-deletions", []);
+            await extensionAPI.settings.set("pending-deletions-timestamp", null);
+
+            console.groupEnd();
+            showToast(`Deleted ${deletedCount} events, preserved ${preservedCount} with content`, "SUCCESS");
+        },
+    })
+
+    // Command Palette Cancel Pending Deletions
+    extensionAPI.ui.commandPalette.addCommand({
+        label: "Roam CRM - Cancel Pending Deletions",
+        "disable-hotkey": false,
+        callback: async () => {
+            const pendingDeletions = getExtensionAPISetting(extensionAPI, "pending-deletions", []);
+
+            if (pendingDeletions.length === 0) {
+                showToast("No pending deletions to cancel", "INFO");
+                return;
+            }
+
+            // Clear pending deletions without deleting anything
+            await extensionAPI.settings.set("pending-deletions", []);
+            await extensionAPI.settings.set("pending-deletions-timestamp", null);
+
+            console.log(`🚫 Cancelled ${pendingDeletions.length} pending deletions`);
+            showToast(`Cancelled ${pendingDeletions.length} pending deletions`, "SUCCESS");
         },
     })
     // Command Palette Quick Capture - Create a new DNP block and focus it in the sidebar
