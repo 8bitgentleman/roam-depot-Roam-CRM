@@ -11,7 +11,7 @@ import {
 import React, { useState, useEffect } from "react"
 import renderOverlay from "roamjs-components/util/renderOverlay"
 import remindersSystem from "../utils_reminders"
-import { calculateAge } from "../utils_reminders"
+import { calculateAge, getAllPeople } from "../utils_reminders"
 import { getEventInfo } from "../utils_gcal"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import createBlock from "roamjs-components/writes/createBlock"
@@ -133,7 +133,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                 disabled={
                                     !getExtensionAPISetting(extensionAPI, "calendar-setting", false)
                                 }
-                                onClick={() => getEventInfo(people, extensionAPI, false)}
+                                onClick={async () => getEventInfo(await getAllPeople(), extensionAPI, false)}
                             // TODO add a toast if there are no changes or updates
                             />
                         </Tooltip>

@@ -282,11 +282,11 @@ async function setDONEFilter(page) {
     }
 }
 
-function createGoogleLoadedHandler(people, extensionAPI) {
+function createGoogleLoadedHandler(extensionAPI) {
     // handler for loading events once the google extension has finished loading
     return async function handleGoogleLoaded() {
         if (window.roamjs?.extension.smartblocks) {
-            await getEventInfo(people, extensionAPI, testing)
+            await getEventInfo(await getAllPeople(), extensionAPI, testing)
         }
     }
 }
@@ -342,21 +342,21 @@ async function onload({ extensionAPI }) {
         if (window.roamjs?.extension?.google) {
             await getEventInfo(people, extensionAPI, testing)
         } else {
-            googleLoadedHandler = createGoogleLoadedHandler(people, extensionAPI)
+            googleLoadedHandler = createGoogleLoadedHandler(extensionAPI)
             document.body.addEventListener("roamjs:google:loaded", googleLoadedHandler)
         }
         // Set an interval to fetch google events every hour
         const intervalId = setInterval(
-            () => getEventInfo(people, extensionAPI, testing),
+            async () => getEventInfo(await getAllPeople(), extensionAPI, testing),
             60 * 60 * 1000,
         )
         runners.intervals.push(intervalId)
 
         // set a listener to run the calendar check on visibility change.
         // This is so the check runs right when your laptop is openend
-        addEventListener(document, "visibilitychange", () => {
+        addEventListener(document, "visibilitychange", async () => {
             if (document.visibilityState === "visible") {
-                getEventInfo(people, extensionAPI, testing)
+                getEventInfo(await getAllPeople(), extensionAPI, testing)
             }
         })
     }
